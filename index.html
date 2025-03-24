@@ -21,15 +21,26 @@
       height: auto;
       display: block;
     }
-    #dot {
-      position: absolute;
-      width: 20px;
-      height: 20px;
-      background-color: red;
-      border-radius: 50%;
-      transform: translate(-50%, -50%);
-      pointer-events: none;
-    }
+      #dot {
+          position: absolute;
+          width: 60px;
+          height: 60px;
+          background-color: red;
+          border-radius: 50%;
+          transform: translate(-50%, -50%);
+          pointer-events: none;
+          animation: heartbeat 1s infinite;
+      }
+
+      @keyframes heartbeat {
+          0%, 100% {
+              transform: translate(-50%, -50%) scale(1);
+          }
+
+          50% {
+              transform: translate(-50%, -50%) scale(1.2);
+          }
+      }
   </style>
 </head>
 <body>
