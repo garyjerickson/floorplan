@@ -1,0 +1,54 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Floorplan with Red Dot</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+    }
+    #container {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      background-color: black;
+    }
+    #floorplan {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+    #dot {
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      background-color: red;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+    }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <img id="floorplan" src="floorplan.png" alt="Floorplan">
+    <div id="dot" style="left: 50%; top: 50%;"></div>
+  </div>
+
+  <script>
+    const container = document.getElementById('container');
+    const dot = document.getElementById('dot');
+
+    container.addEventListener('click', (e) => {
+      const rect = container.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      dot.style.left = `${x}px`;
+      dot.style.top = `${y}px`;
+    });
+  </script>
+</body>
+</html>
