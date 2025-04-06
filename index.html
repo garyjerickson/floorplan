@@ -40,12 +40,12 @@
       text-align: center;
     }
 
-    #dot-axel {
-      background-color: red;
-    }
-
     #dot-grammie {
       background-color: blue;
+    }
+
+    #dot-axel {
+      background-color: red;
     }
 
     @keyframes heartbeat {
@@ -88,24 +88,37 @@
       "FrontDoor": { x: 280, y: 630 }
     };
 
-    function moveDot(dot, room) {
-      const pos = roomPositions[room];
-      if (pos) {
-        dot.style.left = `${pos.x}px`;
-        dot.style.top = `${pos.y}px`;
+    let axelRoom = "";
+    let grammieRoom = "";
+
+    function updateDotPositions() {
+      if (axelRoom && roomPositions[axelRoom]) {
+        const pos = roomPositions[axelRoom];
+        let offset = (axelRoom === grammieRoom) ? -35 : 0;
+        axelDot.style.left = `${pos.x + offset}px`;
+        axelDot.style.top = `${pos.y}px`;
+      }
+
+      if (grammieRoom && roomPositions[grammieRoom]) {
+        const pos = roomPositions[grammieRoom];
+        let offset = (axelRoom === grammieRoom) ? 35 : 0;
+        grammieDot.style.left = `${pos.x + offset}px`;
+        grammieDot.style.top = `${pos.y}px`;
       }
     }
 
+    // Axel = Minnie Mouse Wristband
     db.ref("beacons/Minnie Mouse Wristband/room").on("value", (snapshot) => {
-      const room = snapshot.val();
-      console.log("Axel is in:", room);
-      moveDot(axelDot, room);
+      axelRoom = snapshot.val();
+      console.log("Axel is in:", axelRoom);
+      updateDotPositions();
     });
 
+    // Grammie = Black Wristband
     db.ref("beacons/Black Wristband/room").on("value", (snapshot) => {
-      const room = snapshot.val();
-      console.log("Grammie is in:", room);
-      moveDot(grammieDot, room);
+      grammieRoom = snapshot.val();
+      console.log("Grammie is in:", grammieRoom);
+      updateDotPositions();
     });
   </script>
 </body>
