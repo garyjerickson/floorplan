@@ -3,26 +3,23 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Floorplan with Axel and Grammie</title>
+  <title>Floorplan Tracker</title>
   <style>
     body {
       margin: 0;
       overflow: hidden;
     }
-
     #container {
       position: relative;
       width: 100vw;
       height: 100vh;
       background-color: black;
     }
-
     #floorplan {
       width: 100%;
       height: auto;
       display: block;
     }
-
     .dot {
       position: absolute;
       width: 60px;
@@ -32,44 +29,37 @@
       pointer-events: none;
       animation: heartbeat 1s infinite;
       display: flex;
-      flex-direction: column;
       align-items: center;
       justify-content: center;
+      font-size: 12px;
+      font-weight: bold;
+      color: white;
+    }
+    .axel { background-color: blue; }
+    .grammie { background-color: purple; }
+
+    .label {
+      position: absolute;
       color: white;
       font-weight: bold;
-      font-size: 11px;
-      text-align: center;
-    }
-
-    #dot-axel {
-      background-color: red;
-    }
-
-    #dot-grammie {
-      background-color: blue;
+      transform: translate(-50%, -100%);
+      text-shadow: 1px 1px 4px black;
+      pointer-events: none;
     }
 
     @keyframes heartbeat {
-      0%, 100% {
-        transform: translate(-50%, -50%) scale(1);
-      }
-      50% {
-        transform: translate(-50%, -50%) scale(1.2);
-      }
+      0%, 100% { transform: translate(-50%, -50%) scale(1); }
+      50% { transform: translate(-50%, -50%) scale(1.2); }
     }
   </style>
 </head>
 <body>
   <div id="container">
     <img id="floorplan" src="floorplan.png" alt="Floorplan">
-    <div id="dot-axel" class="dot">
-      <div>Axel</div>
-      <div id="axel-timer">00:00:00</div>
-    </div>
-    <div id="dot-grammie" class="dot">
-      <div>Grammie</div>
-      <div id="grammie-timer">00:00:00</div>
-    </div>
+    <div class="dot axel" id="dot-axel"></div>
+    <div class="label" id="label-axel">Axel<br><span id="timer-axel">--:--:--</span></div>
+    <div class="dot grammie" id="dot-grammie"></div>
+    <div class="label" id="label-grammie">Grammie<br><span id="timer-grammie">--:--:--</span></div>
   </div>
 
   <!-- Firebase SDKs -->
@@ -80,15 +70,8 @@
     const firebaseConfig = {
       databaseURL: "https://ultrawatchfloorplan-default-rtdb.firebaseio.com/"
     };
-
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
-
-    const axelDot = document.getElementById("dot-axel");
-    const grammieDot = document.getElementById("dot-grammie");
-
-    const axelTimerLabel = document.getElementById("axel-timer");
-    const grammieTimerLabel = document.getElementById("grammie-timer");
 
     const roomPositions = {
       "Living Room": { x: 130, y: 325 },
@@ -98,62 +81,63 @@
       "FrontDoor": { x: 280, y: 630 }
     };
 
-    let axelRoom = "";
-    let grammieRoom = "";
-    let axelStartTime = Date.now();
-    let grammieStartTime = Date.now();
-
-    function updateDotPositions() {
-      if (axelRoom && roomPositions[axelRoom]) {
-        const pos = roomPositions[axelRoom];
-        const offset = (axelRoom === grammieRoom) ? -35 : 0;
-        axelDot.style.left = `${pos.x + offset}px`;
-        axelDot.style.top = `${pos.y}px`;
+    const beacons = {
+      "Minnie Mouse Wristband": {
+        dotId: "dot-axel",
+        labelId: "label-axel",
+        timerId: "timer-axel",
+        offsetX: -20,
+        offsetY: 0
+      },
+      "Black Wristband": {
+        dotId: "dot-grammie",
+        labelId: "label-grammie",
+        timerId: "timer-grammie",
+        offsetX: 20,
+        offsetY: 0
       }
+    };
 
-      if (grammieRoom && roomPositions[grammieRoom]) {
-        const pos = roomPositions[grammieRoom];
-        const offset = (axelRoom === grammieRoom) ? 35 : 0;
-        grammieDot.style.left = `${pos.x + offset}px`;
-        grammieDot.style.top = `${pos.y}px`;
+    function moveDot(beaconName, room, enteredTime) {
+      const config = beacons[beaconName];
+      const pos = roomPositions[room];
+      if (!config || !pos) return;
+
+      const dot = document.getElementById(config.dotId);
+      const label = document.getElementById(config.labelId);
+
+      const x = pos.x + config.offsetX;
+      const y = pos.y + config.offsetY;
+
+      dot.style.left = `${x}px`;
+      dot.style.top = `${y}px`;
+
+      label.style.left = `${x}px`;
+      label.style.top = `${y - 40}px`;
+
+      // Start timer
+      if (enteredTime) {
+        const timerElem = document.getElementById(config.timerId);
+        const enteredDate = new Date(enteredTime);
+        setInterval(() => {
+          const now = new Date();
+          const elapsedMs = now - enteredDate;
+          const hours = String(Math.floor(elapsedMs / 3600000)).padStart(2, '0');
+          const minutes = String(Math.floor((elapsedMs % 3600000) / 60000)).padStart(2, '0');
+          const seconds = String(Math.floor((elapsedMs % 60000) / 1000)).padStart(2, '0');
+          timerElem.textContent = `${hours}:${minutes}:${seconds}`;
+        }, 1000);
       }
     }
 
-    function formatTime(ms) {
-      const totalSeconds = Math.floor(ms / 1000);
-      const hrs = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
-      const mins = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0');
-      const secs = String(totalSeconds % 60).padStart(2, '0');
-      return `${hrs}:${mins}:${secs}`;
+    for (const beaconName in beacons) {
+      db.ref(`beacons/${beaconName}`).on("value", (snapshot) => {
+        const data = snapshot.val();
+        if (data?.room) {
+          moveDot(beaconName, data.room, data.entered);
+        }
+      });
     }
-
-    function updateTimers() {
-      const now = Date.now();
-      axelTimerLabel.textContent = formatTime(now - axelStartTime);
-      grammieTimerLabel.textContent = formatTime(now - grammieStartTime);
-    }
-
-    setInterval(updateTimers, 1000); // update every second
-
-    // Axel = Black Wristband
-    db.ref("beacons/Black Wristband/room").on("value", (snapshot) => {
-      const newRoom = snapshot.val();
-      if (newRoom && newRoom !== axelRoom) {
-        axelRoom = newRoom;
-        axelStartTime = Date.now();
-        updateDotPositions();
-      }
-    });
-
-    // Grammie = Minnie Mouse Wristband
-    db.ref("beacons/Minnie Mouse Wristband/room").on("value", (snapshot) => {
-      const newRoom = snapshot.val();
-      if (newRoom && newRoom !== grammieRoom) {
-        grammieRoom = newRoom;
-        grammieStartTime = Date.now();
-        updateDotPositions();
-      }
-    });
   </script>
 </body>
 </html>
