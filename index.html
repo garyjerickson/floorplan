@@ -60,8 +60,8 @@
 <body>
   <div id="container">
     <img id="floorplan" src="floorplan.png" alt="Floorplan">
-    <div id="dot-axel" class="dot">00:00</div>
-    <div id="dot-grammie" class="dot">00:00</div>
+    <div id="dot-axel" class="dot">00:00:00</div>
+    <div id="dot-grammie" class="dot">00:00:00</div>
   </div>
 
   <!-- Firebase SDKs -->
@@ -87,6 +87,11 @@
       "FrontDoor": { x: 280, y: 630 }
     };
 
+    let intervals = {
+      axel: null,
+      grammie: null
+    };
+
     function moveDot(dot, room, offsetX = 0) {
       const pos = roomPositions[room];
       if (pos) {
@@ -95,8 +100,11 @@
       }
     }
 
-    function updateTimer(dot, enteredAt) {
+    function updateTimer(dot, enteredAt, name) {
       const enteredTime = new Date(enteredAt).getTime();
+
+      if (intervals[name]) clearInterval(intervals[name]);
+
       function tick() {
         const now = Date.now();
         const diff = now - enteredTime;
@@ -107,17 +115,17 @@
           .toString()
           .padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
       }
-      setInterval(tick, 1000);
-      tick();
+
+      tick(); // first tick immediately
+      intervals[name] = setInterval(tick, 1000);
     }
 
     // Axel
     db.ref("beacons/Axel").on("value", (snapshot) => {
       const data = snapshot.val();
       if (data && data.room && data.entered_at) {
-        alert("✅ Axel is in: " + data.room);
         moveDot(dotAxel, data.room, -20);
-        updateTimer(dotAxel, data.entered_at);
+        updateTimer(dotAxel, data.entered_at, "axel");
       }
     });
 
@@ -125,9 +133,8 @@
     db.ref("beacons/Grammie").on("value", (snapshot) => {
       const data = snapshot.val();
       if (data && data.room && data.entered_at) {
-        alert("✅ Grammie is in: " + data.room);
         moveDot(dotGrammie, data.room, +20);
-        updateTimer(dotGrammie, data.entered_at);
+        updateTimer(dotGrammie, data.entered_at, "grammie");
       }
     });
   </script>
