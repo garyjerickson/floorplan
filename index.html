@@ -138,11 +138,10 @@
 
     setInterval(updateTimers, 1000);
 
-    // Firebase listeners
     db.ref("beacons/Grammie").on("value", (snapshot) => {
       const data = snapshot.val();
       if (data && data.room && data.entered_at) {
-        moveDot(dotGrammie, data.room, -20);
+        moveDot(dotGrammie, data.room, -40);
         startTimer("Grammie", data.entered_at);
       }
     });
@@ -150,7 +149,7 @@
     db.ref("beacons/Axel").on("value", (snapshot) => {
       const data = snapshot.val();
       if (data && data.room && data.entered_at) {
-        moveDot(dotAxel, data.room, 20);
+        moveDot(dotAxel, data.room, 40);
         startTimer("Axel", data.entered_at);
       }
     });
