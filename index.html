@@ -108,14 +108,14 @@
     }
 
     // Axel = Minnie Mouse Wristband
-    db.ref("beacons/Minnie Mouse Wristband/room").on("value", (snapshot) => {
+      db.ref("beacons/Black Wristband/room").on("value", (snapshot) => {
       axelRoom = snapshot.val();
       console.log("Axel is in:", axelRoom);
       updateDotPositions();
     });
 
     // Grammie = Black Wristband
-    db.ref("beacons/Black Wristband/room").on("value", (snapshot) => {
+      db.ref("beacons/Minnie Mouse Wristband/room").on("value", (snapshot) => {
       grammieRoom = snapshot.val();
       console.log("Grammie is in:", grammieRoom);
       updateDotPositions();
