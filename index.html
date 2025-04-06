@@ -3,23 +3,26 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Floorplan Tracker</title>
+  <title>UltraWatch Floorplan</title>
   <style>
     body {
       margin: 0;
       overflow: hidden;
     }
+
     #container {
       position: relative;
       width: 100vw;
       height: 100vh;
       background-color: black;
     }
+
     #floorplan {
       width: 100%;
       height: auto;
       display: block;
     }
+
     .dot {
       position: absolute;
       width: 60px;
@@ -32,34 +35,47 @@
       align-items: center;
       justify-content: center;
       font-size: 12px;
-      font-weight: bold;
       color: white;
+      font-weight: bold;
+      text-align: center;
     }
-    .axel { background-color: blue; }
-    .grammie { background-color: purple; }
 
-    .label {
-      position: absolute;
-      color: white;
-      font-weight: bold;
-      transform: translate(-50%, -100%);
-      text-shadow: 1px 1px 4px black;
-      pointer-events: none;
+    #dot-grammie {
+      background-color: orange;
+    }
+
+    #dot-axel {
+      background-color: blue;
     }
 
     @keyframes heartbeat {
-      0%, 100% { transform: translate(-50%, -50%) scale(1); }
-      50% { transform: translate(-50%, -50%) scale(1.2); }
+      0%, 100% {
+        transform: translate(-50%, -50%) scale(1);
+      }
+      50% {
+        transform: translate(-50%, -50%) scale(1.2);
+      }
+    }
+
+    @media screen and (orientation: landscape) {
+      body {
+        transform: rotate(90deg);
+        transform-origin: left top;
+        width: 100vh;
+        height: 100vw;
+        overflow: hidden;
+        position: absolute;
+        top: 100%;
+        left: 0;
+      }
     }
   </style>
 </head>
 <body>
   <div id="container">
     <img id="floorplan" src="floorplan.png" alt="Floorplan">
-    <div class="dot axel" id="dot-axel"></div>
-    <div class="label" id="label-axel">Axel<br><span id="timer-axel">--:--:--</span></div>
-    <div class="dot grammie" id="dot-grammie"></div>
-    <div class="label" id="label-grammie">Grammie<br><span id="timer-grammie">--:--:--</span></div>
+    <div id="dot-grammie" class="dot">Grammie<br><span class="timer">0:00:00</span></div>
+    <div id="dot-axel" class="dot">Axel<br><span class="timer">0:00:00</span></div>
   </div>
 
   <!-- Firebase SDKs -->
@@ -70,8 +86,17 @@
     const firebaseConfig = {
       databaseURL: "https://ultrawatchfloorplan-default-rtdb.firebaseio.com/"
     };
+
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
+
+    const dotGrammie = document.getElementById("dot-grammie");
+    const dotAxel = document.getElementById("dot-axel");
+
+    const timers = {
+      "Grammie": { start: Date.now(), el: dotGrammie.querySelector(".timer"), lastRoom: "" },
+      "Axel": { start: Date.now(), el: dotAxel.querySelector(".timer"), lastRoom: "" }
+    };
 
     const roomPositions = {
       "Living Room": { x: 130, y: 325 },
@@ -81,63 +106,48 @@
       "FrontDoor": { x: 280, y: 630 }
     };
 
-    const beacons = {
-      "Minnie Mouse Wristband": {
-        dotId: "dot-axel",
-        labelId: "label-axel",
-        timerId: "timer-axel",
-        offsetX: -20,
-        offsetY: 0
-      },
-      "Black Wristband": {
-        dotId: "dot-grammie",
-        labelId: "label-grammie",
-        timerId: "timer-grammie",
-        offsetX: 20,
-        offsetY: 0
-      }
-    };
-
-    function moveDot(beaconName, room, enteredTime) {
-      const config = beacons[beaconName];
+    function moveDot(dot, room, offsetX = 0) {
       const pos = roomPositions[room];
-      if (!config || !pos) return;
-
-      const dot = document.getElementById(config.dotId);
-      const label = document.getElementById(config.labelId);
-
-      const x = pos.x + config.offsetX;
-      const y = pos.y + config.offsetY;
-
-      dot.style.left = `${x}px`;
-      dot.style.top = `${y}px`;
-
-      label.style.left = `${x}px`;
-      label.style.top = `${y - 40}px`;
-
-      // Start timer
-      if (enteredTime) {
-        const timerElem = document.getElementById(config.timerId);
-        const enteredDate = new Date(enteredTime);
-        setInterval(() => {
-          const now = new Date();
-          const elapsedMs = now - enteredDate;
-          const hours = String(Math.floor(elapsedMs / 3600000)).padStart(2, '0');
-          const minutes = String(Math.floor((elapsedMs % 3600000) / 60000)).padStart(2, '0');
-          const seconds = String(Math.floor((elapsedMs % 60000) / 1000)).padStart(2, '0');
-          timerElem.textContent = `${hours}:${minutes}:${seconds}`;
-        }, 1000);
+      if (pos) {
+        dot.style.left = `${pos.x + offsetX}px`;
+        dot.style.top = `${pos.y}px`;
       }
     }
 
-    for (const beaconName in beacons) {
-      db.ref(`beacons/${beaconName}`).on("value", (snapshot) => {
-        const data = snapshot.val();
-        if (data?.room) {
-          moveDot(beaconName, data.room, data.entered);
-        }
-      });
+    function updateTimer(label) {
+      const timer = timers[label];
+      const elapsed = Math.floor((Date.now() - timer.start) / 1000);
+      const h = String(Math.floor(elapsed / 3600)).padStart(1, '0');
+      const m = String(Math.floor((elapsed % 3600) / 60)).padStart(2, '0');
+      const s = String(elapsed % 60).padStart(2, '0');
+      timer.el.textContent = `${h}:${m}:${s}`;
     }
+
+    setInterval(() => {
+      updateTimer("Grammie");
+      updateTimer("Axel");
+    }, 1000);
+
+    function handleBeaconUpdate(label, room, dot, offsetX = 0) {
+      const timer = timers[label];
+      if (room !== timer.lastRoom) {
+        timer.lastRoom = room;
+        timer.start = Date.now();
+      }
+      moveDot(dot, room, offsetX);
+    }
+
+    db.ref("beacons/Black Wristband/room").on("value", (snapshot) => {
+      const room = snapshot.val();
+      console.log("Grammie in:", room);
+      handleBeaconUpdate("Grammie", room, dotGrammie, -20);
+    });
+
+    db.ref("beacons/Minnie Mouse Wristband/room").on("value", (snapshot) => {
+      const room = snapshot.val();
+      console.log("Axel in:", room);
+      handleBeaconUpdate("Axel", room, dotAxel, 20);
+    });
   </script>
 </body>
 </html>
