@@ -38,6 +38,7 @@
       color: white;
       font-weight: bold;
       text-align: center;
+      flex-direction: column;
     }
 
     #dot-grammie {
@@ -74,8 +75,14 @@
 <body>
   <div id="container">
     <img id="floorplan" src="floorplan.png" alt="Floorplan">
-    <div id="dot-grammie" class="dot">Grammie<br><span class="timer">0:00:00</span></div>
-    <div id="dot-axel" class="dot">Axel<br><span class="timer">0:00:00</span></div>
+    <div id="dot-grammie" class="dot">
+      Grammie
+      <span class="timer">00:00:00</span>
+    </div>
+    <div id="dot-axel" class="dot">
+      Axel
+      <span class="timer">00:00:00</span>
+    </div>
   </div>
 
   <!-- Firebase SDKs -->
@@ -94,8 +101,8 @@
     const dotAxel = document.getElementById("dot-axel");
 
     const timers = {
-      "Grammie": { start: Date.now(), el: dotGrammie.querySelector(".timer"), lastRoom: "" },
-      "Axel": { start: Date.now(), el: dotAxel.querySelector(".timer"), lastRoom: "" }
+      "Grammie": { el: dotGrammie.querySelector(".timer"), start: 0 },
+      "Axel": { el: dotAxel.querySelector(".timer"), start: 0 }
     };
 
     const roomPositions = {
@@ -114,39 +121,38 @@
       }
     }
 
-    function updateTimer(label) {
-      const timer = timers[label];
-      const elapsed = Math.floor((Date.now() - timer.start) / 1000);
-      const h = String(Math.floor(elapsed / 3600)).padStart(1, '0');
-      const m = String(Math.floor((elapsed % 3600) / 60)).padStart(2, '0');
-      const s = String(elapsed % 60).padStart(2, '0');
-      timer.el.textContent = `${h}:${m}:${s}`;
+    function startTimer(label, startTimestamp) {
+      timers[label].start = startTimestamp * 1000; // Convert to ms
     }
 
-    setInterval(() => {
-      updateTimer("Grammie");
-      updateTimer("Axel");
-    }, 1000);
-
-    function handleBeaconUpdate(label, room, dot, offsetX = 0) {
-      const timer = timers[label];
-      if (room !== timer.lastRoom) {
-        timer.lastRoom = room;
-        timer.start = Date.now();
+    function updateTimers() {
+      const now = Date.now();
+      for (const label in timers) {
+        const elapsed = Math.floor((now - timers[label].start) / 1000);
+        const h = String(Math.floor(elapsed / 3600)).padStart(1, '0');
+        const m = String(Math.floor((elapsed % 3600) / 60)).padStart(2, '0');
+        const s = String(elapsed % 60).padStart(2, '0');
+        timers[label].el.textContent = `${h}:${m}:${s}`;
       }
-      moveDot(dot, room, offsetX);
     }
 
-    db.ref("beacons/Black Wristband/room").on("value", (snapshot) => {
-      const room = snapshot.val();
-      console.log("Grammie in:", room);
-      handleBeaconUpdate("Grammie", room, dotGrammie, -20);
+    setInterval(updateTimers, 1000);
+
+    // Firebase listeners
+    db.ref("beacons/Grammie").on("value", (snapshot) => {
+      const data = snapshot.val();
+      if (data && data.room && data.entered_at) {
+        moveDot(dotGrammie, data.room, -20);
+        startTimer("Grammie", data.entered_at);
+      }
     });
 
-    db.ref("beacons/Minnie Mouse Wristband/room").on("value", (snapshot) => {
-      const room = snapshot.val();
-      console.log("Axel in:", room);
-      handleBeaconUpdate("Axel", room, dotAxel, 20);
+    db.ref("beacons/Axel").on("value", (snapshot) => {
+      const data = snapshot.val();
+      if (data && data.room && data.entered_at) {
+        moveDot(dotAxel, data.room, 20);
+        startTimer("Axel", data.entered_at);
+      }
     });
   </script>
 </body>
