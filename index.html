@@ -2,9 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport"
-        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>UltraWatch Floorplan</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Floorplan with Dots</title>
   <style>
     body {
       margin: 0;
@@ -33,12 +32,11 @@
       pointer-events: none;
       animation: heartbeat 1s infinite;
       display: flex;
-      justify-content: center;
       align-items: center;
+      justify-content: center;
       color: white;
-      font-size: 10px;
-      text-align: center;
-      font-weight: bold;
+      font-size: 12px;
+      font-family: Arial, sans-serif;
     }
 
     #dot-axel {
@@ -53,7 +51,6 @@
       0%, 100% {
         transform: translate(-50%, -50%) scale(1);
       }
-
       50% {
         transform: translate(-50%, -50%) scale(1.2);
       }
@@ -62,9 +59,9 @@
 </head>
 <body>
   <div id="container">
-    <img id="floorplan" src="floorplan.png" alt="Floorplan" />
-    <div id="dot-axel" class="dot">Axel<br>--:--:--</div>
-    <div id="dot-grammie" class="dot">Grammie<br>--:--:--</div>
+    <img id="floorplan" src="floorplan.png" alt="Floorplan">
+    <div id="dot-axel" class="dot">00:00</div>
+    <div id="dot-grammie" class="dot">00:00</div>
   </div>
 
   <!-- Firebase SDKs -->
@@ -79,6 +76,9 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
+    const dotAxel = document.getElementById("dot-axel");
+    const dotGrammie = document.getElementById("dot-grammie");
+
     const roomPositions = {
       "Living Room": { x: 130, y: 325 },
       "Bedroom": { x: 300, y: 325 },
@@ -87,56 +87,49 @@
       "FrontDoor": { x: 280, y: 630 }
     };
 
-    const dots = {
-      Axel: document.getElementById("dot-axel"),
-      Grammie: document.getElementById("dot-grammie")
-    };
-
-    function formatElapsed(ms) {
-      const total = Math.floor(ms / 1000);
-      const h = String(Math.floor(total / 3600)).padStart(2, '0');
-      const m = String(Math.floor((total % 3600) / 60)).padStart(2, '0');
-      const s = String(total % 60).padStart(2, '0');
-      return `${h}:${m}:${s}`;
-    }
-
-    function moveDot(name, room, enteredAt) {
-      const dot = dots[name];
+    function moveDot(dot, room, offsetX = 0) {
       const pos = roomPositions[room];
-      if (pos && dot) {
-        // Offset to avoid overlap if in the same room
-        const offsetX = name === "Axel" ? -25 : 25;
-        const offsetY = name === "Axel" ? -25 : 25;
-
+      if (pos) {
         dot.style.left = `${pos.x + offsetX}px`;
-        dot.style.top = `${pos.y + offsetY}px`;
-
-        // Start timer update
-        if (enteredAt) {
-          const startTime = enteredAt * 1000;
-          const update = () => {
-            const now = Date.now();
-            const elapsed = formatElapsed(now - startTime);
-            dot.innerHTML = `${name}<br>${elapsed}`;
-          };
-          update();
-          setInterval(update, 1000);
-        }
+        dot.style.top = `${pos.y}px`;
       }
     }
 
-    function setupWatcher(name) {
-      const ref = db.ref(`beacons/${name}`);
-      ref.on("value", (snapshot) => {
-        const data = snapshot.val();
-        if (data && data.room && data.entered_at) {
-          moveDot(name, data.room, data.entered_at);
-        }
-      });
+    function updateTimer(dot, enteredAt) {
+      const enteredTime = new Date(enteredAt).getTime();
+      function tick() {
+        const now = Date.now();
+        const diff = now - enteredTime;
+        const hours = Math.floor(diff / 3600000);
+        const minutes = Math.floor((diff % 3600000) / 60000);
+        const seconds = Math.floor((diff % 60000) / 1000);
+        dot.textContent = `${hours.toString().padStart(2, '0')}:${minutes
+          .toString()
+          .padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+      }
+      setInterval(tick, 1000);
+      tick();
     }
 
-    setupWatcher("Axel");
-    setupWatcher("Grammie");
+    // Axel
+    db.ref("beacons/Axel").on("value", (snapshot) => {
+      const data = snapshot.val();
+      if (data && data.room && data.entered_at) {
+        alert("✅ Axel is in: " + data.room);
+        moveDot(dotAxel, data.room, -20);
+        updateTimer(dotAxel, data.entered_at);
+      }
+    });
+
+    // Grammie
+    db.ref("beacons/Grammie").on("value", (snapshot) => {
+      const data = snapshot.val();
+      if (data && data.room && data.entered_at) {
+        alert("✅ Grammie is in: " + data.room);
+        moveDot(dotGrammie, data.room, +20);
+        updateTimer(dotGrammie, data.entered_at);
+      }
+    });
   </script>
 </body>
 </html>
