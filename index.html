@@ -3,32 +3,49 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Floorplan with Red Dot</title>
+  <title>Floorplan with Axel and Grammie</title>
   <style>
     body {
       margin: 0;
       overflow: hidden;
     }
+
     #container {
       position: relative;
       width: 100vw;
       height: 100vh;
       background-color: black;
     }
+
     #floorplan {
       width: 100%;
       height: auto;
       display: block;
     }
-    #dot {
+
+    .dot {
       position: absolute;
       width: 60px;
       height: 60px;
-      background-color: red;
       border-radius: 50%;
       transform: translate(-50%, -50%);
       pointer-events: none;
       animation: heartbeat 1s infinite;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: bold;
+      font-size: 12px;
+      text-align: center;
+    }
+
+    #dot-axel {
+      background-color: red;
+    }
+
+    #dot-grammie {
+      background-color: blue;
     }
 
     @keyframes heartbeat {
@@ -44,7 +61,8 @@
 <body>
   <div id="container">
     <img id="floorplan" src="floorplan.png" alt="Floorplan">
-    <div id="dot" style="left: 50%; top: 50%;"></div>
+    <div id="dot-axel" class="dot">Axel</div>
+    <div id="dot-grammie" class="dot">Grammie</div>
   </div>
 
   <!-- Firebase SDKs -->
@@ -52,7 +70,6 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
 
   <script>
-    // Firebase config
     const firebaseConfig = {
       databaseURL: "https://ultrawatchfloorplan-default-rtdb.firebaseio.com/"
     };
@@ -60,9 +77,9 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    const dot = document.getElementById("dot");
+    const axelDot = document.getElementById("dot-axel");
+    const grammieDot = document.getElementById("dot-grammie");
 
-    // Define pixel positions for each room (adjust these to fit your floorplan)
     const roomPositions = {
       "Living Room": { x: 130, y: 325 },
       "Bedroom": { x: 300, y: 325 },
@@ -71,7 +88,7 @@
       "FrontDoor": { x: 280, y: 630 }
     };
 
-    function moveDotToRoom(room) {
+    function moveDot(dot, room) {
       const pos = roomPositions[room];
       if (pos) {
         dot.style.left = `${pos.x}px`;
@@ -79,17 +96,16 @@
       }
     }
 
-    // Watch one or both beacons
     db.ref("beacons/Minnie Mouse Wristband/room").on("value", (snapshot) => {
       const room = snapshot.val();
-      console.log("Minnie Mouse is in:", room);
-      moveDotToRoom(room);
+      console.log("Axel is in:", room);
+      moveDot(axelDot, room);
     });
 
     db.ref("beacons/Black Wristband/room").on("value", (snapshot) => {
       const room = snapshot.val();
-      console.log("Black Wristband is in:", room);
-      moveDotToRoom(room);
+      console.log("Grammie is in:", room);
+      moveDot(grammieDot, room);
     });
   </script>
 </body>
