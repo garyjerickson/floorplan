@@ -1,110 +1,142 @@
-import paho.mqtt.client as mqtt
-import json
-import time
-from collections import defaultdict, deque
-import firebase_admin
-from firebase_admin import credentials, db
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>UltraWatch Floorplan</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+    }
 
-# ==== Firebase Setup ====
-cred = credentials.Certificate("firebase-key.json")
-firebase_admin.initialize_app(cred, {
-    "databaseURL": "https://ultrawatchfloorplan-default-rtdb.firebaseio.com/"
-})
+    #container {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      background-color: black;
+    }
 
-# ==== MQTT Settings ====
-BROKER = "localhost"
-PORT = 1883
-TOPIC = "#"
+    #floorplan {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
 
-# ==== Gateway MAC → Room ====
-room_map = {
-    "B0B21C863204": "Living Room",
-    "B0B21C8631C4": "Bedroom",
-    "B0B21C8631EC": "Kitchen",
-    "B0B21CA68C0C": "Bathroom",
-    "08B61F77BEB0": "FrontDoor"
-}
+    .dot {
+      position: absolute;
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+      animation: heartbeat 1s infinite;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: white;
+      font-size: 10px;
+      text-align: center;
+      font-weight: bold;
+    }
 
-# ==== Beacons to Track ====
-watched_beacons = {
-    "D490B297D096": "Grammie",
-    "CDB7DA7557A6": "Axel"
-}
+    #dot-axel {
+      background-color: red;
+    }
 
-# ==== RSSI Handling ====
-rssi_history = defaultdict(lambda: defaultdict(lambda: deque(maxlen=10)))
-last_seen = defaultdict(float)
-last_reported = defaultdict(float)
-last_known_room = dict()  # beacon_mac → last room
-REPORT_INTERVAL = 5  # seconds
+    #dot-grammie {
+      background-color: blue;
+    }
 
-# ==== MQTT Callbacks ====
-def on_connect(client, userdata, flags, rc):
-    print("Connected to MQTT broker.")
-    client.subscribe(TOPIC)
+    @keyframes heartbeat {
+      0%, 100% {
+        transform: translate(-50%, -50%) scale(1);
+      }
 
-def on_message(client, userdata, msg):
-    try:
-        payload = json.loads(msg.payload.decode())
-        gateway_mac = payload.get("device_info", {}).get("mac", "").upper()
+      50% {
+        transform: translate(-50%, -50%) scale(1.2);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="container">
+    <img id="floorplan" src="floorplan.png" alt="Floorplan" />
+    <div id="dot-axel" class="dot">Axel<br>--:--:--</div>
+    <div id="dot-grammie" class="dot">Grammie<br>--:--:--</div>
+  </div>
 
-        topic_parts = msg.topic.strip("/").split("/")
-        if len(topic_parts) >= 3 and not gateway_mac:
-            gateway_mac = topic_parts[2].upper()
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
 
-        data_list = payload.get("data", [])
-        if not isinstance(data_list, list):
-            return
+  <script>
+    const firebaseConfig = {
+      databaseURL: "https://ultrawatchfloorplan-default-rtdb.firebaseio.com/"
+    };
 
-        for entry in data_list:
-            beacon_mac = entry.get("mac", "").upper()
-            rssi = entry.get("rssi")
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
 
-            if beacon_mac in watched_beacons and rssi is not None:
-                rssi_history[beacon_mac][gateway_mac].append(rssi)
-                last_seen[beacon_mac] = time.time()
-    except Exception as e:
-        print("Error parsing message:", e)
+    const roomPositions = {
+      "Living Room": { x: 130, y: 325 },
+      "Bedroom": { x: 300, y: 325 },
+      "Kitchen": { x: 130, y: 530 },
+      "Bathroom": { x: 300, y: 470 },
+      "FrontDoor": { x: 280, y: 630 }
+    };
 
-# ==== Beacon Analysis + Firebase Update ====
-def analyze_positions():
-    now = time.time()
-    for beacon_mac, beacon_name in watched_beacons.items():
-        if beacon_mac in rssi_history and now - last_reported[beacon_mac] >= REPORT_INTERVAL:
-            avg_rssi_per_gateway = {}
-            for gw_mac, rssi_list in rssi_history[beacon_mac].items():
-                if rssi_list:
-                    avg_rssi = sum(rssi_list) / len(rssi_list)
-                    avg_rssi_per_gateway[gw_mac] = avg_rssi
+    const dots = {
+      Axel: document.getElementById("dot-axel"),
+      Grammie: document.getElementById("dot-grammie")
+    };
 
-            if avg_rssi_per_gateway:
-                strongest_gateway = max(avg_rssi_per_gateway, key=avg_rssi_per_gateway.get)
-                room = room_map.get(strongest_gateway, "Unknown Room")
+    function formatElapsed(ms) {
+      const total = Math.floor(ms / 1000);
+      const h = String(Math.floor(total / 3600)).padStart(2, '0');
+      const m = String(Math.floor((total % 3600) / 60)).padStart(2, '0');
+      const s = String(total % 60).padStart(2, '0');
+      return `${h}:${m}:${s}`;
+    }
 
-                # Only update if room has changed
-                if last_known_room.get(beacon_mac) != room:
-                    last_known_room[beacon_mac] = room
-                    db.reference(f"/beacons/{beacon_name}").set({
-                        "room": room,
-                        "entered_at": int(now)
-                    })
-                    print(f"📍 {beacon_name} moved to {room}")
-                    last_reported[beacon_mac] = now
+    function moveDot(name, room, enteredAt) {
+      const dot = dots[name];
+      const pos = roomPositions[room];
+      if (pos && dot) {
+        // Offset to avoid overlap if in the same room
+        const offsetX = name === "Axel" ? -25 : 25;
+        const offsetY = name === "Axel" ? -25 : 25;
 
-# ==== MQTT Client Setup ====
-client = mqtt.Client()
-client.on_connect = on_connect
-client.on_message = on_message
+        dot.style.left = `${pos.x + offsetX}px`;
+        dot.style.top = `${pos.y + offsetY}px`;
 
-client.connect(BROKER, PORT, 60)
-client.loop_start()
+        // Start timer update
+        if (enteredAt) {
+          const startTime = enteredAt * 1000;
+          const update = () => {
+            const now = Date.now();
+            const elapsed = formatElapsed(now - startTime);
+            dot.innerHTML = `${name}<br>${elapsed}`;
+          };
+          update();
+          setInterval(update, 1000);
+        }
+      }
+    }
 
-# ==== Run Main Loop ====
-try:
-    while True:
-        analyze_positions()
-        time.sleep(1)
-except KeyboardInterrupt:
-    client.loop_stop()
-    client.disconnect()
-    print("Stopped.")
+    function setupWatcher(name) {
+      const ref = db.ref(`beacons/${name}`);
+      ref.on("value", (snapshot) => {
+        const data = snapshot.val();
+        if (data && data.room && data.entered_at) {
+          moveDot(name, data.room, data.entered_at);
+        }
+      });
+    }
+
+    setupWatcher("Axel");
+    setupWatcher("Grammie");
+  </script>
+</body>
+</html>
