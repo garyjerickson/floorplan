@@ -32,6 +32,7 @@
       pointer-events: none;
       animation: heartbeat 1s infinite;
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
       color: white;
@@ -61,8 +62,14 @@
 <body>
   <div id="container">
     <img id="floorplan" src="floorplan.png" alt="Floorplan">
-    <div id="dot-axel" class="dot">Axel</div>
-    <div id="dot-grammie" class="dot">Grammie</div>
+    <div id="dot-axel" class="dot">
+      <div>Axel</div>
+      <div id="axel-timer">0 min</div>
+    </div>
+    <div id="dot-grammie" class="dot">
+      <div>Grammie</div>
+      <div id="grammie-timer">0 min</div>
+    </div>
   </div>
 
   <!-- Firebase SDKs -->
@@ -80,6 +87,9 @@
     const axelDot = document.getElementById("dot-axel");
     const grammieDot = document.getElementById("dot-grammie");
 
+    const axelTimerLabel = document.getElementById("axel-timer");
+    const grammieTimerLabel = document.getElementById("grammie-timer");
+
     const roomPositions = {
       "Living Room": { x: 130, y: 325 },
       "Bedroom": { x: 300, y: 325 },
@@ -90,6 +100,8 @@
 
     let axelRoom = "";
     let grammieRoom = "";
+    let axelStartTime = Date.now();
+    let grammieStartTime = Date.now();
 
     function updateDotPositions() {
       if (axelRoom && roomPositions[axelRoom]) {
@@ -107,18 +119,35 @@
       }
     }
 
+    function updateTimers() {
+      const now = Date.now();
+      const axelMinutes = Math.floor((now - axelStartTime) / 60000);
+      const grammieMinutes = Math.floor((now - grammieStartTime) / 60000);
+
+      axelTimerLabel.textContent = `${axelMinutes} min`;
+      grammieTimerLabel.textContent = `${grammieMinutes} min`;
+    }
+
+    setInterval(updateTimers, 10000); // update every 10 seconds
+
     // Axel = Minnie Mouse Wristband
-      db.ref("beacons/Black Wristband/room").on("value", (snapshot) => {
-      axelRoom = snapshot.val();
-      console.log("Axel is in:", axelRoom);
-      updateDotPositions();
+    db.ref("beacons/Minnie Mouse Wristband/room").on("value", (snapshot) => {
+      const newRoom = snapshot.val();
+      if (newRoom && newRoom !== axelRoom) {
+        axelRoom = newRoom;
+        axelStartTime = Date.now();
+        updateDotPositions();
+      }
     });
 
     // Grammie = Black Wristband
-      db.ref("beacons/Minnie Mouse Wristband/room").on("value", (snapshot) => {
-      grammieRoom = snapshot.val();
-      console.log("Grammie is in:", grammieRoom);
-      updateDotPositions();
+    db.ref("beacons/Black Wristband/room").on("value", (snapshot) => {
+      const newRoom = snapshot.val();
+      if (newRoom && newRoom !== grammieRoom) {
+        grammieRoom = newRoom;
+        grammieStartTime = Date.now();
+        updateDotPositions();
+      }
     });
   </script>
 </body>
