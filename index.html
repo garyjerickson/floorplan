@@ -37,16 +37,16 @@
       justify-content: center;
       color: white;
       font-weight: bold;
-      font-size: 12px;
+      font-size: 11px;
       text-align: center;
-    }
-
-    #dot-grammie {
-      background-color: blue;
     }
 
     #dot-axel {
       background-color: red;
+    }
+
+    #dot-grammie {
+      background-color: blue;
     }
 
     @keyframes heartbeat {
@@ -64,11 +64,11 @@
     <img id="floorplan" src="floorplan.png" alt="Floorplan">
     <div id="dot-axel" class="dot">
       <div>Axel</div>
-      <div id="axel-timer">0 min</div>
+      <div id="axel-timer">00:00:00</div>
     </div>
     <div id="dot-grammie" class="dot">
       <div>Grammie</div>
-      <div id="grammie-timer">0 min</div>
+      <div id="grammie-timer">00:00:00</div>
     </div>
   </div>
 
@@ -106,32 +106,37 @@
     function updateDotPositions() {
       if (axelRoom && roomPositions[axelRoom]) {
         const pos = roomPositions[axelRoom];
-        let offset = (axelRoom === grammieRoom) ? -35 : 0;
+        const offset = (axelRoom === grammieRoom) ? -35 : 0;
         axelDot.style.left = `${pos.x + offset}px`;
         axelDot.style.top = `${pos.y}px`;
       }
 
       if (grammieRoom && roomPositions[grammieRoom]) {
         const pos = roomPositions[grammieRoom];
-        let offset = (axelRoom === grammieRoom) ? 35 : 0;
+        const offset = (axelRoom === grammieRoom) ? 35 : 0;
         grammieDot.style.left = `${pos.x + offset}px`;
         grammieDot.style.top = `${pos.y}px`;
       }
     }
 
-    function updateTimers() {
-      const now = Date.now();
-      const axelMinutes = Math.floor((now - axelStartTime) / 60000);
-      const grammieMinutes = Math.floor((now - grammieStartTime) / 60000);
-
-      axelTimerLabel.textContent = `${axelMinutes} min`;
-      grammieTimerLabel.textContent = `${grammieMinutes} min`;
+    function formatTime(ms) {
+      const totalSeconds = Math.floor(ms / 1000);
+      const hrs = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
+      const mins = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0');
+      const secs = String(totalSeconds % 60).padStart(2, '0');
+      return `${hrs}:${mins}:${secs}`;
     }
 
-    setInterval(updateTimers, 10000); // update every 10 seconds
+    function updateTimers() {
+      const now = Date.now();
+      axelTimerLabel.textContent = formatTime(now - axelStartTime);
+      grammieTimerLabel.textContent = formatTime(now - grammieStartTime);
+    }
 
-    // Axel = Minnie Mouse Wristband
-    db.ref("beacons/Minnie Mouse Wristband/room").on("value", (snapshot) => {
+    setInterval(updateTimers, 1000); // update every second
+
+    // Axel = Black Wristband
+    db.ref("beacons/Black Wristband/room").on("value", (snapshot) => {
       const newRoom = snapshot.val();
       if (newRoom && newRoom !== axelRoom) {
         axelRoom = newRoom;
@@ -140,8 +145,8 @@
       }
     });
 
-    // Grammie = Black Wristband
-    db.ref("beacons/Black Wristband/room").on("value", (snapshot) => {
+    // Grammie = Minnie Mouse Wristband
+    db.ref("beacons/Minnie Mouse Wristband/room").on("value", (snapshot) => {
       const newRoom = snapshot.val();
       if (newRoom && newRoom !== grammieRoom) {
         grammieRoom = newRoom;
