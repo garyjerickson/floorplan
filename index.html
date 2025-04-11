@@ -15,16 +15,18 @@
     }
 
     #container {
-      display: flex;
       width: 100vw;
       height: 100vh;
-      flex-direction: row;
+      position: relative;
     }
 
     #floorplan-view, #map-view {
-      flex: 1;
-      position: relative;
+      width: 100%;
       height: 100%;
+      position: absolute;
+      top: 0;
+      left: 0;
+      display: none;
     }
 
     #floorplan-img {
@@ -94,23 +96,40 @@
       border: none;
     }
 
-    @media screen and (max-width: 800px) {
-      #container {
-        flex-direction: column;
-      }
-      #floorplan-view, #map-view {
-        display: block;
-        width: 100vw;
-        height: 50vh;
-      }
-      #map-view {
-        height: 50vh;
-      }
+    #toggle-btn {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      z-index: 1002;
+      background: white;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      padding: 8px 12px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    @media screen and (min-width: 801px) {
+  #container {
+    display: flex;
+    flex-direction: row;
+  }
+  #floorplan-view, #map-view {
+    position: relative;
+    display: block !important;
+    flex: 1;
+  }
+  #toggle-btn {
+    display: none;
+  }
+}
+}
     }
   </style>
 </head>
 <body>
   <div id="container">
+    <button id="toggle-btn" onclick="toggleView()">Switch to Map View</button>
     <div id="floorplan-view">
       <img id="floorplan-img" src="floorplan.png" alt="Floorplan">
       <div id="dot-grammie" class="dot">Grammie <span class="timer">00:00:00</span></div>
@@ -144,6 +163,19 @@
 
     const dotGrammie = document.getElementById("dot-grammie");
     const dotAxel = document.getElementById("dot-axel");
+    const toggleBtn = document.getElementById("toggle-btn");
+    const floorplanView = document.getElementById("floorplan-view");
+    const mapView = document.getElementById("map-view");
+
+    let isMapVisible = false;
+
+    function toggleView() {
+      isMapVisible = !isMapVisible;
+      floorplanView.style.display = isMapVisible ? "none" : "block";
+      mapView.style.display = isMapVisible ? "block" : "none";
+      toggleBtn.innerText = isMapVisible ? "Switch to Floorplan View" : "Switch to Map View";
+    }
+
     const timers = {
       "Grammie": { el: dotGrammie.querySelector(".timer"), start: 0 },
       "Axel": { el: dotAxel.querySelector(".timer"), start: 0 }
@@ -204,6 +236,11 @@
         lastSeenGrammie = Date.now();
         moveDot(dotGrammie, data.room, -40);
         startTimer("Grammie", data.entered_at);
+        if (!isDesktopView() && !isMapVisible) {
+          floorplanView.style.display = "block";
+          mapView.style.display = "none";
+          toggleBtn.innerText = "Switch to Map View";
+        }
       }
     });
 
@@ -214,6 +251,12 @@
         startTimer("Axel", data.entered_at);
       }
     });
+
+    setInterval(() => {
+      if (!isDesktopView() && Date.now() - lastSeenGrammie > 60000 && !isMapVisible) {
+        toggleView();
+      }
+    }, 10000);
 
     const sosSound = document.getElementById("sos-sound");
     const sosPopup = document.getElementById("sos-popup");
@@ -232,6 +275,12 @@
 
     function acknowledgeAlert() {
       db.ref("alerts/Grammie").set({ sos: false });
+    }
+
+    // Initial mobile view setup
+    if (!isDesktopView()) {
+      floorplanView.style.display = "block";
+      mapView.style.display = "none";
     }
   </script>
 </body>
