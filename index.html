@@ -171,10 +171,15 @@
       "FrontDoor": { x: 280, y: 630 }
     };
 
+    function isDesktopView() {
+      return window.innerWidth > 800;
+    }
+
     function moveDot(dot, room, offsetX = 0) {
       const pos = roomPositions[room];
       if (pos) {
-        dot.style.left = `${pos.x + offsetX}px`;
+        const scaledX = isDesktopView() ? pos.x / 2 : pos.x;
+        dot.style.left = `${scaledX + offsetX}px`;
         dot.style.top = `${pos.y}px`;
       }
     }
