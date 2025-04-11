@@ -163,13 +163,20 @@
       "Axel": { el: dotAxel.querySelector(".timer"), start: 0 }
     };
 
-    const roomPositions = {
-      "Living Room": { x: 130, y: 325 },
-      "Bedroom": { x: 300, y: 325 },
-      "Kitchen": { x: 130, y: 530 },
-      "Bathroom": { x: 300, y: 470 },
-      "FrontDoor": { x: 280, y: 630 }
-    };
+const roomPositions = isDesktopView() ? {
+  "Living Room": { x: 377, y: 440 },
+  "Bedroom": { x: 574, y: 402 },
+  "Kitchen": { x: 386, y: 677 },
+  "Bathroom": { x: 619, y: 582 },
+  "FrontDoor": { x: 586, y: 822 }
+} : {
+  "Living Room": { x: 130, y: 325 },
+  "Bedroom": { x: 300, y: 325 },
+  "Kitchen": { x: 130, y: 530 },
+  "Bathroom": { x: 300, y: 470 },
+  "FrontDoor": { x: 280, y: 630 }
+};
+
 
     function isDesktopView() {
       return window.innerWidth > 800;
