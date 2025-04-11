@@ -252,11 +252,16 @@
       }
     });
 
-    setInterval(() => {
-      if (!isDesktopView() && Date.now() - lastSeenGrammie > 60000 && !isMapVisible) {
-        toggleView();
-      }
-    }, 10000);
+setInterval(() => {
+  const now = Date.now();
+  const age = now - lastSeenGrammie;
+
+  if (!isDesktopView() && !isMapVisible && lastSeenGrammie !== 0 && age > 60000) {
+    console.log("⏱️ No beacon from Grammie in", age / 1000, "seconds — switching to map view");
+    toggleView();
+  }
+}, 10000);
+
 
     const sosSound = document.getElementById("sos-sound");
     const sosPopup = document.getElementById("sos-popup");
