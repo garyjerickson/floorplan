@@ -99,27 +99,13 @@
         flex-direction: column;
       }
       #floorplan-view, #map-view {
-        display: none;
-        width: 100vw;
-        height: 100vh;
-      }
-      #toggle-btn {
         display: block;
+        width: 100vw;
+        height: 50vh;
       }
-    }
-
-    #toggle-btn {
-      display: none;
-      position: absolute;
-      top: 10px;
-      left: 10px;
-      z-index: 1002;
-      background: white;
-      border: 1px solid #ccc;
-      border-radius: 5px;
-      padding: 8px 12px;
-      font-weight: bold;
-      cursor: pointer;
+      #map-view {
+        height: 50vh;
+      }
     }
   </style>
 </head>
@@ -163,26 +149,28 @@
       "Axel": { el: dotAxel.querySelector(".timer"), start: 0 }
     };
 
-const roomPositions = isDesktopView() ? {
-  "Living Room": { x: 600, y: 340 },
-  "Bedroom": { x: 900, y: 320 },
-  "Kitchen": { x: 600, y: 550 },
-  "Bathroom": { x: 940, y: 480 },
-  "FrontDoor": { x: 940, y: 600 }
-} : {
-  "Living Room": { x: 130, y: 325 },
-  "Bedroom": { x: 300, y: 325 },
-  "Kitchen": { x: 130, y: 530 },
-  "Bathroom": { x: 300, y: 470 },
-  "FrontDoor": { x: 280, y: 630 }
-};
-
-
     function isDesktopView() {
       return window.innerWidth > 800;
     }
 
+    function getRoomPositions() {
+      return isDesktopView() ? {
+        "Living Room": { x: 600, y: 340 },
+        "Bedroom": { x: 900, y: 320 },
+        "Kitchen": { x: 600, y: 550 },
+        "Bathroom": { x: 940, y: 480 },
+        "FrontDoor": { x: 940, y: 600 }
+      } : {
+        "Living Room": { x: 130, y: 325 },
+        "Bedroom": { x: 300, y: 325 },
+        "Kitchen": { x: 130, y: 530 },
+        "Bathroom": { x: 300, y: 470 },
+        "FrontDoor": { x: 280, y: 630 }
+      };
+    }
+
     function moveDot(dot, room, offsetX = 0) {
+      const roomPositions = getRoomPositions();
       const pos = roomPositions[room];
       if (pos) {
         const scaledX = isDesktopView() ? pos.x / 2 : pos.x;
