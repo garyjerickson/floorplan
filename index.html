@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>UltraWatch Floorplan + Map</title>
+  <title>UltraWatch Floorplan</title>
   <style>
     body {
       margin: 0;
@@ -12,19 +12,21 @@
     }
 
     #container {
-      position: relative;
+      display: flex;
+      flex-direction: row;
       width: 100vw;
       height: 100vh;
-      background-color: black;
     }
 
-    #floorplan, #map-view {
-      width: 100%;
-      height: 100%;
+    #floorplan-view, #map-view {
+      flex: 1;
       display: none;
+      position: relative;
     }
 
-    #floorplan.active, #map-view.active {
+    #floorplan-img {
+      width: 100%;
+      height: auto;
       display: block;
     }
 
@@ -52,20 +54,6 @@
     @keyframes heartbeat {
       0%, 100% { transform: translate(-50%, -50%) scale(1); }
       50% { transform: translate(-50%, -50%) scale(1.2); }
-    }
-
-    #view-toggle {
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      z-index: 2000;
-      padding: 10px;
-      font-size: 16px;
-      font-weight: bold;
-      background: white;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
     }
 
     #sos-popup {
@@ -96,15 +84,44 @@
       border-radius: 10px;
       cursor: pointer;
     }
+
+    #map-frame {
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+
+    #toggle-btn {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      z-index: 1002;
+      background: white;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      padding: 8px 12px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    @media screen and (max-width: 800px) {
+      #container {
+        flex-direction: column;
+      }
+      #floorplan-view, #map-view {
+        display: none;
+        width: 100vw;
+        height: 100vh;
+      }
+    }
   </style>
 </head>
 <body>
   <div id="container">
-    <button id="view-toggle">Switch to Map View</button>
-
     <!-- Floorplan View -->
-    <div id="floorplan" class="active">
-      <img src="floorplan.png" alt="Floorplan" style="width:100%; height:auto; display:block;">
+    <div id="floorplan-view">
+      <button id="toggle-btn">Switch to Map View</button>
+      <img id="floorplan-img" src="floorplan.png" alt="Floorplan">
       <div id="dot-grammie" class="dot">Grammie <span class="timer">00:00:00</span></div>
       <div id="dot-axel" class="dot">Axel <span class="timer">00:00:00</span></div>
       <div id="sos-popup">
@@ -112,20 +129,22 @@
         <br><br>
         <button onclick="acknowledgeAlert()">Acknowledge Alert</button>
       </div>
-      <audio id="sos-sound" src="sos-alert.mp3" preload="auto"></audio>
     </div>
 
     <!-- Map View -->
     <div id="map-view">
       <iframe
-  width="100%" height="100%" style="border:0"
-        src="https://www.google.com/maps/embed/v1/place?key=AIzaSyAlGea2dx5OIv5y8iH0Jgo3QvXmp4I0Ko4&q=2153+Weatherly+Way,+Orlando,+FL+32820"
-  allowfullscreen="" loading="lazy">
-</iframe>
+        id="map-frame"
+        src="https://maps.google.com/maps?q=2153%20Weatherly%20Way%20Orlando%20FL%2032820&z=15&output=embed"
+        allowfullscreen
+        loading="lazy">
+      </iframe>
     </div>
   </div>
 
-  <!-- Firebase -->
+  <audio id="sos-sound" src="sos-alert.mp3" preload="auto"></audio>
+
+  <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
 
@@ -138,16 +157,6 @@
 
     const dotGrammie = document.getElementById("dot-grammie");
     const dotAxel = document.getElementById("dot-axel");
-    const sosPopup = document.getElementById("sos-popup");
-    const sosSound = document.getElementById("sos-sound");
-    const viewToggle = document.getElementById("view-toggle");
-    const floorplan = document.getElementById("floorplan");
-    const mapView = document.getElementById("map-view");
-
-    let grammieLastSeen = Date.now();
-    const BLE_TIMEOUT = 60000; // 60 seconds
-
-    // Timers and positions
     const timers = {
       "Grammie": { el: dotGrammie.querySelector(".timer"), start: 0 },
       "Axel": { el: dotAxel.querySelector(".timer"), start: 0 }
@@ -183,15 +192,19 @@
         timers[label].el.textContent = `${h}:${m}:${s}`;
       }
     }
+
     setInterval(updateTimers, 1000);
+
+    let lastSeenGrammie = Date.now();
+    let autoSwitched = false;
 
     db.ref("beacons/Grammie").on("value", (snapshot) => {
       const data = snapshot.val();
       if (data && data.room && data.entered_at) {
+        lastSeenGrammie = Date.now();
         moveDot(dotGrammie, data.room, -40);
         startTimer("Grammie", data.entered_at);
-        grammieLastSeen = Date.now();
-        if (!floorplan.classList.contains("active")) switchView("floorplan");
+        if (!autoSwitched) showView("floorplan");
       }
     });
 
@@ -202,6 +215,9 @@
         startTimer("Axel", data.entered_at);
       }
     });
+
+    const sosSound = document.getElementById("sos-sound");
+    const sosPopup = document.getElementById("sos-popup");
 
     db.ref("alerts/Grammie").on("value", (snapshot) => {
       const data = snapshot.val();
@@ -219,30 +235,41 @@
       db.ref("alerts/Grammie").set({ sos: false });
     }
 
-    function switchView(view) {
-      floorplan.classList.remove("active");
-      mapView.classList.remove("active");
-      if (view === "map") {
-        mapView.classList.add("active");
-        viewToggle.textContent = "Switch to Floorplan View";
-      } else {
-        floorplan.classList.add("active");
-        viewToggle.textContent = "Switch to Map View";
-      }
+    // Audio autoplay unlock on mobile
+    window.addEventListener('click', () => {
+      sosSound.play().then(() => {
+        sosSound.pause();
+        sosSound.currentTime = 0;
+      });
+    }, { once: true });
+
+    function showView(view) {
+      document.getElementById("floorplan-view").style.display = view === "floorplan" ? "block" : "none";
+      document.getElementById("map-view").style.display = view === "map" ? "block" : "none";
     }
 
-    viewToggle.addEventListener("click", () => {
-      const isFloorplan = floorplan.classList.contains("active");
-      switchView(isFloorplan ? "map" : "floorplan");
+    // Toggle Button
+    document.getElementById("toggle-btn").addEventListener("click", () => {
+      const isFloorplan = document.getElementById("floorplan-view").style.display === "block";
+      showView(isFloorplan ? "map" : "floorplan");
     });
 
+    // Auto-switch to map view after 60s of no BLE signal
     setInterval(() => {
-      const timeSinceSeen = Date.now() - grammieLastSeen;
-      if (timeSinceSeen > BLE_TIMEOUT && !mapView.classList.contains("active")) {
-        console.log("⏰ Grammie not seen in 60s. Switching to map view.");
-        switchView("map");
+      if (Date.now() - lastSeenGrammie > 60000 && !autoSwitched) {
+        showView("map");
+        autoSwitched = true;
       }
     }, 10000);
+
+    // Default view on load
+    if (window.innerWidth <= 800) {
+      showView("floorplan");
+    } else {
+      // Desktop = show both
+      document.getElementById("floorplan-view").style.display = "block";
+      document.getElementById("map-view").style.display = "block";
+    }
   </script>
 </body>
 </html>
