@@ -49,6 +49,22 @@
       background-color: blue;
     }
 
+    #acknowledge-btn {
+      position: absolute;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: red;
+      color: white;
+      font-size: 18px;
+      font-weight: bold;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 10px;
+      display: none;
+      z-index: 1000;
+    }
+
     @keyframes heartbeat {
       0%, 100% {
         transform: translate(-50%, -50%) scale(1);
@@ -83,6 +99,7 @@
       Axel
       <span class="timer">00:00:00</span>
     </div>
+    <button id="acknowledge-btn" onclick="acknowledgeAlert()">Acknowledge Alert</button>
   </div>
 
   <!-- Firebase SDKs -->
@@ -99,6 +116,7 @@
 
     const dotGrammie = document.getElementById("dot-grammie");
     const dotAxel = document.getElementById("dot-axel");
+    const acknowledgeBtn = document.getElementById("acknowledge-btn");
 
     const timers = {
       "Grammie": { el: dotGrammie.querySelector(".timer"), start: 0 },
@@ -122,7 +140,7 @@
     }
 
     function startTimer(label, startTimestamp) {
-      timers[label].start = startTimestamp * 1000; // Convert to ms
+      timers[label].start = startTimestamp * 1000;
     }
 
     function updateTimers() {
@@ -153,6 +171,20 @@
         startTimer("Axel", data.entered_at);
       }
     });
+
+    db.ref("alerts/Grammie").on("value", (snapshot) => {
+      const data = snapshot.val();
+      if (data && data.sos) {
+        alert("🆘 SOS ALERT: Grammie pressed the emergency button!");
+        acknowledgeBtn.style.display = "block";
+      } else {
+        acknowledgeBtn.style.display = "none";
+      }
+    });
+
+    function acknowledgeAlert() {
+      db.ref("alerts/Grammie").set({ sos: false });
+    }
   </script>
 </body>
 </html>
