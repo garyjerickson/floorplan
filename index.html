@@ -3,11 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>UltraWatch Floorplan</title>
+  <title>UltraWatch Floorplan + Map</title>
   <style>
     body {
       margin: 0;
       overflow: hidden;
+      font-family: sans-serif;
     }
 
     #container {
@@ -17,9 +18,13 @@
       background-color: black;
     }
 
-    #floorplan {
+    #floorplan, #map-view {
       width: 100%;
-      height: auto;
+      height: 100%;
+      display: none;
+    }
+
+    #floorplan.active, #map-view.active {
       display: block;
     }
 
@@ -41,12 +46,26 @@
       flex-direction: column;
     }
 
-    #dot-grammie {
-      background-color: orange;
+    #dot-grammie { background-color: orange; }
+    #dot-axel { background-color: blue; }
+
+    @keyframes heartbeat {
+      0%, 100% { transform: translate(-50%, -50%) scale(1); }
+      50% { transform: translate(-50%, -50%) scale(1.2); }
     }
 
-    #dot-axel {
-      background-color: blue;
+    #view-toggle {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      z-index: 2000;
+      padding: 10px;
+      font-size: 16px;
+      font-weight: bold;
+      background: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
     }
 
     #sos-popup {
@@ -77,54 +96,35 @@
       border-radius: 10px;
       cursor: pointer;
     }
-
-    @keyframes heartbeat {
-      0%, 100% {
-        transform: translate(-50%, -50%) scale(1);
-      }
-      50% {
-        transform: translate(-50%, -50%) scale(1.2);
-      }
-    }
-
-    @media screen and (orientation: landscape) {
-      body {
-        transform: rotate(90deg);
-        transform-origin: left top;
-        width: 100vh;
-        height: 100vw;
-        overflow: hidden;
-        position: absolute;
-        top: 100%;
-        left: 0;
-      }
-    }
   </style>
 </head>
 <body>
   <div id="container">
-    <img id="floorplan" src="floorplan.png" alt="Floorplan">
-    <div id="dot-grammie" class="dot">
-      Grammie
-      <span class="timer">00:00:00</span>
-    </div>
-    <div id="dot-axel" class="dot">
-      Axel
-      <span class="timer">00:00:00</span>
+    <button id="view-toggle">Switch to Map View</button>
+
+    <!-- Floorplan View -->
+    <div id="floorplan" class="active">
+      <img src="floorplan.png" alt="Floorplan" style="width:100%; height:auto; display:block;">
+      <div id="dot-grammie" class="dot">Grammie <span class="timer">00:00:00</span></div>
+      <div id="dot-axel" class="dot">Axel <span class="timer">00:00:00</span></div>
+      <div id="sos-popup">
+        🆘 SOS ALERT: Grammie pressed the emergency button!
+        <br><br>
+        <button onclick="acknowledgeAlert()">Acknowledge Alert</button>
+      </div>
+      <audio id="sos-sound" src="sos-alert.mp3" preload="auto"></audio>
     </div>
 
-    <!-- SOS Alert Popup -->
-    <div id="sos-popup">
-      🆘 SOS ALERT: Grammie pressed the emergency button!
-      <br><br>
-      <button onclick="acknowledgeAlert()">Acknowledge Alert</button>
+    <!-- Map View -->
+    <div id="map-view">
+      <iframe width="100%" height="100%" style="border:0" loading="lazy" allowfullscreen
+        referrerpolicy="no-referrer-when-downgrade"
+        src="https://www.google.com/maps/embed/v1/place?key=YOUR_GOOGLE_MAPS_API_KEY&q=2153+Weatherly+Way,+Orlando,+FL+32820">
+      </iframe>
     </div>
-
-    <!-- SOS Sound -->
-    <audio id="sos-sound" src="sos-alert.mp3" preload="auto"></audio>
   </div>
 
-  <!-- Firebase SDKs -->
+  <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
 
@@ -132,7 +132,6 @@
     const firebaseConfig = {
       databaseURL: "https://ultrawatchfloorplan-default-rtdb.firebaseio.com/"
     };
-
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
@@ -140,7 +139,14 @@
     const dotAxel = document.getElementById("dot-axel");
     const sosPopup = document.getElementById("sos-popup");
     const sosSound = document.getElementById("sos-sound");
+    const viewToggle = document.getElementById("view-toggle");
+    const floorplan = document.getElementById("floorplan");
+    const mapView = document.getElementById("map-view");
 
+    let grammieLastSeen = Date.now();
+    const BLE_TIMEOUT = 60000; // 60 seconds
+
+    // Timers and positions
     const timers = {
       "Grammie": { el: dotGrammie.querySelector(".timer"), start: 0 },
       "Axel": { el: dotAxel.querySelector(".timer"), start: 0 }
@@ -176,7 +182,6 @@
         timers[label].el.textContent = `${h}:${m}:${s}`;
       }
     }
-
     setInterval(updateTimers, 1000);
 
     db.ref("beacons/Grammie").on("value", (snapshot) => {
@@ -184,6 +189,8 @@
       if (data && data.room && data.entered_at) {
         moveDot(dotGrammie, data.room, -40);
         startTimer("Grammie", data.entered_at);
+        grammieLastSeen = Date.now();
+        if (!floorplan.classList.contains("active")) switchView("floorplan");
       }
     });
 
@@ -195,14 +202,11 @@
       }
     });
 
-    // Firebase SOS alert logic
     db.ref("alerts/Grammie").on("value", (snapshot) => {
       const data = snapshot.val();
       if (data && data.sos) {
         sosPopup.style.display = "block";
-        sosSound.play().catch(e => {
-          console.log("🔇 Autoplay blocked. Waiting for user interaction...");
-        });
+        sosSound.play().catch(e => console.log("🔇 Autoplay blocked:", e));
       } else {
         sosPopup.style.display = "none";
         sosSound.pause();
@@ -214,16 +218,30 @@
       db.ref("alerts/Grammie").set({ sos: false });
     }
 
-    // Unlock audio after first user interaction (mobile autoplay workaround)
-    window.addEventListener('click', () => {
-      sosSound.play().then(() => {
-        sosSound.pause();
-        sosSound.currentTime = 0;
-        console.log("🔓 Audio unlocked for autoplay.");
-      }).catch(() => {
-        console.log("🔒 Still locked until interaction.");
-      });
-    }, { once: true });
+    function switchView(view) {
+      floorplan.classList.remove("active");
+      mapView.classList.remove("active");
+      if (view === "map") {
+        mapView.classList.add("active");
+        viewToggle.textContent = "Switch to Floorplan View";
+      } else {
+        floorplan.classList.add("active");
+        viewToggle.textContent = "Switch to Map View";
+      }
+    }
+
+    viewToggle.addEventListener("click", () => {
+      const isFloorplan = floorplan.classList.contains("active");
+      switchView(isFloorplan ? "map" : "floorplan");
+    });
+
+    setInterval(() => {
+      const timeSinceSeen = Date.now() - grammieLastSeen;
+      if (timeSinceSeen > BLE_TIMEOUT && !mapView.classList.contains("active")) {
+        console.log("⏰ Grammie not seen in 60s. Switching to map view.");
+        switchView("map");
+      }
+    }, 10000);
   </script>
 </body>
 </html>
