@@ -195,11 +195,14 @@
       }
     });
 
+    // Firebase SOS alert logic
     db.ref("alerts/Grammie").on("value", (snapshot) => {
       const data = snapshot.val();
       if (data && data.sos) {
         sosPopup.style.display = "block";
-        sosSound.play().catch(e => console.log("🔇 Autoplay blocked:", e));
+        sosSound.play().catch(e => {
+          console.log("🔇 Autoplay blocked. Waiting for user interaction...");
+        });
       } else {
         sosPopup.style.display = "none";
         sosSound.pause();
@@ -210,6 +213,17 @@
     function acknowledgeAlert() {
       db.ref("alerts/Grammie").set({ sos: false });
     }
+
+    // Unlock audio after first user interaction (mobile autoplay workaround)
+    window.addEventListener('click', () => {
+      sosSound.play().then(() => {
+        sosSound.pause();
+        sosSound.currentTime = 0;
+        console.log("🔓 Audio unlocked for autoplay.");
+      }).catch(() => {
+        console.log("🔒 Still locked until interaction.");
+      });
+    }, { once: true });
   </script>
 </body>
 </html>
