@@ -228,40 +228,47 @@
 
     setInterval(updateTimers, 1000);
 
-    let lastSeenGrammie = Date.now();
+    let lastSeenGrammie = 0;
+let lastSeenAxel = 0;
 
     db.ref("beacons/Grammie").on("value", (snapshot) => {
-      const data = snapshot.val();
-      if (data && data.room && data.entered_at) {
-        lastSeenGrammie = Date.now();
-        moveDot(dotGrammie, data.room, -40);
-        startTimer("Grammie", data.entered_at);
-        if (!isDesktopView() && !isMapVisible) {
-          floorplanView.style.display = "block";
-          mapView.style.display = "none";
-          toggleBtn.innerText = "Switch to Map View";
-        }
+  const data = snapshot.val();
+  if (data) {
+    lastSeenGrammie = Date.now();
+    if (data.room && data.entered_at) {
+    moveDot(dotGrammie, data.room, -40);
+    startTimer("Grammie", data.entered_at);
+    if (!isDesktopView() && !isMapVisible) {
+      floorplanView.style.display = "block";
+      mapView.style.display = "none";
+      toggleBtn.innerText = "Switch to Map View";
+    }
+  }
       }
     });
 
     db.ref("beacons/Axel").on("value", (snapshot) => {
-      const data = snapshot.val();
-      if (data && data.room && data.entered_at) {
+  const data = snapshot.val();
+  if (data) {
+    lastSeenAxel = Date.now();
+    if (data.room && data.entered_at) {
         moveDot(dotAxel, data.room, 40);
         startTimer("Axel", data.entered_at);
       }
     });
 
+    // Disable auto-switching unless no beacon is seen
+// Disable auto-switching unless no beacon is seen
 setInterval(() => {
-  const now = Date.now();
-  const age = now - lastSeenGrammie;
-
-  if (!isDesktopView() && !isMapVisible && lastSeenGrammie !== 0 && age > 60000) {
-    console.log("⏱️ No beacon from Grammie in", age / 1000, "seconds — switching to map view");
-    toggleView();
+  if (!isDesktopView() && !isMapVisible && lastSeenGrammie !== 0) {
+    const now = Date.now();
+    const inactiveFor = now - lastSeenGrammie;
+    if (inactiveFor > 60000) {
+      console.log("No signal from Grammie's tag for 60s, switching to map view");
+      toggleView();
+    }
   }
 }, 10000);
-
 
     const sosSound = document.getElementById("sos-sound");
     const sosPopup = document.getElementById("sos-popup");
