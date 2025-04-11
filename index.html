@@ -5,29 +5,32 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>UltraWatch Floorplan</title>
   <style>
-    body {
+    body, html {
       margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
       overflow: hidden;
       font-family: sans-serif;
     }
 
     #container {
       display: flex;
-      flex-direction: row;
       width: 100vw;
       height: 100vh;
+      flex-direction: row;
     }
 
     #floorplan-view, #map-view {
       flex: 1;
-      display: none;
       position: relative;
+      height: 100%;
     }
 
     #floorplan-img {
       width: 100%;
-      height: auto;
-      display: block;
+      height: 100%;
+      object-fit: contain;
     }
 
     .dot {
@@ -91,7 +94,22 @@
       border: none;
     }
 
+    @media screen and (max-width: 800px) {
+      #container {
+        flex-direction: column;
+      }
+      #floorplan-view, #map-view {
+        display: none;
+        width: 100vw;
+        height: 100vh;
+      }
+      #toggle-btn {
+        display: block;
+      }
+    }
+
     #toggle-btn {
+      display: none;
       position: absolute;
       top: 10px;
       left: 10px;
@@ -103,24 +121,11 @@
       font-weight: bold;
       cursor: pointer;
     }
-
-    @media screen and (max-width: 800px) {
-      #container {
-        flex-direction: column;
-      }
-      #floorplan-view, #map-view {
-        display: none;
-        width: 100vw;
-        height: 100vh;
-      }
-    }
   </style>
 </head>
 <body>
   <div id="container">
-    <!-- Floorplan View -->
     <div id="floorplan-view">
-      <button id="toggle-btn">Switch to Map View</button>
       <img id="floorplan-img" src="floorplan.png" alt="Floorplan">
       <div id="dot-grammie" class="dot">Grammie <span class="timer">00:00:00</span></div>
       <div id="dot-axel" class="dot">Axel <span class="timer">00:00:00</span></div>
@@ -130,8 +135,6 @@
         <button onclick="acknowledgeAlert()">Acknowledge Alert</button>
       </div>
     </div>
-
-    <!-- Map View -->
     <div id="map-view">
       <iframe
         id="map-frame"
@@ -144,10 +147,8 @@
 
   <audio id="sos-sound" src="sos-alert.mp3" preload="auto"></audio>
 
-  <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
-
   <script>
     const firebaseConfig = {
       databaseURL: "https://ultrawatchfloorplan-default-rtdb.firebaseio.com/"
@@ -196,7 +197,6 @@
     setInterval(updateTimers, 1000);
 
     let lastSeenGrammie = Date.now();
-    let autoSwitched = false;
 
     db.ref("beacons/Grammie").on("value", (snapshot) => {
       const data = snapshot.val();
@@ -204,7 +204,6 @@
         lastSeenGrammie = Date.now();
         moveDot(dotGrammie, data.room, -40);
         startTimer("Grammie", data.entered_at);
-        if (!autoSwitched) showView("floorplan");
       }
     });
 
@@ -233,42 +232,6 @@
 
     function acknowledgeAlert() {
       db.ref("alerts/Grammie").set({ sos: false });
-    }
-
-    // Audio autoplay unlock on mobile
-    window.addEventListener('click', () => {
-      sosSound.play().then(() => {
-        sosSound.pause();
-        sosSound.currentTime = 0;
-      });
-    }, { once: true });
-
-    function showView(view) {
-      document.getElementById("floorplan-view").style.display = view === "floorplan" ? "block" : "none";
-      document.getElementById("map-view").style.display = view === "map" ? "block" : "none";
-    }
-
-    // Toggle Button
-    document.getElementById("toggle-btn").addEventListener("click", () => {
-      const isFloorplan = document.getElementById("floorplan-view").style.display === "block";
-      showView(isFloorplan ? "map" : "floorplan");
-    });
-
-    // Auto-switch to map view after 60s of no BLE signal
-    setInterval(() => {
-      if (Date.now() - lastSeenGrammie > 60000 && !autoSwitched) {
-        showView("map");
-        autoSwitched = true;
-      }
-    }, 10000);
-
-    // Default view on load
-    if (window.innerWidth <= 800) {
-      showView("floorplan");
-    } else {
-      // Desktop = show both
-      document.getElementById("floorplan-view").style.display = "block";
-      document.getElementById("map-view").style.display = "block";
     }
   </script>
 </body>
