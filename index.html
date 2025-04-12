@@ -412,16 +412,6 @@ setInterval(() => {
   }
 }, 30000);
 
-    function saveSettingsToLocalStorage() {
-  const fields = [
-    "nightStart", "nightEnd",
-    "bedroomDay", "bedroomNight",
-    "bathroomDay", "bathroomNight",
-    "kitchenDay", "kitchenNight",
-    "livingDay", "livingNight",
-    "frontDay", "frontNight"
-  ];
-
 function loadSettingsFromLocalStorage() {
   const saved = localStorage.getItem("ultrawatchSettings");
   if (!saved) return;
@@ -432,6 +422,17 @@ function loadSettingsFromLocalStorage() {
     if (el) el.value = value;
   });
 }
+
+    
+    function saveSettingsToLocalStorage() {
+  const fields = [
+    "nightStart", "nightEnd",
+    "bedroomDay", "bedroomNight",
+    "bathroomDay", "bathroomNight",
+    "kitchenDay", "kitchenNight",
+    "livingDay", "livingNight",
+    "frontDay", "frontNight"
+  ];
 
       
   const settings = {};
