@@ -235,21 +235,36 @@
     let isMapVisible = false;
     let isSettingsVisible = false;
 
-    function toggleView() {
-      isMapVisible = !isMapVisible;
-      mapView.style.display = isMapVisible ? "block" : "none";
-      floorplanView.style.display = isMapVisible ? "none" : "block";
-      settingsView.style.display = "none";
-      toggleBtn.innerText = isMapVisible ? "Switch to Floorplan View" : "Switch to Map View";
-    }
+function toggleView() {
+  isMapVisible = !isMapVisible;
+  mapView.style.display = isMapVisible ? "block" : "none";
+  floorplanView.style.display = isMapVisible ? "none" : "block";
+  settingsView.style.display = "none";
+  isSettingsVisible = false;
+  toggleBtn.innerText = isMapVisible ? "Switch to Floorplan View" : "Switch to Map View";
 
-    function toggleSettings() {
-      isSettingsVisible = !isSettingsVisible;
-      settingsView.style.display = isSettingsVisible ? "block" : "none";
-      floorplanView.style.display = isSettingsVisible ? "none" : "block";
-      mapView.style.display = "none";
-      toggleBtn.innerText = "Switch to Map View";
-    }
+  // Restore buttons in phone view
+  if (!isDesktopView()) {
+    toggleBtn.style.display = "block";
+    settingsBtn.style.display = "block";
+  }
+}
+
+
+function toggleSettings() {
+  isSettingsVisible = !isSettingsVisible;
+  settingsView.style.display = isSettingsVisible ? "block" : "none";
+  floorplanView.style.display = isSettingsVisible ? "none" : "block";
+  mapView.style.display = "none";
+  toggleBtn.innerText = "Switch to Map View";
+
+  // Hide buttons in Settings view on mobile
+  if (!isDesktopView()) {
+    toggleBtn.style.display = isSettingsVisible ? "none" : "block";
+    settingsBtn.style.display = isSettingsVisible ? "none" : "block";
+  }
+}
+
 
     function isDesktopView() {
       return window.innerWidth > 800;
