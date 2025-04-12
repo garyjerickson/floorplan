@@ -20,7 +20,7 @@
       position: relative;
     }
 
-    #floorplan-view, #map-view {
+    #floorplan-view, #map-view, #settings-view {
       width: 100%;
       height: 100%;
       position: absolute;
@@ -54,7 +54,6 @@
     }
 
     #dot-grammie { background-color: orange; }
-    /* #dot-axel { background-color: blue; } */
 
     @keyframes heartbeat {
       0%, 100% { transform: translate(-50%, -50%) scale(1); }
@@ -96,10 +95,9 @@
       border: none;
     }
 
-    #toggle-btn {
+    #toggle-btn, #settings-btn {
       position: absolute;
       top: 10px;
-      left: 10px;
       z-index: 1002;
       background: white;
       border: 1px solid #ccc;
@@ -107,6 +105,40 @@
       padding: 8px 12px;
       font-weight: bold;
       cursor: pointer;
+    }
+
+    #toggle-btn { left: 10px; }
+    #settings-btn { left: 160px; }
+
+    #settings-view {
+      background: white;
+      padding: 20px;
+      overflow-y: auto;
+      font-size: 16px;
+    }
+
+    #settings-view h2 {
+      margin-top: 0;
+    }
+
+    #settings-view label {
+      display: block;
+      margin: 10px 0 5px;
+    }
+
+    #settings-view input {
+      padding: 5px;
+      width: 60px;
+    }
+
+    table {
+      margin-top: 10px;
+      border-collapse: collapse;
+    }
+
+    table td, table th {
+      padding: 4px 10px;
+      border: 1px solid #ccc;
     }
 
     @media screen and (min-width: 801px) {
@@ -119,7 +151,7 @@
         display: block !important;
         flex: 1;
       }
-      #toggle-btn {
+      #toggle-btn, #settings-btn {
         display: none;
       }
     }
@@ -128,28 +160,60 @@
 <body>
   <div id="container">
     <button id="toggle-btn" onclick="toggleView()">Switch to Map View</button>
+    <button id="settings-btn" onclick="toggleSettings()">Settings</button>
+
     <div id="floorplan-view">
       <img id="floorplan-img" src="floorplan.png" alt="Floorplan">
       <div id="dot-grammie" class="dot">Grammie <span class="timer">00:00:00</span></div>
-      <!-- <div id="dot-axel" class="dot">Axel <span class="timer">00:00:00</span></div> -->
       <div id="sos-popup">
         🆘 SOS ALERT: Grammie pressed the emergency button!
         <br><br>
         <button onclick="acknowledgeAlert()">Acknowledge Alert</button>
       </div>
     </div>
+
     <div id="map-view">
-      <iframe
-        id="map-frame"
-        src="https://maps.google.com/maps?q=2153%20Weatherly%20Way%20Orlando%20FL%2032820&z=15&output=embed"
-        allowfullscreen
-        loading="lazy">
-      </iframe>
+      <iframe id="map-frame" src="https://maps.google.com/maps?q=2153%20Weatherly%20Way%20Orlando%20FL%2032820&z=15&output=embed" allowfullscreen loading="lazy"></iframe>
+    </div>
+
+    <div id="settings-view">
+      <h2>Set Day/Night Time Ranges</h2>
+      <label>Night Start (hour): <input type="number" id="nightStart" min="0" max="23" value="22"></label>
+      <label>Night End (hour): <input type="number" id="nightEnd" min="0" max="23" value="7"></label>
+
+      <h2>Room Time Limits (hours)</h2>
+      <table>
+        <tr><th></th><th>Day</th><th>Night</th></tr>
+        <tr>
+          <td>Bedroom</td>
+          <td><input type="number" id="bedroomDay" value="4"></td>
+          <td><input type="number" id="bedroomNight" value="10"></td>
+        </tr>
+        <tr>
+          <td>Bathroom</td>
+          <td><input type="number" id="bathroomDay" value="2"></td>
+          <td><input type="number" id="bathroomNight" value="2"></td>
+        </tr>
+        <tr>
+          <td>Kitchen</td>
+          <td><input type="number" id="kitchenDay" value="4"></td>
+          <td><input type="number" id="kitchenNight" value="4"></td>
+        </tr>
+        <tr>
+          <td>Living Room</td>
+          <td><input type="number" id="livingDay" value="4"></td>
+          <td><input type="number" id="livingNight" value="4"></td>
+        </tr>
+        <tr>
+          <td>Front Door</td>
+          <td><input type="number" id="frontDay" value="1"></td>
+          <td><input type="number" id="frontNight" value="1"></td>
+        </tr>
+      </table>
     </div>
   </div>
 
   <audio id="sos-sound" src="sos-alert.mp3" preload="auto"></audio>
-
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
   <script>
@@ -160,24 +224,32 @@
     const db = firebase.database();
 
     const dotGrammie = document.getElementById("dot-grammie");
-    // const dotAxel = document.getElementById("dot-axel");
-    const toggleBtn = document.getElementById("toggle-btn");
     const floorplanView = document.getElementById("floorplan-view");
     const mapView = document.getElementById("map-view");
+    const settingsView = document.getElementById("settings-view");
+    const toggleBtn = document.getElementById("toggle-btn");
+    const settingsBtn = document.getElementById("settings-btn");
+    const sosPopup = document.getElementById("sos-popup");
+    const sosSound = document.getElementById("sos-sound");
 
     let isMapVisible = false;
+    let isSettingsVisible = false;
 
     function toggleView() {
       isMapVisible = !isMapVisible;
-      floorplanView.style.display = isMapVisible ? "none" : "block";
       mapView.style.display = isMapVisible ? "block" : "none";
+      floorplanView.style.display = isMapVisible ? "none" : "block";
+      settingsView.style.display = "none";
       toggleBtn.innerText = isMapVisible ? "Switch to Floorplan View" : "Switch to Map View";
     }
 
-    const timers = {
-      "Grammie": { el: dotGrammie.querySelector(".timer"), start: 0 },
-      // "Axel": { el: dotAxel.querySelector(".timer"), start: 0 }
-    };
+    function toggleSettings() {
+      isSettingsVisible = !isSettingsVisible;
+      settingsView.style.display = isSettingsVisible ? "block" : "none";
+      floorplanView.style.display = isSettingsVisible ? "none" : "block";
+      mapView.style.display = "none";
+      toggleBtn.innerText = "Switch to Map View";
+    }
 
     function isDesktopView() {
       return window.innerWidth > 800;
@@ -200,14 +272,17 @@
     }
 
     function moveDot(dot, room, offsetX = 0) {
-      const roomPositions = getRoomPositions();
-      const pos = roomPositions[room];
+      const pos = getRoomPositions()[room];
       if (pos) {
         const scaledX = isDesktopView() ? pos.x / 2 : pos.x;
         dot.style.left = `${scaledX + offsetX}px`;
         dot.style.top = `${pos.y}px`;
       }
     }
+
+    const timers = {
+      "Grammie": { el: dotGrammie.querySelector(".timer"), start: 0 }
+    };
 
     function startTimer(label, startTimestamp) {
       timers[label].start = startTimestamp * 1000;
@@ -226,48 +301,19 @@
 
     setInterval(updateTimers, 1000);
 
-    let lastSeenGrammie = Date.now();
-
-    db.ref("beacons/Grammie").on("value", (snapshot) => {
+    db.ref("beacons/Grammie").on("value", snapshot => {
       const data = snapshot.val();
       if (data && data.room && data.entered_at) {
-        lastSeenGrammie = Date.now();
         moveDot(dotGrammie, data.room, -40);
         startTimer("Grammie", data.entered_at);
-        if (!isDesktopView() && !isMapVisible) {
-          floorplanView.style.display = "block";
-          mapView.style.display = "none";
-          toggleBtn.innerText = "Switch to Map View";
-        }
       }
     });
 
-    // db.ref("beacons/Axel").on("value", (snapshot) => {
-    //   const data = snapshot.val();
-    //   if (data && data.room && data.entered_at) {
-    //     moveDot(dotAxel, data.room, 40);
-    //     startTimer("Axel", data.entered_at);
-    //   }
-    // });
-
-    setInterval(() => {
-      const now = Date.now();
-      const age = now - lastSeenGrammie;
-
-      if (!isDesktopView() && !isMapVisible && lastSeenGrammie !== 0 && age > 60000) {
-        console.log("⏱️ No beacon from Grammie in", age / 1000, "seconds — switching to map view");
-        toggleView();
-      }
-    }, 10000);
-
-    const sosSound = document.getElementById("sos-sound");
-    const sosPopup = document.getElementById("sos-popup");
-
-    db.ref("alerts/Grammie").on("value", (snapshot) => {
+    db.ref("alerts/Grammie").on("value", snapshot => {
       const data = snapshot.val();
       if (data && data.sos) {
         sosPopup.style.display = "block";
-        sosSound.play().catch(e => console.log("🔇 Autoplay blocked:", e));
+        sosSound.play().catch(err => console.log("🔇 Autoplay blocked:", err));
       } else {
         sosPopup.style.display = "none";
         sosSound.pause();
@@ -277,11 +323,6 @@
 
     function acknowledgeAlert() {
       db.ref("alerts/Grammie").set({ sos: false });
-    }
-
-    if (!isDesktopView()) {
-      floorplanView.style.display = "block";
-      mapView.style.display = "none";
     }
   </script>
 </body>
