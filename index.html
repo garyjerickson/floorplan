@@ -171,7 +171,9 @@
         <button onclick="acknowledgeAlert()">Acknowledge Alert</button>
       </div>
     </div>
+<div id="linger-popup" style="display:none; position:absolute; top:20px; left:50%; transform:translateX(-50%); background-color:gold; color:black; font-weight:bold; padding:20px; border-radius:10px; z-index:1002; box-shadow:0 0 15px rgba(0,0,0,0.3); text-align:center; max-width:80%;"></div>
 
+    
     <div id="map-view">
       <iframe id="map-frame" src="https://maps.google.com/maps?q=2153%20Weatherly%20Way%20Orlando%20FL%2032820&z=15&output=embed" allowfullscreen loading="lazy"></iframe>
     </div>
@@ -322,6 +324,11 @@ function toggleSettings() {
       if (data && data.room && data.entered_at) {
         moveDot(dotGrammie, data.room, -40);
         startTimer("Grammie", data.entered_at);
+        if (currentRoom !== data.room) {
+  currentRoom = data.room;
+  clearLingerAlert();
+}
+
       }
     });
 
@@ -349,6 +356,58 @@ window.addEventListener("DOMContentLoaded", () => {
     toggleBtn.innerText = "Switch to Map View";
   }
 });
+
+    let currentRoom = "";
+let alertActive = false;
+
+function getTimeLimitForRoom(room) {
+  const hour = new Date().getHours();
+  const nightStart = parseInt(document.getElementById("nightStart").value, 10);
+  const nightEnd = parseInt(document.getElementById("nightEnd").value, 10);
+  const isNight = nightStart < nightEnd
+    ? (hour >= nightStart && hour < nightEnd)
+    : (hour >= nightStart || hour < nightEnd);
+
+  const limits = {
+    "Bedroom": isNight ? "bedroomNight" : "bedroomDay",
+    "Bathroom": isNight ? "bathroomNight" : "bathroomDay",
+    "Kitchen": isNight ? "kitchenNight" : "kitchenDay",
+    "Living Room": isNight ? "livingNight" : "livingDay",
+    "FrontDoor": isNight ? "frontNight" : "frontDay"
+  };
+
+  const inputId = limits[room];
+  if (inputId) {
+    const value = parseFloat(document.getElementById(inputId).value);
+    return isNaN(value) ? null : value;
+  }
+  return null;
+}
+
+function showLingerAlert(room, minutes) {
+  const popup = document.getElementById("linger-popup");
+  popup.innerText = `⚠️ Grammie has been in the ${room} for ${minutes} minutes — please check on her.`;
+  popup.style.display = "block";
+  alertActive = true;
+}
+
+function clearLingerAlert() {
+  const popup = document.getElementById("linger-popup");
+  popup.style.display = "none";
+  alertActive = false;
+}
+
+setInterval(() => {
+  if (!currentRoom || !timers["Grammie"].start) return;
+
+  const now = Date.now();
+  const elapsedMinutes = Math.floor((now - timers["Grammie"].start) / 60000);
+  const limit = getTimeLimitForRoom(currentRoom);
+
+  if (limit && elapsedMinutes > limit && !alertActive) {
+    showLingerAlert(currentRoom, elapsedMinutes);
+  }
+}, 30000);
 
     
   </script>
