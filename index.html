@@ -212,8 +212,10 @@
   const roomPositions = getRoomPositions();
   const pos = roomPositions[room];
   if (pos) {
-    const scaledX = isDesktopView() ? pos.x / 2 : pos.x;
-    dot.style.left = `${scaledX + offsetX}px`;
+    dot.style.left = `${pos.x + offsetX}px`;
+    dot.style.top = `${pos.y}px`;
+  }
+}px`;
     dot.style.top = `${pos.y}px`;
   }
 }px`;
