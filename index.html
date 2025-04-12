@@ -54,7 +54,7 @@
     }
 
     #dot-grammie { background-color: orange; }
-    #dot-axel { background-color: blue; }
+    /* #dot-axel { background-color: blue; } */
 
     @keyframes heartbeat {
       0%, 100% { transform: translate(-50%, -50%) scale(1); }
@@ -110,20 +110,18 @@
     }
 
     @media screen and (min-width: 801px) {
-  #container {
-    display: flex;
-    flex-direction: row;
-  }
-  #floorplan-view, #map-view {
-    position: relative;
-    display: block !important;
-    flex: 1;
-  }
-  #toggle-btn {
-    display: none;
-  }
-}
-}
+      #container {
+        display: flex;
+        flex-direction: row;
+      }
+      #floorplan-view, #map-view {
+        position: relative;
+        display: block !important;
+        flex: 1;
+      }
+      #toggle-btn {
+        display: none;
+      }
     }
   </style>
 </head>
@@ -133,7 +131,7 @@
     <div id="floorplan-view">
       <img id="floorplan-img" src="floorplan.png" alt="Floorplan">
       <div id="dot-grammie" class="dot">Grammie <span class="timer">00:00:00</span></div>
-      <div id="dot-axel" class="dot">Axel <span class="timer">00:00:00</span></div>
+      <!-- <div id="dot-axel" class="dot">Axel <span class="timer">00:00:00</span></div> -->
       <div id="sos-popup">
         🆘 SOS ALERT: Grammie pressed the emergency button!
         <br><br>
@@ -162,7 +160,7 @@
     const db = firebase.database();
 
     const dotGrammie = document.getElementById("dot-grammie");
-    const dotAxel = document.getElementById("dot-axel");
+    // const dotAxel = document.getElementById("dot-axel");
     const toggleBtn = document.getElementById("toggle-btn");
     const floorplanView = document.getElementById("floorplan-view");
     const mapView = document.getElementById("map-view");
@@ -178,7 +176,7 @@
 
     const timers = {
       "Grammie": { el: dotGrammie.querySelector(".timer"), start: 0 },
-      "Axel": { el: dotAxel.querySelector(".timer"), start: 0 }
+      // "Axel": { el: dotAxel.querySelector(".timer"), start: 0 }
     };
 
     function isDesktopView() {
@@ -244,24 +242,23 @@
       }
     });
 
-    db.ref("beacons/Axel").on("value", (snapshot) => {
-      const data = snapshot.val();
-      if (data && data.room && data.entered_at) {
-        moveDot(dotAxel, data.room, 40);
-        startTimer("Axel", data.entered_at);
+    // db.ref("beacons/Axel").on("value", (snapshot) => {
+    //   const data = snapshot.val();
+    //   if (data && data.room && data.entered_at) {
+    //     moveDot(dotAxel, data.room, 40);
+    //     startTimer("Axel", data.entered_at);
+    //   }
+    // });
+
+    setInterval(() => {
+      const now = Date.now();
+      const age = now - lastSeenGrammie;
+
+      if (!isDesktopView() && !isMapVisible && lastSeenGrammie !== 0 && age > 60000) {
+        console.log("⏱️ No beacon from Grammie in", age / 1000, "seconds — switching to map view");
+        toggleView();
       }
-    });
-
-setInterval(() => {
-  const now = Date.now();
-  const age = now - lastSeenGrammie;
-
-  if (!isDesktopView() && !isMapVisible && lastSeenGrammie !== 0 && age > 60000) {
-    console.log("⏱️ No beacon from Grammie in", age / 1000, "seconds — switching to map view");
-    toggleView();
-  }
-}, 10000);
-
+    }, 10000);
 
     const sosSound = document.getElementById("sos-sound");
     const sosPopup = document.getElementById("sos-popup");
@@ -282,7 +279,6 @@ setInterval(() => {
       db.ref("alerts/Grammie").set({ sos: false });
     }
 
-    // Initial mobile view setup
     if (!isDesktopView()) {
       floorplanView.style.display = "block";
       mapView.style.display = "none";
