@@ -129,6 +129,7 @@
 }
 
 
+
     #settings-view h2 {
       margin-top: 0;
     }
@@ -154,8 +155,14 @@
     }
 
     @media screen and (min-width: 801px) {
+  #container {
+    display: flex;
+    flex-direction: row;
+  }
   #floorplan-view, #map-view {
-    display: block;
+    position: relative;
+    display: block !important;
+    flex: 1;
   }
   #toggle-btn, #settings-btn {
     display: none;
