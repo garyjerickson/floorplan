@@ -61,15 +61,15 @@
       50% { transform: translate(-50%, -50%) scale(1.2); }
     }
 
-    #sos-popup, #linger-popup {
+    #sos-popup {
       display: none;
       position: absolute;
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      background-color: yellow;
-      color: black;
-      font-size: 20px;
+      background-color: red;
+      color: white;
+      font-size: 22px;
       font-weight: bold;
       padding: 30px;
       border-radius: 15px;
@@ -78,16 +78,10 @@
       box-shadow: 0 0 20px rgba(0,0,0,0.6);
     }
 
-    #sos-popup {
-      background-color: red;
-      color: white;
-      font-size: 22px;
-    }
-
-    #sos-popup button, #linger-popup button {
+    #sos-popup button {
       margin-top: 20px;
       background-color: white;
-      color: black;
+      color: red;
       font-size: 18px;
       font-weight: bold;
       padding: 10px 20px;
@@ -143,11 +137,6 @@
         <br><br>
         <button onclick="acknowledgeAlert()">Acknowledge Alert</button>
       </div>
-      <div id="linger-popup">
-        ⚠️ Grammie has been in <span id="linger-room"></span> for <span id="linger-duration"></span> — please check on her!
-        <br><br>
-        <button onclick="dismissLingerAlert()">Dismiss</button>
-      </div>
     </div>
     <div id="map-view">
       <iframe
@@ -171,6 +160,7 @@
     const db = firebase.database();
 
     const dotGrammie = document.getElementById("dot-grammie");
+    // const dotAxel = document.getElementById("dot-axel");
     const toggleBtn = document.getElementById("toggle-btn");
     const floorplanView = document.getElementById("floorplan-view");
     const mapView = document.getElementById("map-view");
@@ -185,7 +175,8 @@
     }
 
     const timers = {
-      "Grammie": { el: dotGrammie.querySelector(".timer"), start: 0 }
+      "Grammie": { el: dotGrammie.querySelector(".timer"), start: 0 },
+      // "Axel": { el: dotAxel.querySelector(".timer"), start: 0 }
     };
 
     function isDesktopView() {
@@ -209,50 +200,13 @@
     }
 
     function moveDot(dot, room, offsetX = 0) {
-  const roomPositions = getRoomPositions();
-  const pos = roomPositions[room];
-  if (pos) {
-    dot.style.left = `${pos.x + offsetX}px`;
-    dot.style.top = `${pos.y}px`;
-  }
-}px`;
-    dot.style.top = `${pos.y}px`;
-  }
-}px`;
+      const roomPositions = getRoomPositions();
+      const pos = roomPositions[room];
+      if (pos) {
+        const scaledX = isDesktopView() ? pos.x / 2 : pos.x;
+        dot.style.left = `${scaledX + offsetX}px`;
         dot.style.top = `${pos.y}px`;
       }
-    }
-
-    function getRoomLimit(room) {
-      const hour = new Date().getHours();
-      const isNight = hour >= 22 || hour < 7;
-      const limits = {
-        "Bedroom": isNight ? 10 : 4,
-        "Bathroom": 2,
-        "Kitchen": 4,
-        "Living Room": 4,
-        "FrontDoor": 1
-      };
-      return (limits[room] || 4) * 3600 * 1000;
-    }
-
-    function checkLinger(room, since) {
-      const now = Date.now();
-      const limit = getRoomLimit(room);
-      if (now - since > limit) {
-        const duration = now - since;
-        const h = Math.floor(duration / 3600000);
-        const m = Math.floor((duration % 3600000) / 60000);
-        document.getElementById("linger-room").textContent = room;
-        document.getElementById("linger-duration").textContent = `${h}h ${m}m`;
-        document.getElementById("linger-popup").style.display = "block";
-      } else {
-        document.getElementById("linger-popup").style.display = "none";
-      }
-    }
-
-    function dismissLingerAlert() {
-      document.getElementById("linger-popup").style.display = "none";
     }
 
     function startTimer(label, startTimestamp) {
@@ -273,16 +227,12 @@
     setInterval(updateTimers, 1000);
 
     let lastSeenGrammie = Date.now();
-    let grammieRoom = null;
-    let grammieRoomSince = 0;
 
     db.ref("beacons/Grammie").on("value", (snapshot) => {
       const data = snapshot.val();
       if (data && data.room && data.entered_at) {
         lastSeenGrammie = Date.now();
-        grammieRoom = data.room;
-        grammieRoomSince = data.entered_at * 1000;
-        moveDot(dotGrammie, grammieRoom, -40);
+        moveDot(dotGrammie, data.room, -40);
         startTimer("Grammie", data.entered_at);
         if (!isDesktopView() && !isMapVisible) {
           floorplanView.style.display = "block";
@@ -292,14 +242,21 @@
       }
     });
 
+    // db.ref("beacons/Axel").on("value", (snapshot) => {
+    //   const data = snapshot.val();
+    //   if (data && data.room && data.entered_at) {
+    //     moveDot(dotAxel, data.room, 40);
+    //     startTimer("Axel", data.entered_at);
+    //   }
+    // });
+
     setInterval(() => {
       const now = Date.now();
       const age = now - lastSeenGrammie;
+
       if (!isDesktopView() && !isMapVisible && lastSeenGrammie !== 0 && age > 60000) {
+        console.log("⏱️ No beacon from Grammie in", age / 1000, "seconds — switching to map view");
         toggleView();
-      }
-      if (grammieRoom && grammieRoomSince) {
-        checkLinger(grammieRoom, grammieRoomSince);
       }
     }, 10000);
 
