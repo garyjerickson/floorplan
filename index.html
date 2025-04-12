@@ -171,7 +171,6 @@
     const db = firebase.database();
 
     const dotGrammie = document.getElementById("dot-grammie");
-    // const dotAxel = document.getElementById("dot-axel");
     const toggleBtn = document.getElementById("toggle-btn");
     const floorplanView = document.getElementById("floorplan-view");
     const mapView = document.getElementById("map-view");
@@ -187,8 +186,36 @@
 
     const timers = {
       "Grammie": { el: dotGrammie.querySelector(".timer"), start: 0 }
-      // ,"Axel": { el: dotAxel.querySelector(".timer"), start: 0 }
     };
+
+    function isDesktopView() {
+      return window.innerWidth > 800;
+    }
+
+    function getRoomPositions() {
+      return isDesktopView() ? {
+        "Living Room": { x: 600, y: 340 },
+        "Bedroom": { x: 900, y: 320 },
+        "Kitchen": { x: 600, y: 550 },
+        "Bathroom": { x: 940, y: 480 },
+        "FrontDoor": { x: 940, y: 600 }
+      } : {
+        "Living Room": { x: 130, y: 325 },
+        "Bedroom": { x: 300, y: 325 },
+        "Kitchen": { x: 130, y: 530 },
+        "Bathroom": { x: 300, y: 470 },
+        "FrontDoor": { x: 280, y: 630 }
+      };
+    }
+
+    function moveDot(dot, room, offsetX = 0) {
+      const roomPositions = getRoomPositions();
+      const pos = roomPositions[room];
+      if (pos) {
+        dot.style.left = `${pos.x + offsetX}px`;
+        dot.style.top = `${pos.y}px`;
+      }
+    }
 
     function getRoomLimit(room) {
       const hour = new Date().getHours();
