@@ -366,13 +366,23 @@ function toggleSettings() {
     }
 
 window.addEventListener("DOMContentLoaded", () => {
+  // Mobile view default
   if (!isDesktopView()) {
     floorplanView.style.display = "block";
     mapView.style.display = "none";
     settingsView.style.display = "none";
     toggleBtn.innerText = "Switch to Map View";
   }
+
+  // Load shared settings from Firebase
+  loadSettingsFromFirebase();
+
+  // Save to Firebase on input change
+  document.querySelectorAll('#settings-view input').forEach(input => {
+    input.addEventListener('input', saveSettingsToFirebase);
+  });
 });
+
 
     let currentRoom = "";
 let alertActive = false;
@@ -463,6 +473,37 @@ function loadSettingsFromLocalStorage() {
 });
 
 loadSettingsFromLocalStorage(); // Load on startup
+
+    function saveSettingsToFirebase() {
+  const fields = [
+    "nightStart", "nightEnd",
+    "bedroomDay", "bedroomNight",
+    "bathroomDay", "bathroomNight",
+    "kitchenDay", "kitchenNight",
+    "livingDay", "livingNight",
+    "frontDay", "frontNight"
+  ];
+
+  const settings = {};
+  fields.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) settings[id] = el.value;
+  });
+
+  db.ref("settings").set(settings);
+}
+
+function loadSettingsFromFirebase() {
+  db.ref("settings").once("value").then(snapshot => {
+    const settings = snapshot.val();
+    if (!settings) return;
+
+    Object.entries(settings).forEach(([id, value]) => {
+      const el = document.getElementById(id);
+      if (el) el.value = value;
+    });
+  });
+}
 
     
   </script>
