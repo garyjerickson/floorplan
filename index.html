@@ -412,6 +412,43 @@ setInterval(() => {
   }
 }, 30000);
 
+    function saveSettingsToLocalStorage() {
+  const fields = [
+    "nightStart", "nightEnd",
+    "bedroomDay", "bedroomNight",
+    "bathroomDay", "bathroomNight",
+    "kitchenDay", "kitchenNight",
+    "livingDay", "livingNight",
+    "frontDay", "frontNight"
+  ];
+
+function loadSettingsFromLocalStorage() {
+  const saved = localStorage.getItem("ultrawatchSettings");
+  if (!saved) return;
+
+  const settings = JSON.parse(saved);
+  Object.entries(settings).forEach(([id, value]) => {
+    const el = document.getElementById(id);
+    if (el) el.value = value;
+  });
+}
+
+      
+  const settings = {};
+  fields.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) settings[id] = el.value;
+  });
+
+  localStorage.setItem("ultrawatchSettings", JSON.stringify(settings));
+}
+
+    document.querySelectorAll('#settings-view input').forEach(input => {
+  input.addEventListener('input', saveSettingsToLocalStorage);
+});
+
+loadSettingsFromLocalStorage(); // Load on startup
+
     
   </script>
 </body>
