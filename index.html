@@ -193,6 +193,7 @@
     
     <div id="map-view">
       <iframe id="map-frame" src="https://maps.google.com/maps?q=2153%20Weatherly%20Way%20Orlando%20FL%2032820&z=15&output=embed" allowfullscreen loading="lazy"></iframe>
+    <div id="gps-dot" class="dot" style="background-color: blue; display: none;">Grammie<br><span class="gps-label">GPS</span></div>
     </div>
 
     <div id="settings-view">
@@ -251,6 +252,7 @@
     const settingsBtn = document.getElementById("settings-btn");
     const sosPopup = document.getElementById("sos-popup");
     const sosSound = document.getElementById("sos-sound");
+    const gpsDot = document.getElementById("gps-dot");
 
     let isMapVisible = false;
     let isSettingsVisible = false;
@@ -360,6 +362,14 @@ function toggleSettings() {
         sosSound.currentTime = 0;
       }
     });
+
+    db.ref("Grammie/gps").on("value", (snapshot) => {
+  const data = snapshot.val();
+  if (data && data.lat && data.lng) {
+    updateGpsDot(data.lat, data.lng);
+  }
+});
+
 
     function acknowledgeAlert() {
       db.ref("alerts/Grammie").set({ sos: false });
@@ -504,6 +514,18 @@ function loadSettingsFromFirebase() {
     });
   });
 }
+
+    function updateGpsDot(lat, lng) {
+  // Dummy mock: convert lat/lng to x/y in pixels for now
+  // You can upgrade later using Leaflet.js or Google Maps API
+  const x = 200 + (lng % 1) * 1000; // mock conversion
+  const y = 200 + (lat % 1) * 1000; // mock conversion
+
+  gpsDot.style.left = `${x}px`;
+  gpsDot.style.top = `${y}px`;
+  gpsDot.style.display = "block";
+}
+
 
     
   </script>
