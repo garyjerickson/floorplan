@@ -53,6 +53,9 @@
       flex-direction: column;
     }
 
+    #gps-dot {
+  z-index: 1001; /* higher than map iframe */
+}
     #dot-grammie { background-color: orange; }
 
     @keyframes heartbeat {
@@ -520,14 +523,22 @@ function loadSettingsFromFirebase() {
 function updateGpsDot(lat, lng) {
   console.log("📍 GPS update received:", lat, lng);
 
-  // Adjusted dummy pixel conversion for better centering
-  const x = (lng % 1 + 1) % 1 * 500 + 200; // shift into 0-1 range
-  const y = (lat % 1 + 1) % 1 * 500 + 200;
+  const isMobile = window.innerWidth <= 800;
+
+  // Adjusted values based on screen size
+  const x = isMobile
+    ? ((lng % 1 + 1) % 1) * 300 + 50  // keep it within phone view range
+    : ((lng % 1 + 1) % 1) * 500 + 200;
+
+  const y = isMobile
+    ? ((lat % 1 + 1) % 1) * 400 + 100
+    : ((lat % 1 + 1) % 1) * 500 + 200;
 
   gpsDot.style.left = `${x}px`;
   gpsDot.style.top = `${y}px`;
   gpsDot.style.display = "block";
 }
+
 
 
     
