@@ -203,9 +203,6 @@
     <div id="map-view">
       // <iframe id="map-frame" src="https://maps.google.com/maps?q=2153%20Weatherly%20Way%20Orlando%20FL%2032820&z=15&output=embed" allowfullscreen loading="lazy"></iframe>
       <div id="leaflet-map" style="width: 100%; height: 100%;"></div>
-  //  <div id="gps-dot" class="dot" style="background-color: blue; display: none;">Grammie<br><span class="gps-label">GPS</span></div>
-    <div id="gps-dot" class="dot" style="background-color: blue; display: none;">Grammie<br><small>GPS</small></div>
-
     </div>
 
     <div id="settings-view">
@@ -290,7 +287,6 @@ function initLeafletMap() {
     const settingsBtn = document.getElementById("settings-btn");
     const sosPopup = document.getElementById("sos-popup");
     const sosSound = document.getElementById("sos-sound");
-    const gpsDot = document.getElementById("gps-dot");
 
     let isMapVisible = false;
     let isSettingsVisible = false;
@@ -303,6 +299,9 @@ function toggleView() {
   isSettingsVisible = false;
   toggleBtn.innerText = isMapVisible ? "Switch to Floorplan View" : "Switch to Map View";
 
+if (isMapVisible && !map) {
+  initLeafletMap();
+} 
   // Restore buttons in phone view
   if (!isDesktopView()) {
     toggleBtn.style.display = "block";
@@ -426,8 +425,6 @@ window.addEventListener("DOMContentLoaded", () => {
     toggleBtn.innerText = "Switch to Map View";
   }
 
- initLeafletMap(); 
-  
   // Load shared settings from Firebase
   loadSettingsFromFirebase();
 
