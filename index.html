@@ -4,6 +4,12 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>UltraWatch Floorplan</title>
+  <link
+  rel="stylesheet"
+  href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  integrity="sha256-sA+4VHz5I0rM8P1AYa6J2vqGCkqCJQ+kiqcHzsA+g3Q="
+  crossorigin=""
+/>
   <style>
     body, html {
       margin: 0;
@@ -195,7 +201,8 @@
 
     
     <div id="map-view">
-      <iframe id="map-frame" src="https://maps.google.com/maps?q=2153%20Weatherly%20Way%20Orlando%20FL%2032820&z=15&output=embed" allowfullscreen loading="lazy"></iframe>
+      // <iframe id="map-frame" src="https://maps.google.com/maps?q=2153%20Weatherly%20Way%20Orlando%20FL%2032820&z=15&output=embed" allowfullscreen loading="lazy"></iframe>
+      <div id="leaflet-map" style="width: 100%; height: 100%;"></div>
   //  <div id="gps-dot" class="dot" style="background-color: blue; display: none;">Grammie<br><span class="gps-label">GPS</span></div>
     <div id="gps-dot" class="dot" style="background-color: blue; display: none;">Grammie<br><small>GPS</small></div>
 
@@ -248,6 +255,26 @@
     };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
+
+    let map, gpsMarker;
+
+function initLeafletMap() {
+  map = L.map('leaflet-map').setView([28.484, -81.34], 16); // Initial view
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors'
+  }).addTo(map);
+
+  gpsMarker = L.circleMarker([28.484, -81.34], {
+    radius: 10,
+    fillColor: "blue",
+    color: "white",
+    weight: 2,
+    opacity: 1,
+    fillOpacity: 0.8
+  }).addTo(map).bindPopup("Grammie");
+}
+
 
     const dotGrammie = document.getElementById("dot-grammie");
     const floorplanView = document.getElementById("floorplan-view");
@@ -380,6 +407,10 @@ function toggleSettings() {
       db.ref("alerts/Grammie").set({ sos: false });
     }
 
+
+
+
+    
 window.addEventListener("DOMContentLoaded", () => {
   // Mobile view default
   if (!isDesktopView()) {
@@ -389,6 +420,8 @@ window.addEventListener("DOMContentLoaded", () => {
     toggleBtn.innerText = "Switch to Map View";
   }
 
+ initLeafletMap(); 
+  
   // Load shared settings from Firebase
   loadSettingsFromFirebase();
 
@@ -521,27 +554,21 @@ function loadSettingsFromFirebase() {
 }
 
 function updateGpsDot(lat, lng) {
-  console.log("📍 GPS update received:", lat, lng);
+  console.log("📍 Updating GPS location:", lat, lng);
 
-  const isMobile = window.innerWidth <= 800;
+  if (!gpsMarker) return;
 
-  // Adjusted values based on screen size
-  const x = isMobile
-    ? ((lng % 1 + 1) % 1) * 300 + 50  // keep it within phone view range
-    : ((lng % 1 + 1) % 1) * 500 + 200;
-
-  const y = isMobile
-    ? ((lat % 1 + 1) % 1) * 400 + 100
-    : ((lat % 1 + 1) % 1) * 500 + 200;
-
-  gpsDot.style.left = `${x}px`;
-  gpsDot.style.top = `${y}px`;
-  gpsDot.style.display = "block";
+  gpsMarker.setLatLng([lat, lng]);
+  map.setView([lat, lng], map.getZoom()); // Optional: center map on move
 }
-
-
 
     
   </script>
+
+  <script
+  src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+  integrity="sha256-o9N1jPe5xGfJ7iZP8cQ+I7Tb6sRmQUg3vrZJCFdGSV0="
+  crossorigin=""
+></script>
 </body>
 </html>
