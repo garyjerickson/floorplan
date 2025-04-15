@@ -193,7 +193,9 @@
     
     <div id="map-view">
       <iframe id="map-frame" src="https://maps.google.com/maps?q=2153%20Weatherly%20Way%20Orlando%20FL%2032820&z=15&output=embed" allowfullscreen loading="lazy"></iframe>
-    <div id="gps-dot" class="dot" style="background-color: blue; display: none;">Grammie<br><span class="gps-label">GPS</span></div>
+  //  <div id="gps-dot" class="dot" style="background-color: blue; display: none;">Grammie<br><span class="gps-label">GPS</span></div>
+    <div id="gps-dot" class="dot" style="background-color: blue; display: none;">Grammie<br><small>GPS</small></div>
+
     </div>
 
     <div id="settings-view">
@@ -515,11 +517,12 @@ function loadSettingsFromFirebase() {
   });
 }
 
-    function updateGpsDot(lat, lng) {
-  // Dummy mock: convert lat/lng to x/y in pixels for now
-  // You can upgrade later using Leaflet.js or Google Maps API
-  const x = 200 + (lng % 1) * 1000; // mock conversion
-  const y = 200 + (lat % 1) * 1000; // mock conversion
+function updateGpsDot(lat, lng) {
+  console.log("📍 GPS update received:", lat, lng);
+
+  // Adjusted dummy pixel conversion for better centering
+  const x = (lng % 1 + 1) % 1 * 500 + 200; // shift into 0-1 range
+  const y = (lat % 1 + 1) % 1 * 500 + 200;
 
   gpsDot.style.left = `${x}px`;
   gpsDot.style.top = `${y}px`;
