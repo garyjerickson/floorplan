@@ -5,13 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>UltraWatch Floorplan</title>
   <link
-  rel="stylesheet"
-  href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-  integrity="sha256-sA+4VHz5I0rM8P1AYa6J2vqGCkqCJQ+kiqcHzsA+g3Q="
-  crossorigin=""
-/>
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    crossorigin=""
+  />
   <style>
-    body, html {
+    html, body {
       margin: 0;
       padding: 0;
       width: 100%;
@@ -32,10 +31,9 @@
       left: 0;
       display: none;
     }
-    #floorplan-img {
+    #leaflet-map {
       width: 100%;
       height: 100%;
-      object-fit: contain;
     }
     .dot {
       position: absolute;
@@ -54,9 +52,6 @@
       text-align: center;
       flex-direction: column;
     }
-    #gps-dot {
-  z-index: 1001; /* higher than map iframe */
-}
     #dot-grammie { background-color: orange; }
     @keyframes heartbeat {
       0%, 100% { transform: translate(-50%, -50%) scale(1); }
@@ -89,11 +84,6 @@
       border-radius: 10px;
       cursor: pointer;
     }
-    #map-frame {
-      width: 100%;
-      height: 100%;
-      border: none;
-    }
     #toggle-btn, #settings-btn {
       position: absolute;
       top: 10px;
@@ -108,22 +98,22 @@
     #toggle-btn { left: 10px; }
     #settings-btn { left: 200px; }
     #settings-view {
-  display: none;
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 90%;
-  max-width: 500px;
-  max-height: 90%;
-  overflow-y: auto;
-  background: white;
-  padding: 20px;
-  font-size: 16px;
-  border-radius: 12px;
-  box-shadow: 0 0 25px rgba(0,0,0,0.5);
-  z-index: 1003;
-}
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 90%;
+      max-width: 500px;
+      max-height: 90%;
+      overflow-y: auto;
+      background: white;
+      padding: 20px;
+      font-size: 16px;
+      border-radius: 12px;
+      box-shadow: 0 0 25px rgba(0,0,0,0.5);
+      z-index: 1003;
+    }
     #settings-view h2 {
       margin-top: 0;
     }
@@ -143,43 +133,22 @@
       padding: 4px 10px;
       border: 1px solid #ccc;
     }
-    @media screen and (min-width: 801px) {
-  #container {
-    display: flex;
-    flex-direction: row;
-  }
-  #floorplan-view, #map-view {
-    position: relative;
-    display: block !important;
-    flex: 1;
-  }
-  #toggle-btn {
-    display: none;
-  }
-}
   </style>
 </head>
 <body>
   <div id="container">
     <button id="toggle-btn" onclick="toggleView()">Switch to Map View</button>
     <button id="settings-btn" onclick="toggleSettings()">Settings</button>
-
     <div id="floorplan-view">
       <img id="floorplan-img" src="floorplan.png" alt="Floorplan">
       <div id="dot-grammie" class="dot">Grammie <span class="timer">00:00:00</span></div>
       <div id="sos-popup">
-        🆘 SOS ALERT: Grammie pressed the emergency button!
-        <br><br>
+        🆘 SOS ALERT: Grammie pressed the emergency button!<br><br>
         <button onclick="acknowledgeAlert()">Acknowledge Alert</button>
       </div>
     </div>
-<div id="linger-popup" style="display:none; position:absolute; top:20px; left:50%; transform:translateX(-50%); background-color:gold; color:black; font-weight:bold; padding:20px; border-radius:10px; z-index:1002; box-shadow:0 0 15px rgba(0,0,0,0.3); text-align:center; max-width:80%;">
-  <div id="linger-text">⚠️ Grammie has been in the room too long — please check on her.</div>
-  <button onclick="clearLingerAlert()" style="margin-top:10px; font-weight:bold; padding:6px 12px; border:none; border-radius:6px; cursor:pointer;">Dismiss Alert</button>
-</div>
     <div id="map-view">
-      // <iframe id="map-frame" src="https://maps.google.com/maps?q=2153%20Weatherly%20Way%20Orlando%20FL%2032820&z=15&output=embed" allowfullscreen loading="lazy"></iframe>
-      <div id="leaflet-map" style="width: 100%; height: 100%;"></div>
+      <div id="leaflet-map"></div>
     </div>
     <div id="settings-view">
       <h2>Set Day/Night Time Ranges</h2>
@@ -189,41 +158,17 @@
       <h2>Room Time Limits (hours)</h2>
       <table>
         <tr><th></th><th>Day</th><th>Night</th></tr>
-        <tr>
-          <td>Bedroom</td>
-          <td><input type="number" id="bedroomDay" value="4"></td>
-          <td><input type="number" id="bedroomNight" value="10"></td>
-        </tr>
-        <tr>
-          <td>Bathroom</td>
-          <td><input type="number" id="bathroomDay" value="2"></td>
-          <td><input type="number" id="bathroomNight" value="2"></td>
-        </tr>
-        <tr>
-          <td>Kitchen</td>
-          <td><input type="number" id="kitchenDay" value="4"></td>
-          <td><input type="number" id="kitchenNight" value="4"></td>
-        </tr>
-        <tr>
-          <td>Living Room</td>
-          <td><input type="number" id="livingDay" value="4"></td>
-          <td><input type="number" id="livingNight" value="4"></td>
-        </tr>
-        <tr>
-          <td>Front Door</td>
-          <td><input type="number" id="frontDay" value="1"></td>
-          <td><input type="number" id="frontNight" value="1"></td>
-        </tr>
+        <tr><td>Bedroom</td><td><input type="number" id="bedroomDay" value="4"></td><td><input type="number" id="bedroomNight" value="10"></td></tr>
+        <tr><td>Bathroom</td><td><input type="number" id="bathroomDay" value="2"></td><td><input type="number" id="bathroomNight" value="2"></td></tr>
+        <tr><td>Kitchen</td><td><input type="number" id="kitchenDay" value="4"></td><td><input type="number" id="kitchenNight" value="4"></td></tr>
+        <tr><td>Living Room</td><td><input type="number" id="livingDay" value="4"></td><td><input type="number" id="livingNight" value="4"></td></tr>
+        <tr><td>Front Door</td><td><input type="number" id="frontDay" value="1"></td><td><input type="number" id="frontNight" value="1"></td></tr>
       </table>
     </div>
   </div>
-  <audio id="sos-sound" src="sos-alert.mp3" preload="auto"></audio>
-  <script
-  src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-  integrity="sha256-o9N1jPe5xGfJ7iZP8cQ+I7Tb6sRmQUg3vrZJCFdGSV0="
-  crossorigin=""
-></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
   <script>
     const firebaseConfig = {
@@ -232,20 +177,52 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
     let map, gpsMarker;
-function initLeafletMap() {
-  map = L.map('leaflet-map').setView([28.484, -81.34], 16); // Initial view
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; OpenStreetMap contributors'
-  }).addTo(map);
-  gpsMarker = L.circleMarker([28.484, -81.34], {
-    radius: 10,
-    fillColor: "blue",
-    color: "white",
-    weight: 2,
-    opacity: 1,
-    fillOpacity: 0.8
-  }).addTo(map).bindPopup("Grammie");
-}
+
+    function initLeafletMap() {
+      map = L.map('leaflet-map').setView([28.484, -81.34], 16);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors'
+      }).addTo(map);
+
+      gpsMarker = L.circleMarker([28.484, -81.34], {
+        radius: 10,
+        fillColor: "blue",
+        color: "white",
+        weight: 2,
+        opacity: 1,
+        fillOpacity: 0.8
+      }).addTo(map).bindPopup("Grammie");
+
+      db.ref("Grammie/gps").on("value", snapshot => {
+        const data = snapshot.val();
+        if (data && data.lat && data.lng) {
+          gpsMarker.setLatLng([data.lat, data.lng]);
+          map.setView([data.lat, data.lng]);
+        }
+      });
+    }
+
+    let isMapVisible = false;
+    let isSettingsVisible = false;
+
+    function toggleView() {
+      isMapVisible = !isMapVisible;
+      mapView.style.display = isMapVisible ? "block" : "none";
+      floorplanView.style.display = isMapVisible ? "none" : "block";
+      settingsView.style.display = "none";
+      isSettingsVisible = false;
+      toggleBtn.innerText = isMapVisible ? "Switch to Floorplan View" : "Switch to Map View";
+      if (isMapVisible && !map) initLeafletMap();
+    }
+
+    function toggleSettings() {
+      isSettingsVisible = !isSettingsVisible;
+      settingsView.style.display = isSettingsVisible ? "block" : "none";
+      floorplanView.style.display = isSettingsVisible ? "none" : "block";
+      mapView.style.display = "none";
+      toggleBtn.innerText = "Switch to Map View";
+    }
+
     const dotGrammie = document.getElementById("dot-grammie");
     const floorplanView = document.getElementById("floorplan-view");
     const mapView = document.getElementById("map-view");
@@ -253,230 +230,26 @@ function initLeafletMap() {
     const toggleBtn = document.getElementById("toggle-btn");
     const settingsBtn = document.getElementById("settings-btn");
     const sosPopup = document.getElementById("sos-popup");
-    const sosSound = document.getElementById("sos-sound");
-    let isMapVisible = false;
-    let isSettingsVisible = false;
-function toggleView() {
-  isMapVisible = !isMapVisible;
-  mapView.style.display = isMapVisible ? "block" : "none";
-  floorplanView.style.display = isMapVisible ? "none" : "block";
-  settingsView.style.display = "none";
-  isSettingsVisible = false;
-  toggleBtn.innerText = isMapVisible ? "Switch to Floorplan View" : "Switch to Map View";
-if (isMapVisible && !map) {
-  initLeafletMap();
-} 
-  // Restore buttons in phone view
-  if (!isDesktopView()) {
-    toggleBtn.style.display = "block";
-    settingsBtn.style.display = "block";
-  }
-}
-function toggleSettings() {
-  isSettingsVisible = !isSettingsVisible;
-  settingsView.style.display = isSettingsVisible ? "block" : "none";
-  floorplanView.style.display = isSettingsVisible ? "none" : "block";
-  mapView.style.display = "none";
-  toggleBtn.innerText = "Switch to Map View";
-  // Hide buttons in Settings view on mobile
-  if (!isDesktopView()) {
-    toggleBtn.style.display = isSettingsVisible ? "none" : "block";
-    settingsBtn.style.display = isSettingsVisible ? "none" : "block";
-  }
-}
-    function isDesktopView() {
-      return window.innerWidth > 800;
-    }
-    function getRoomPositions() {
-      return isDesktopView() ? {
-        "Living Room": { x: 600, y: 340 },
-        "Bedroom": { x: 900, y: 320 },
-        "Kitchen": { x: 600, y: 550 },
-        "Bathroom": { x: 940, y: 480 },
-        "FrontDoor": { x: 940, y: 600 }
-      } : {
-        "Living Room": { x: 130, y: 325 },
-        "Bedroom": { x: 300, y: 325 },
-        "Kitchen": { x: 130, y: 530 },
-        "Bathroom": { x: 300, y: 470 },
-        "FrontDoor": { x: 280, y: 630 }
-      };
-    }
-    function moveDot(dot, room, offsetX = 0) {
-      const pos = getRoomPositions()[room];
-      if (pos) {
-        const scaledX = isDesktopView() ? pos.x / 2 : pos.x;
-        dot.style.left = `${scaledX + offsetX}px`;
-        dot.style.top = `${pos.y}px`;
-      }
-    }
-    const timers = {
-      "Grammie": { el: dotGrammie.querySelector(".timer"), start: 0 }
-    };
-    function startTimer(label, startTimestamp) {
-      timers[label].start = startTimestamp * 1000;
-    }
-    function updateTimers() {
-      const now = Date.now();
-      for (const label in timers) {
-        const elapsed = Math.floor((now - timers[label].start) / 1000);
-        const h = String(Math.floor(elapsed / 3600)).padStart(1, '0');
-        const m = String(Math.floor((elapsed % 3600) / 60)).padStart(2, '0');
-        const s = String(elapsed % 60).padStart(2, '0');
-        timers[label].el.textContent = `${h}:${m}:${s}`;
-      }
-    }
-    setInterval(updateTimers, 1000);
-    db.ref("beacons/Grammie").on("value", snapshot => {
-      const data = snapshot.val();
-      if (data && data.room && data.entered_at) {
-        moveDot(dotGrammie, data.room, -40);
-        startTimer("Grammie", data.entered_at);
-        if (currentRoom !== data.room) {
-  currentRoom = data.room;
-  clearLingerAlert();
-}
-      }
-    });
-   db.ref("alerts/Grammie").on("value", snapshot => {
+
+    db.ref("alerts/Grammie").on("value", snapshot => {
       const data = snapshot.val();
       if (data && data.sos) {
         sosPopup.style.display = "block";
-        sosSound.play().catch(err => console.log("🔇 Autoplay blocked:", err));
       } else {
         sosPopup.style.display = "none";
-        sosSound.pause();
-        sosSound.currentTime = 0;
       }
     });
-    db.ref("Grammie/gps").on("value", (snapshot) => {
-  const data = snapshot.val();
-  if (data && data.lat && data.lng) {
-    updateGpsDot(data.lat, data.lng);
-  }
-});
+
     function acknowledgeAlert() {
       db.ref("alerts/Grammie").set({ sos: false });
-    } 
-window.addEventListener("DOMContentLoaded", () => {
-  // Mobile view default
-  if (!isDesktopView()) {
-    floorplanView.style.display = "block";
-    mapView.style.display = "none";
-    settingsView.style.display = "none";
-    toggleBtn.innerText = "Switch to Map View";
-  }
-  // Load shared settings from Firebase
-  loadSettingsFromFirebase();
-  // Save to Firebase on input change
-  document.querySelectorAll('#settings-view input').forEach(input => {
-    input.addEventListener('input', saveSettingsToFirebase);
-  });
-});
-    let currentRoom = "";
-let alertActive = false;
-function getTimeLimitForRoom(room) {
-  const hour = new Date().getHours();
-  const nightStart = parseInt(document.getElementById("nightStart").value, 10);
-  const nightEnd = parseInt(document.getElementById("nightEnd").value, 10);
-  const isNight = nightStart < nightEnd
-    ? (hour >= nightStart && hour < nightEnd)
-    : (hour >= nightStart || hour < nightEnd);
-  const limits = {
-    "Bedroom": isNight ? "bedroomNight" : "bedroomDay",
-    "Bathroom": isNight ? "bathroomNight" : "bathroomDay",
-    "Kitchen": isNight ? "kitchenNight" : "kitchenDay",
-    "Living Room": isNight ? "livingNight" : "livingDay",
-    "FrontDoor": isNight ? "frontNight" : "frontDay"
-  };
-  const inputId = limits[room];
-  if (inputId) {
-    const value = parseFloat(document.getElementById(inputId).value);
-    return isNaN(value) ? null : value;
-  }
-  return null;
-}
-function showLingerAlert(room, minutes) {
-  const popup = document.getElementById("linger-popup");
-  document.getElementById("linger-text").innerText = `⚠️ Grammie has been in the ${room} for ${minutes} minutes — please check on her.`;
-  popup.style.display = "block";
-  alertActive = true;
-}
-function clearLingerAlert() {
-  const popup = document.getElementById("linger-popup");
-  popup.style.display = "none";
-  alertActive = false;
-}
-setInterval(() => {
-  if (!currentRoom || !timers["Grammie"].start) return;
-  const now = Date.now();
-  const elapsedMinutes = Math.floor((now - timers["Grammie"].start) / 60000);
-  const limit = getTimeLimitForRoom(currentRoom);
-  if (limit && elapsedMinutes > limit && !alertActive) {
-    showLingerAlert(currentRoom, elapsedMinutes);
-  }
-}, 30000);
-function loadSettingsFromLocalStorage() {
-  const saved = localStorage.getItem("ultrawatchSettings");
-  if (!saved) return;
-  const settings = JSON.parse(saved);
-  Object.entries(settings).forEach(([id, value]) => {
-    const el = document.getElementById(id);
-    if (el) el.value = value;
-  });
-} 
-    function saveSettingsToLocalStorage() {
-  const fields = [
-    "nightStart", "nightEnd",
-    "bedroomDay", "bedroomNight",
-    "bathroomDay", "bathroomNight",
-    "kitchenDay", "kitchenNight",
-    "livingDay", "livingNight",
-    "frontDay", "frontNight"
-  ];     
-  const settings = {};
-  fields.forEach(id => {
-    const el = document.getElementById(id);
-    if (el) settings[id] = el.value;
-  });
-  localStorage.setItem("ultrawatchSettings", JSON.stringify(settings));
-}
-    document.querySelectorAll('#settings-view input').forEach(input => {
-  input.addEventListener('input', saveSettingsToLocalStorage);
-});
-loadSettingsFromLocalStorage(); // Load on startup
-    function saveSettingsToFirebase() {
-  const fields = [
-    "nightStart", "nightEnd",
-    "bedroomDay", "bedroomNight",
-    "bathroomDay", "bathroomNight",
-    "kitchenDay", "kitchenNight",
-    "livingDay", "livingNight",
-    "frontDay", "frontNight"
-  ];
-  const settings = {};
-  fields.forEach(id => {
-    const el = document.getElementById(id);
-    if (el) settings[id] = el.value;
-  });
-  db.ref("settings").set(settings);
-}
-function loadSettingsFromFirebase() {
-  db.ref("settings").once("value").then(snapshot => {
-    const settings = snapshot.val();
-    if (!settings) return;
-    Object.entries(settings).forEach(([id, value]) => {
-      const el = document.getElementById(id);
-      if (el) el.value = value;
+    }
+
+    window.addEventListener("DOMContentLoaded", () => {
+      floorplanView.style.display = "block";
+      mapView.style.display = "none";
+      settingsView.style.display = "none";
+      toggleBtn.innerText = "Switch to Map View";
     });
-  });
-}
-function updateGpsDot(lat, lng) {
-  console.log("📍 Updating GPS location:", lat, lng);
-  if (!gpsMarker) return;
-  gpsMarker.setLatLng([lat, lng]);
-  map.setView([lat, lng], map.getZoom()); // Optional: center map on move
-} 
   </script>
 </body>
 </html>
