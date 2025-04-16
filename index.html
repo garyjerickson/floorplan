@@ -172,6 +172,9 @@
         <br><br>
         <button onclick="acknowledgeAlert()">Acknowledge Alert</button>
       </div>
+<div id="gone-popup" style="display:none; position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); background-color:#333; color:white; font-size:22px; font-weight:bold; padding:30px; border-radius:15px; z-index:1001; text-align:center; box-shadow:0 0 20px rgba(0,0,0,0.6);">
+  🎤 Elvis Has Left the Building!
+</div>    
     </div>
 <div id="linger-popup" style="display:none; position:absolute; top:20px; left:50%; transform:translateX(-50%); background-color:gold; color:black; font-weight:bold; padding:20px; border-radius:10px; z-index:1002; box-shadow:0 0 15px rgba(0,0,0,0.3); text-align:center; max-width:80%;">
   <div id="linger-text">⚠️ Grammie has been in the room too long — please check on her.</div>
@@ -337,16 +340,23 @@ function toggleSettings() {
     }
     setInterval(updateTimers, 1000);
     db.ref("beacons/Grammie").on("value", snapshot => {
-      const data = snapshot.val();
-      if (data && data.room && data.entered_at) {
-        moveDot(dotGrammie, data.room, -40);
-        startTimer("Grammie", data.entered_at);
-        if (currentRoom !== data.room) {
-  currentRoom = data.room;
-  clearLingerAlert();
-}
-      }
-    });
+  const data = snapshot.val();
+  const gonePopup = document.getElementById("gone-popup");
+
+  if (data && data.room && data.entered_at) {
+    moveDot(dotGrammie, data.room, -40);
+    startTimer("Grammie", data.entered_at);
+    if (currentRoom !== data.room) {
+      currentRoom = data.room;
+      clearLingerAlert();
+    }
+    gonePopup.style.display = "none";
+  } else {
+    // No room info = Grammie is out
+    gonePopup.style.display = "block";
+  }
+});
+
    db.ref("alerts/Grammie").on("value", snapshot => {
       const data = snapshot.val();
       if (data && data.sos) {
