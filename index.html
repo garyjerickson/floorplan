@@ -483,10 +483,25 @@ function loadSettingsFromFirebase() {
 }
 function updateGpsDot(lat, lng) {
   console.log("📍 Updating GPS location:", lat, lng);
-  if (!gpsMarker) return;
-  gpsMarker.setLatLng([lat, lng]);
-  map.setView([lat, lng], map.getZoom()); // Optional: center map on move
-} 
+  if (!map) {
+    console.warn("⚠️ Map not initialized yet.");
+    return;
+  }
+  if (!gpsMarker) {
+    gpsMarker = L.circleMarker([lat, lng], {
+      radius: 10,
+      fillColor: "blue",
+      color: "white",
+      weight: 2,
+      opacity: 1,
+      fillOpacity: 0.8
+    }).addTo(map).bindPopup("Grammie (GPS)");
+  } else {
+    gpsMarker.setLatLng([lat, lng]);
+  }
+  map.setView([lat, lng], map.getZoom());
+}
+
   </script>
 </body>
 </html>
