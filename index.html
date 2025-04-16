@@ -245,6 +245,15 @@ function initLeafletMap() {
     opacity: 1,
     fillOpacity: 0.8
   }).addTo(map).bindPopup("Grammie");
+
+  // Re-fetch current GPS data once map is initialized
+db.ref("Grammie/gps").once("value").then(snapshot => {
+  const data = snapshot.val();
+  if (data && data.lat && data.lng) {
+    updateGpsDot(data.lat, data.lng);
+  }
+});
+
 }
     const dotGrammie = document.getElementById("dot-grammie");
     const floorplanView = document.getElementById("floorplan-view");
