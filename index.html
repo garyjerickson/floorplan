@@ -369,6 +369,15 @@ function toggleSettings() {
       db.ref("alerts/Grammie").set({ sos: false });
     } 
 window.addEventListener("DOMContentLoaded", () => {
+
+  // Force map view ON to see GPS dot for testing
+  floorplanView.style.display = "none";
+  mapView.style.display = "block";
+  toggleBtn.innerText = "Switch to Floorplan View";
+  isMapVisible = true;
+  initLeafletMap();
+
+  
   // Mobile view default
   if (!isDesktopView()) {
     floorplanView.style.display = "block";
