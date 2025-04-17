@@ -45,18 +45,15 @@
   transform: translate(-50%, -50%);
   pointer-events: none;
   animation: heartbeat 1s infinite;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 3px;
-  padding-top: 2px;       /* helps center the vertical alignment */
-  font-size: 13px;
-  line-height: 1.1;
+  display: grid; /* 🔄 SWITCH FROM FLEX TO GRID */
+  place-items: center; /* ✅ centers horizontally & vertically */
+  font-size: 11px;
   color: white;
   font-weight: bold;
   text-align: center;
+  line-height: 1.2;
 }
+
 
     #gps-dot {
   z-index: 1001; /* higher than map iframe */
