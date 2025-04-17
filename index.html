@@ -344,6 +344,7 @@ function toggleSettings() {
   const gonePopup = document.getElementById("gone-popup");
 
   if (data && data.room && data.entered_at) {
+    dotGrammie.style.display = "block";  // Show the dot
     moveDot(dotGrammie, data.room, -40);
     startTimer("Grammie", data.entered_at);
     if (currentRoom !== data.room) {
@@ -352,7 +353,7 @@ function toggleSettings() {
     }
     gonePopup.style.display = "none";
   } else {
-    // No room info = Grammie is out
+    dotGrammie.style.display = "none";   // Hide the dot
     gonePopup.style.display = "block";
   }
 });
