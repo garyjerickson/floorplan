@@ -448,7 +448,8 @@ setInterval(() => {
   const now = Date.now();
   const elapsedMinutes = Math.floor((now - timers["Grammie"].start) / 60000);
   const limit = getTimeLimitForRoom(currentRoom);
-  if (limit && elapsedMinutes > limit && !alertActive) {
+  if (limit && elapsedMinutes > limit * 60 && !alertActive)
+ {
     showLingerAlert(currentRoom, elapsedMinutes);
   }
 }, 30000);
