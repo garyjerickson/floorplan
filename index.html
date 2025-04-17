@@ -38,24 +38,26 @@
       object-fit: contain;
     }
     .dot {
-      position: absolute;
-      width: 60px;
-      height: 60px;
-      border-radius: 50%;
-      transform: translate(-50%, -50%);
-      pointer-events: none;
-      animation: heartbeat 1s infinite;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 13px;
-      line-height: 1.1;
-      gap: 2px;
-      color: white;
-      font-weight: bold;
-      text-align: center;
-      flex-direction: column;
-    }
+  position: absolute;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  animation: heartbeat 1s infinite;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding-top: 2px;       /* helps center the vertical alignment */
+  font-size: 13px;
+  line-height: 1.1;
+  color: white;
+  font-weight: bold;
+  text-align: center;
+}
+
     #gps-dot {
   z-index: 1001; /* higher than map iframe */
 }
