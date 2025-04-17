@@ -345,15 +345,21 @@ function toggleSettings() {
   const gonePopup = document.getElementById("gone-popup");
 
   if (data && data.room && data.entered_at) {
-    dotGrammie.style.visibility = "visible";  // Show the dot
-    moveDot(dotGrammie, data.room, -40);
-    startTimer("Grammie", data.entered_at);
-    if (currentRoom !== data.room) {
-      currentRoom = data.room;
-      clearLingerAlert();
-    }
-    gonePopup.style.display = "none";
-  } else {
+  dotGrammie.style.visibility = "visible";
+  moveDot(dotGrammie, data.room, -40);
+
+  // Always update timer when entered_at changes
+  startTimer("Grammie", data.entered_at);
+
+  // If room changed, update and clear alert
+  if (currentRoom !== data.room) {
+    currentRoom = data.room;
+    clearLingerAlert();
+  }
+
+  gonePopup.style.display = "none";
+}
+ else {
     dotGrammie.style.visibility = "hidden";   // Hide the dot
     gonePopup.style.display = "block";
   }
