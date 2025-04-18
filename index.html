@@ -388,20 +388,22 @@ function toggleSettings() {
       db.ref("alerts/Grammie").set({ sos: false });
     } 
 
+let lastHeartbeat = Date.now();
+
 function checkHeartbeat() {
-  // Listen for heartbeat updates from Firebase
+  // Start listening for heartbeat updates
   db.ref("/system/heartbeat").on("value", snapshot => {
     const timestamp = snapshot.val();
     if (timestamp) {
-      lastHeartbeat = timestamp * 1000; // Convert seconds to ms
+      lastHeartbeat = timestamp * 1000; // convert seconds to ms
     }
   });
 
-  // Check for heartbeat timeout every 5 seconds
+  // Check every 5 seconds if heartbeat is stale
   setInterval(() => {
     const now = Date.now();
     const diff = now - lastHeartbeat;
-    if (diff > 15000) { // If no update for >15 seconds
+    if (diff > 15000) { // more than 15 seconds since last heartbeat
       const popup = document.getElementById("gone-popup");
       popup.innerText = "❌ No data being received from the system.";
       popup.style.display = "block";
@@ -409,6 +411,7 @@ function checkHeartbeat() {
     }
   }, 5000);
 }
+
     
 window.addEventListener("DOMContentLoaded", () => {
 
