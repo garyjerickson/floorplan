@@ -288,16 +288,18 @@ if (isMapVisible && !map) {
 }
 function toggleSettings() {
   isSettingsVisible = !isSettingsVisible;
+
   settingsView.style.display = isSettingsVisible ? "block" : "none";
-  floorplanView.style.display = isSettingsVisible ? "none" : "block";
-  mapView.style.display = "none";
-  toggleBtn.innerText = "Switch to Map View";
-  // Hide buttons in Settings view on mobile
+  floorplanView.style.display = isSettingsVisible ? "none" : (isMapVisible ? "none" : "block");
+  mapView.style.display = isSettingsVisible ? "none" : (isMapVisible ? "block" : "none");
+
+  // Button logic for mobile view only
   if (!isDesktopView()) {
     toggleBtn.style.display = isSettingsVisible ? "none" : "block";
     settingsBtn.style.display = isSettingsVisible ? "none" : "block";
   }
 }
+
     function isDesktopView() {
       return window.innerWidth > 800;
     }
@@ -415,21 +417,18 @@ function checkHeartbeat() {
     
 window.addEventListener("DOMContentLoaded", () => {
 
-  // Force map view ON to see GPS dot for testing
-  floorplanView.style.display = "none";
-  mapView.style.display = "block";
-  toggleBtn.innerText = "Switch to Floorplan View";
-  isMapVisible = true;
-  initLeafletMap();
-
-  
-  // Mobile view default
-  if (!isDesktopView()) {
+    if (isDesktopView()) {
+    mapView.style.display = "block";
+    floorplanView.style.display = "block";
+    toggleBtn.style.display = "none"; // Hide toggle on desktop
+    initLeafletMap();
+  } else {
     floorplanView.style.display = "block";
     mapView.style.display = "none";
-    settingsView.style.display = "none";
     toggleBtn.innerText = "Switch to Map View";
+    toggleBtn.style.display = "block";
   }
+
   // Load shared settings from Firebase
   loadSettingsFromFirebase();
   // Save to Firebase on input change
