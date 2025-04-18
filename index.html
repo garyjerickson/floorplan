@@ -394,7 +394,7 @@ function checkHeartbeat() {
   db.ref("/system/heartbeat").on("value", snapshot => {
     const timestamp = snapshot.val();
     if (timestamp) {
-      // lastHeartbeat = timestamp * 1000; // convert seconds to ms
+      lastHeartbeat = timestamp * 1000; // convert seconds to ms
     }
   });
 
