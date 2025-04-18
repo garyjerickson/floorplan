@@ -388,13 +388,12 @@ function toggleSettings() {
       db.ref("alerts/Grammie").set({ sos: false });
     } 
 
-let lastHeartbeat = Date.now();
 function checkHeartbeat() {
   // Listen for heartbeat updates from Firebase
   db.ref("/system/heartbeat").on("value", snapshot => {
     const timestamp = snapshot.val();
     if (timestamp) {
-      lastHeartbeat = timestamp * 1000; // convert seconds to ms
+      lastHeartbeat = timestamp * 1000; // Convert seconds to ms
     }
   });
 
