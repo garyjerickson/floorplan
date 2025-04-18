@@ -388,7 +388,7 @@ function toggleSettings() {
       db.ref("alerts/Grammie").set({ sos: false });
     } 
 
-let lastHeartbeat = Date.now();
+lastHeartbeat = Date.now();
 function checkHeartbeat() {
   // Listen for heartbeat updates from Firebase
   db.ref("/system/heartbeat").on("value", snapshot => {
