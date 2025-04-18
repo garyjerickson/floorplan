@@ -234,6 +234,7 @@
       databaseURL: "https://ultrawatchfloorplan-default-rtdb.firebaseio.com/"
     };
     firebase.initializeApp(firebaseConfig);
+    let lastHeartbeat = Date.now();
     const db = firebase.database();
     let map, gpsMarker;
 function initLeafletMap() {
@@ -358,6 +359,7 @@ function toggleSettings() {
   }
 
   gonePopup.style.display = "none";
+  gonePopup.innerText = "🎤 Elvis Has Left the Building!";
 }
  else {
     dotGrammie.style.visibility = "hidden";   // Hide the dot
@@ -385,6 +387,29 @@ function toggleSettings() {
     function acknowledgeAlert() {
       db.ref("alerts/Grammie").set({ sos: false });
     } 
+
+function checkHeartbeat() {
+  // Listen for heartbeat updates from Firebase
+  db.ref("/system/heartbeat").on("value", snapshot => {
+    const timestamp = snapshot.val();
+    if (timestamp) {
+      lastHeartbeat = timestamp * 1000; // Convert seconds to ms
+    }
+  });
+
+  // Check for heartbeat timeout every 5 seconds
+  setInterval(() => {
+    const now = Date.now();
+    const diff = now - lastHeartbeat;
+    if (diff > 15000) { // If no update for >15 seconds
+      const popup = document.getElementById("gone-popup");
+      popup.innerText = "❌ No data being received from the system.";
+      popup.style.display = "block";
+      dotGrammie.style.visibility = "hidden";
+    }
+  }, 5000);
+}
+    
 window.addEventListener("DOMContentLoaded", () => {
 
   // Force map view ON to see GPS dot for testing
@@ -408,6 +433,7 @@ window.addEventListener("DOMContentLoaded", () => {
   document.querySelectorAll('#settings-view input').forEach(input => {
     input.addEventListener('input', saveSettingsToFirebase);
   });
+  checkHeartbeat();
 });
     let currentRoom = "";
 let alertActive = false;
