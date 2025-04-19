@@ -492,6 +492,12 @@ function showLingerAlert(room, minutes) {
   document.getElementById("linger-text").innerText = `⚠️ Grammie has been in the ${room} for ${minutes} minutes — please check on her.`;
   popup.style.display = "block";
   alertActive = true;
+
+  // ✅ Log linger alert to Firebase
+  db.ref("logs/Grammie").push({
+    event: `Linger alert: still in ${room}`,
+    timestamp: Math.floor(Date.now() / 1000)
+  });
 }
 function clearLingerAlert() {
   const popup = document.getElementById("linger-popup");
@@ -598,7 +604,8 @@ function loadRoomLogs() {
       .slice(0, 20)
       .map(entry => {
         const time = new Date(entry.timestamp * 1000).toLocaleString();
-        return `<div>${time}: <strong>${entry.room}</strong></div>`;
+        const label = entry.room ? `Room: <strong>${entry.room}</strong>` : `<em>${entry.event}</em>`;
+        return `<div>${time}: ${label}</div>`;
       });
 
     container.innerHTML = entries.join("");
