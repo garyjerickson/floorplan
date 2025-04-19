@@ -164,6 +164,7 @@
   <div id="container">
     <button id="toggle-btn" onclick="toggleView()">Switch to Map View</button>
     <button id="settings-btn" onclick="toggleSettings()">Settings</button>
+    <button id="log-btn" onclick="toggleLog()">Log</button>
 
     <div id="floorplan-view">
       <img id="floorplan-img" src="floorplan.png" alt="Floorplan">
@@ -219,6 +220,13 @@
         </tr>
       </table>
     </div>
+    <div id="log-view" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%);
+      width: 90%; max-width: 500px; max-height: 90%; overflow-y: auto; background: white; padding: 20px; 
+      font-size: 14px; border-radius: 12px; box-shadow: 0 0 25px rgba(0,0,0,0.5); z-index: 1003;">
+      <h2>Grammie Room History</h2>
+      <button onclick="toggleLog()" style="margin-bottom:10px;">⬅ Back</button>
+      <div id="log-entries">Loading...</div>
+    </div>    
   </div>
   <audio id="sos-sound" src="sos-alert.mp3" preload="auto"></audio>
 <script
@@ -299,7 +307,25 @@ function toggleSettings() {
     settingsBtn.style.display = isSettingsVisible ? "none" : "block";
   }
 }
+function toggleLog() {
+  const logView = document.getElementById("log-view");
+  const isVisible = logView.style.display === "block";
+  logView.style.display = isVisible ? "none" : "block";
+  floorplanView.style.display = isVisible ? "block" : "none";
+  mapView.style.display = "none";
+  settingsView.style.display = "none";
 
+  // Mobile: Hide other buttons
+  if (!isDesktopView()) {
+    toggleBtn.style.display = isVisible ? "block" : "none";
+    settingsBtn.style.display = isVisible ? "block" : "none";
+    document.getElementById("log-btn").style.display = isVisible ? "block" : "none";
+  }
+
+  if (!isVisible) {
+    loadRoomLogs(); // load logs when opening
+  }
+}
     function isDesktopView() {
       return window.innerWidth > 800;
     }
@@ -555,6 +581,27 @@ function updateGpsDot(lat, lng) {
     gpsMarker.setLatLng([lat, lng]);
   }
   map.setView([lat, lng], map.getZoom());
+}
+function loadRoomLogs() {
+  db.ref("logs/Grammie").once("value").then(snapshot => {
+    const logs = snapshot.val();
+    const container = document.getElementById("log-entries");
+
+    if (!logs) {
+      container.innerHTML = "<em>No movement data yet.</em>";
+      return;
+    }
+
+    const entries = Object.values(logs)
+      .sort((a, b) => b.timestamp - a.timestamp)
+      .slice(0, 20)
+      .map(entry => {
+        const time = new Date(entry.timestamp * 1000).toLocaleString();
+        return `<div>${time}: <strong>${entry.room}</strong></div>`;
+      });
+
+    container.innerHTML = entries.join("");
+  });
 }
 
   </script>
