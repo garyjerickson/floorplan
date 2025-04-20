@@ -600,13 +600,21 @@ function loadRoomLogs() {
     }
 
     const entries = Object.values(logs)
-      .sort((a, b) => b.timestamp - a.timestamp)
-      .slice(0, 20)
-      .map(entry => {
-        const time = new Date(entry.timestamp * 1000).toLocaleString();
-        const label = entry.room ? `Room: <strong>${entry.room}</strong>` : `<em>${entry.event}</em>`;
-        return `<div>${time}: ${label}</div>`;
-      });
+  .sort((a, b) => b.timestamp - a.timestamp)
+  .slice(0, 20)
+  .map(entry => {
+    const time = new Date(entry.timestamp * 1000).toLocaleString();
+
+    if (entry.room) {
+      const durationText = entry.duration ? ` (Stayed ${Math.floor(entry.duration / 60)} min)` : "";
+      return `<div>${time}: Room: <strong>${entry.room}</strong>${durationText}</div>`;
+    } else if (entry.event) {
+      return `<div>${time}: <em>${entry.event}</em></div>`;
+    } else {
+      return `<div>${time}: <em>Unknown event</em></div>`;
+    }
+  });
+
 
     container.innerHTML = entries.join("");
   });
