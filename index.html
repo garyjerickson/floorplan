@@ -170,6 +170,7 @@
     <div id="floorplan-view">
       <img id="floorplan-img" src="floorplan.png" alt="Floorplan">
       <div id="dot-grammie" class="dot">Grammie <span class="timer">00:00:00</span></div>
+      <div id="dot-grandpa" class="dot" style="background-color: blue;">GRANDPA <span class="timer">00:00:00</span></div>
       <div id="sos-popup">
         🆘 SOS ALERT: Grammie pressed the emergency button!
         <br><br>
@@ -270,6 +271,7 @@ db.ref("Grammie/gps").once("value").then(snapshot => {
 
 }
     const dotGrammie = document.getElementById("dot-grammie");
+    const dotGrandpa = document.getElementById("dot-grandpa");
     const floorplanView = document.getElementById("floorplan-view");
     const mapView = document.getElementById("map-view");
     const settingsView = document.getElementById("settings-view");
@@ -353,9 +355,10 @@ function toggleLog() {
         dot.style.top = `${pos.y}px`;
       }
     }
-    const timers = {
-      "Grammie": { el: dotGrammie.querySelector(".timer"), start: 0 }
-    };
+const timers = {
+  "Grammie": { el: dotGrammie.querySelector(".timer"), start: 0 },
+  "GRANDPA": { el: dotGrandpa.querySelector(".timer"), start: 0 }
+};
     function startTimer(label, startTimestamp) {
       timers[label].start = startTimestamp * 1000;
     }
@@ -396,6 +399,29 @@ function toggleLog() {
   }
 });
 
+db.ref("beacons/GRANDPA").on("value", snapshot => {
+  const data = snapshot.val();
+  const gonePopup = document.getElementById("gone-popup");
+
+  if (data && data.room && data.entered_at) {
+    dotGrandpa.style.visibility = "visible";
+    moveDot(dotGrandpa, data.room, 40); // offset right of Grammie
+    startTimer("GRANDPA", data.entered_at);
+
+    if (currentRoom !== data.room) {
+      currentRoom = data.room;
+      clearLingerAlert(); // Optional: shared for now
+    }
+
+    gonePopup.style.display = "none";
+    gonePopup.innerText = "🎤 Elvis Has Left the Building!";
+  } else {
+    dotGrandpa.style.visibility = "hidden";
+    gonePopup.style.display = "block";
+  }
+});
+
+    
    db.ref("alerts/Grammie").on("value", snapshot => {
       const data = snapshot.val();
       if (data && data.sos) {
