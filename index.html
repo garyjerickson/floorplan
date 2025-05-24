@@ -385,10 +385,10 @@ const timers = {
   startTimer("Grammie", data.entered_at);
 
   // If room changed, update and clear alert
-  if (currentRoom !== data.room) {
-    currentRoom = data.room;
-    clearLingerAlert();
-  }
+if (currentRoomGrammie !== data.room) {
+  currentRoomGrammie = data.room;
+  clearLingerAlert();
+}
 
   gonePopup.style.display = "none";
   gonePopup.innerText = "🎤 Elvis Has Left the Building!";
@@ -408,16 +408,16 @@ db.ref("beacons/GRANDPA").on("value", snapshot => {
     moveDot(dotGrandpa, data.room, 40); // offset right of Grammie
     startTimer("GRANDPA", data.entered_at);
 
-    if (currentRoom !== data.room) {
-      currentRoom = data.room;
-      clearLingerAlert(); // Optional: shared for now
-    }
+if (currentRoomGrandpa !== data.room) {
+  currentRoomGrandpa = data.room;
+}
+
 
     gonePopup.style.display = "none";
-    gonePopup.innerText = "🎤 Elvis Has Left the Building!";
+//    gonePopup.innerText = "🎤 Elvis Has Left the Building!";
   } else {
     dotGrandpa.style.visibility = "hidden";
-    gonePopup.style.display = "block";
+//    gonePopup.style.display = "block";
   }
 });
 
@@ -490,7 +490,9 @@ window.addEventListener("DOMContentLoaded", () => {
   });
   checkHeartbeat();
 });
-    let currentRoom = "";
+    let currentRoomGrammie = "";
+    let currentRoomGrandpa = "";
+
 let alertActive = false;
 function getTimeLimitForRoom(room) {
   const hour = new Date().getHours();
