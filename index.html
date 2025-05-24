@@ -179,6 +179,9 @@
 <div id="gone-popup" style="display:none; position:absolute; top:50%; left:50%; transform:translate(-50%, -50%); background-color:#333; color:white; font-size:22px; font-weight:bold; padding:30px; border-radius:15px; z-index:1001; text-align:center; box-shadow:0 0 20px rgba(0,0,0,0.6);">
   🎤 Elvis Has Left the Building!
 </div>    
+<div id="gone-popup-grandpa" style="display:none; position:absolute; top:60%; left:50%; transform:translate(-50%, -50%); background-color:#555; color:white; font-size:20px; font-weight:bold; padding:25px; border-radius:12px; z-index:1001; text-align:center; box-shadow:0 0 18px rgba(0,0,0,0.5);">
+  🧓 Grandpa is not currently detected.
+</div>     
     </div>
 <div id="linger-popup" style="display:none; position:absolute; top:20px; left:50%; transform:translateX(-50%); background-color:gold; color:black; font-weight:bold; padding:20px; border-radius:10px; z-index:1002; box-shadow:0 0 15px rgba(0,0,0,0.3); text-align:center; max-width:80%;">
   <div id="linger-text">⚠️ Grammie has been in the room too long — please check on her.</div>
@@ -401,25 +404,24 @@ if (currentRoomGrammie !== data.room) {
 
 db.ref("beacons/GRANDPA").on("value", snapshot => {
   const data = snapshot.val();
-  const gonePopup = document.getElementById("gone-popup");
+  const grandpaGonePopup = document.getElementById("gone-popup-grandpa");
 
   if (data && data.room && data.entered_at) {
     dotGrandpa.style.visibility = "visible";
     moveDot(dotGrandpa, data.room, 40); // offset right of Grammie
     startTimer("GRANDPA", data.entered_at);
 
-if (currentRoomGrandpa !== data.room) {
-  currentRoomGrandpa = data.room;
-}
+    if (currentRoomGrandpa !== data.room) {
+      currentRoomGrandpa = data.room;
+    }
 
-
-    gonePopup.style.display = "none";
-//    gonePopup.innerText = "🎤 Elvis Has Left the Building!";
+    grandpaGonePopup.style.display = "none";
   } else {
     dotGrandpa.style.visibility = "hidden";
-//    gonePopup.style.display = "block";
+    grandpaGonePopup.style.display = "block";
   }
 });
+
 
     
    db.ref("alerts/Grammie").on("value", snapshot => {
@@ -433,12 +435,49 @@ if (currentRoomGrandpa !== data.room) {
         sosSound.currentTime = 0;
       }
     });
+
+db.ref("alerts/GRANDPA").on("value", snapshot => {
+  const data = snapshot.val();
+  if (data && data.sos) {
+    sosPopup.style.display = "block";
+    sosPopup.innerHTML = `
+      🆘 SOS ALERT: GRANDPA pressed the emergency button!<br><br>
+      <button onclick="acknowledgeGrandpaAlert()">Acknowledge Alert</button>
+    `;
+    sosSound.play().catch(err => console.log("🔇 Autoplay blocked:", err));
+  } else {
+    sosPopup.style.display = "none";
+    sosSound.pause();
+    sosSound.currentTime = 0;
+  }
+});
+
+function acknowledgeGrandpaAlert() {
+  db.ref("alerts/GRANDPA").set({ sos: false });
+}
+    
     db.ref("Grammie/gps").on("value", (snapshot) => {
   const data = snapshot.val();
   if (data && data.lat && data.lng) {
     updateGpsDot(data.lat, data.lng);
   }
 });
+db.ref("GRANDPA/gps").on("value", (snapshot) => {
+  const data = snapshot.val();
+  if (data && data.lat && data.lng) {
+    // Add a unique dot for Grandpa on the map
+    L.circleMarker([data.lat, data.lng], {
+      radius: 10,
+      fillColor: "darkblue",
+      color: "white",
+      weight: 2,
+      opacity: 1,
+      fillOpacity: 0.8
+    }).addTo(map).bindPopup("GRANDPA (GPS)");
+  }
+});
+
+    
     function acknowledgeAlert() {
       db.ref("alerts/Grammie").set({ sos: false });
     } 
@@ -533,15 +572,15 @@ function clearLingerAlert() {
   alertActive = false;
 }
 setInterval(() => {
-  if (!currentRoom || !timers["Grammie"].start) return;
+  if (!currentRoomGrammie || !timers["Grammie"].start) return;
   const now = Date.now();
   const elapsedMinutes = Math.floor((now - timers["Grammie"].start) / 60000);
-  const limit = getTimeLimitForRoom(currentRoom);
-  if (limit && elapsedMinutes > limit * 60 && !alertActive)
- {
-    showLingerAlert(currentRoom, elapsedMinutes);
+  const limit = getTimeLimitForRoom(currentRoomGrammie);
+  if (limit && elapsedMinutes > limit * 60 && !alertActive) {
+    showLingerAlert(currentRoomGrammie, elapsedMinutes);
   }
 }, 30000);
+
 function loadSettingsFromLocalStorage() {
   const saved = localStorage.getItem("ultrawatchSettings");
   if (!saved) return;
