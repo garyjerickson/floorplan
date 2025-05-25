@@ -490,7 +490,11 @@ function checkHeartbeat() {
     const timestamp = snapshot.val();
     if (timestamp) {
       lastHeartbeat = timestamp * 1000; // convert seconds to ms
+      console.log("✅ Heartbeat updated:", new Date(lastHeartbeat).toLocaleString());
+    } else {
+      console.warn("⚠️ No heartbeat value received");
     }
+
   });
 
   // Check every 5 seconds if heartbeat is stale
