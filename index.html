@@ -166,6 +166,8 @@
     <button id="toggle-btn" onclick="toggleView()">Switch to Map View</button>
     <button id="settings-btn" onclick="toggleSettings()">Settings</button>
     <button id="log-btn" onclick="toggleLog()">Log</button>
+    <button id="log-grandpa-btn" onclick="toggleLogGrandpa()">GRANDPA Log</button>
+
 
     <div id="floorplan-view">
       <img id="floorplan-img" src="floorplan.png" alt="Floorplan">
@@ -232,6 +234,13 @@
       <button onclick="toggleLog()" style="margin-bottom:10px;">⬅ Back</button>
       <div id="log-entries">Loading...</div>
     </div>    
+    <div id="log-view-grandpa" style="display:none; position:fixed; top:50%; left:50%; transform:translate(-50%, -50%);
+  width: 90%; max-width: 500px; max-height: 90%; overflow-y: auto; background: white; padding: 20px; 
+  font-size: 14px; border-radius: 12px; box-shadow: 0 0 25px rgba(0,0,0,0.5); z-index: 1003;">
+  <h2>GRANDPA Room History</h2>
+  <button onclick="toggleLogGrandpa()" style="margin-bottom:10px;">⬅ Back</button>
+  <div id="log-entries-grandpa">Loading...</div>
+</div>
   </div>
   <audio id="sos-sound" src="sos-alert.mp3" preload="auto"></audio>
 <script
@@ -332,6 +341,55 @@ function toggleLog() {
     loadRoomLogs(); // load logs when opening
   }
 }
+
+function toggleLogGrandpa() {
+  const logView = document.getElementById("log-view-grandpa");
+  const isVisible = logView.style.display === "block";
+  logView.style.display = isVisible ? "none" : "block";
+  floorplanView.style.display = isVisible ? "block" : "none";
+  mapView.style.display = "none";
+  settingsView.style.display = "none";
+
+  if (!isDesktopView()) {
+    toggleBtn.style.display = isVisible ? "block" : "none";
+    settingsBtn.style.display = isVisible ? "block" : "none";
+    document.getElementById("log-grandpa-btn").style.display = isVisible ? "block" : "none";
+  }
+
+  if (!isVisible) {
+    loadRoomLogsGrandpa(); // load logs when opening
+  }
+}
+
+function loadRoomLogsGrandpa() {
+  db.ref("logs/GRANDPA").once("value").then(snapshot => {
+    const logs = snapshot.val();
+    const container = document.getElementById("log-entries-grandpa");
+
+    if (!logs) {
+      container.innerHTML = "<em>No movement data yet.</em>";
+      return;
+    }
+
+    const entries = Object.values(logs)
+      .sort((a, b) => b.timestamp - a.timestamp)
+      .slice(0, 20)
+      .map(entry => {
+        const time = new Date(entry.timestamp * 1000).toLocaleString();
+
+        if (entry.room) {
+          const durationText = entry.duration ? ` (Stayed ${Math.floor(entry.duration / 60)} min)` : "";
+          return `<div>${time}: Room: <strong>${entry.room}</strong>${durationText}</div>`;
+        } else if (entry.event) {
+          return `<div>${time}: <em>${entry.event}</em></div>`;
+        } else {
+          return `<div>${time}: <em>Unknown event</em></div>`;
+        }
+      });
+
+    container.innerHTML = entries.join("");
+  });
+}   
     function isDesktopView() {
       return window.innerWidth > 800;
     }
