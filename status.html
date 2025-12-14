@@ -5,64 +5,30 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>UltraWatch Status</title>
   <style>
-    :root { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
-    body { margin: 0; background: #0b1220; color: #e9eefc; }
-    .wrap { max-width: 760px; margin: 0 auto; padding: 16px; }
-    .card { border-radius: 16px; padding: 16px; background: rgba(255,255,255,0.06); box-shadow: 0 8px 30px rgba(0,0,0,0.25); }
-    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
-    .label { font-size: 12px; opacity: 0.8; margin-bottom: 4px; }
-    .value { font-size: 20px; font-weight: 700; }
-    .status { margin-top: 14px; border-radius: 14px; padding: 14px; text-align: center; font-weight: 800; letter-spacing: 0.5px; }
-    .good { background: #0f7a3a; color: #eafff0; }
-    .check { background: #b8860b; color: #fff7db; }
-    .emergency { background: #b42318; color: #ffe8e6; }
-
-    .controls { display: flex; gap: 10px; align-items: center; margin-bottom: 12px; flex-wrap: wrap; }
-    select, button, textarea {
-      border-radius: 12px; border: 1px solid rgba(255,255,255,0.18);
-      background: rgba(255,255,255,0.08); color: #e9eefc;
-      padding: 10px 12px; font-size: 14px;
-    }
-    textarea { width: 100%; min-height: 90px; resize: vertical; }
-    button { cursor: pointer; font-weight: 700; }
-    .hint { font-size: 12px; opacity: 0.8; margin-top: 8px; }
-    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; opacity: 0.85; }
-    @media (max-width: 560px) {
-      .row { grid-template-columns: 1fr; }
-      .value { font-size: 22px; }
-    }
+    body { margin:0; font-family: Arial, sans-serif; background:#0b1220; color:#e9eefc; }
+    .wrap { max-width: 720px; margin: 0 auto; padding: 16px; }
+    .card { background: rgba(255,255,255,0.07); border-radius: 16px; padding: 16px; }
+    .row { display:grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px; }
+    .label { font-size: 12px; opacity: 0.8; }
+    .value { font-size: 22px; font-weight: 700; margin-top: 4px; }
+    .status { margin-top: 14px; padding: 14px; border-radius: 14px; text-align:center; font-size: 20px; font-weight: 800; }
+    .good { background:#0f7a3a; }
+    .check { background:#b8860b; }
+    .emergency { background:#b42318; }
+    textarea { width:100%; min-height: 90px; border-radius: 12px; padding: 10px; }
+    button, select { border-radius: 12px; padding: 10px 12px; font-weight: 700; }
+    @media (max-width: 560px) { .row { grid-template-columns: 1fr; } }
   </style>
 </head>
-
 <body>
   <div class="wrap">
-    <div class="controls">
-      <div style="flex:1">
-        <div class="label">Person</div>
-        <select id="personSelect">
-          <option value="Grammie">Grammie</option>
-          <option value="GRANDPA">GRANDPA</option>
-          <option value="Axel">Axel</option>
-        </select>
-      </div>
-
-      <div style="flex:1">
-        <div class="label">Manual Status Override (optional)</div>
-        <select id="manualStatus">
-          <option value="">Auto</option>
-          <option value="good">Good</option>
-          <option value="check">Check</option>
-          <option value="emergency">Emergency</option>
-        </select>
-      </div>
-
-      <div>
-        <div class="label">&nbsp;</div>
-        <button id="saveOverrideBtn">Save Override</button>
-      </div>
-    </div>
-
     <div class="card">
+      <div class="label">Person</div>
+      <select id="personSelect">
+        <option value="Grammie">Grammie</option>
+        <option value="GRANDPA">GRANDPA</option>
+      </select>
+
       <div class="row">
         <div>
           <div class="label">Name</div>
@@ -72,7 +38,6 @@
           <div class="label">Current Time</div>
           <div class="value" id="nowVal">—</div>
         </div>
-
         <div>
           <div class="label">Current Room</div>
           <div class="value" id="roomVal">—</div>
@@ -85,61 +50,31 @@
 
       <div id="statusBox" class="status good">GOOD</div>
 
-      <div style="margin-top: 14px;">
+      <div style="margin-top:14px;">
         <div class="label">Notes</div>
-        <textarea id="notesBox" placeholder="Example: Grammie has been in the bathroom for an extended period..."></textarea>
-        <div style="display:flex; gap:10px; margin-top:10px; flex-wrap:wrap;">
+        <textarea id="notesBox"></textarea>
+        <div style="margin-top:10px; display:flex; gap:10px;">
           <button id="saveNotesBtn">Save Notes</button>
           <button id="clearNotesBtn">Clear Notes</button>
         </div>
-        <div class="hint">
-          Notes are saved to Firebase so they show up on any device.
-        </div>
-        <div class="mono" id="debugPath">—</div>
       </div>
     </div>
   </div>
 
-  <!-- Firebase (Compat SDK for simplicity in GitHub Pages) -->
+  <!-- Firebase -->
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
   <script>
-    /***************
-     * 1) PASTE YOUR firebaseConfig HERE
-     * Copy it from your existing index.html
-     ***************/
-  const firebaseConfig = {
-    databaseURL: "https://ultrawatchfloorplan-default-rtdb.firebaseio.com/"
-  };
+    const firebaseConfig = {
+      databaseURL: "https://ultrawatchfloorplan-default-rtdb.firebaseio.com/"
+    };
 
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    // 2) Room “Check” thresholds (seconds) – edit to taste
-    const CHECK_THRESHOLDS = {
-      "Bathroom": 10 * 60,   // 10 minutes
-      "Pool": 5,             // 5 seconds (pool is sensitive)
-      "FrontDoor": 60,       // 1 minute
-      "Kitchen": 60 * 60,    // 1 hour
-      "Living Room": 2 * 60 * 60,
-      "Bedroom": 4 * 60 * 60
-    };
-
-    // If your Python is writing beacons under /beacons/{Name}/room and entered_at, this matches.
-    function beaconPath(name) { return `/beacons/${name}`; }
-
-    // We’ll read alerts from /alerts/{Name} (works great with your pool/sos flags)
-    function alertPath(name) { return `/alerts/${name}`; }
-
-    // Notes + manual override live under /status/{Name}/...
-    function notesPath(name) { return `/status/${name}/notes`; }
-    function overridePath(name) { return `/status/${name}/manualStatus`; }
-
     const els = {
       person: document.getElementById("personSelect"),
-      manual: document.getElementById("manualStatus"),
-      saveOverride: document.getElementById("saveOverrideBtn"),
       nameVal: document.getElementById("nameVal"),
       nowVal: document.getElementById("nowVal"),
       roomVal: document.getElementById("roomVal"),
@@ -147,155 +82,61 @@
       statusBox: document.getElementById("statusBox"),
       notesBox: document.getElementById("notesBox"),
       saveNotes: document.getElementById("saveNotesBtn"),
-      clearNotes: document.getElementById("clearNotesBtn"),
-      debugPath: document.getElementById("debugPath"),
+      clearNotes: document.getElementById("clearNotesBtn")
     };
 
-    let current = {
-      name: els.person.value,
-      room: "",
-      enteredAt: null,      // unix seconds
-      alerts: {},
-      manualStatus: "",
-      notes: ""
-    };
+    let current = { name: els.person.value, room:"", enteredAt:null, alerts:{} };
 
-    function setStatus(kind, text) {
-      els.statusBox.classList.remove("good", "check", "emergency");
-      els.statusBox.classList.add(kind);
+    function setStatus(cls, text) {
+      els.statusBox.className = "status " + cls;
       els.statusBox.textContent = text;
     }
 
-    function formatDuration(sec) {
-      if (!isFinite(sec) || sec < 0) return "—";
-      const h = Math.floor(sec / 3600);
-      const m = Math.floor((sec % 3600) / 60);
-      const s = Math.floor(sec % 60);
-      if (h > 0) return `${h}h ${m}m ${s}s`;
-      if (m > 0) return `${m}m ${s}s`;
-      return `${s}s`;
-    }
-
-    function computeAutoStatus() {
-      // Emergency if SOS or Pool alert is true
-      const a = current.alerts || {};
-      if (a.sos === true) return { kind: "emergency", text: "EMERGENCY (SOS)" };
-      if (a.pool === true) return { kind: "emergency", text: "EMERGENCY (POOL)" };
-
-      // Check if time in room exceeds threshold
-      const threshold = CHECK_THRESHOLDS[current.room];
-      if (threshold && current.enteredAt) {
-        const nowSec = Math.floor(Date.now() / 1000);
-        const dwell = nowSec - current.enteredAt;
-        if (dwell >= threshold) return { kind: "check", text: "CHECK" };
-      }
-
-      return { kind: "good", text: "GOOD" };
-    }
-
-    function refreshUI() {
+    function refresh() {
       els.nameVal.textContent = current.name;
       els.roomVal.textContent = current.room || "—";
-      els.debugPath.textContent =
-        `Reading: ${beaconPath(current.name)} | ${alertPath(current.name)} | ${notesPath(current.name)}`;
+      els.nowVal.textContent = new Date().toLocaleTimeString();
 
-      // Current time
-      const now = new Date();
-      els.nowVal.textContent = now.toLocaleTimeString();
-
-      // Time in room
       if (current.enteredAt) {
-        const nowSec = Math.floor(Date.now() / 1000);
-        els.timeInRoomVal.textContent = formatDuration(nowSec - current.enteredAt);
+        const sec = Math.floor(Date.now()/1000) - current.enteredAt;
+        els.timeInRoomVal.textContent = sec + "s";
       } else {
         els.timeInRoomVal.textContent = "—";
       }
 
-      // Status (manual override wins)
-      if (current.manualStatus) {
-        const m = current.manualStatus;
-        if (m === "good") setStatus("good", "GOOD (MANUAL)");
-        else if (m === "check") setStatus("check", "CHECK (MANUAL)");
-        else if (m === "emergency") setStatus("emergency", "EMERGENCY (MANUAL)");
-      } else {
-        const auto = computeAutoStatus();
-        setStatus(auto.kind, auto.text);
-      }
-    }
-
-    // Live subscriptions
-    let unsubscribers = [];
-
-    function clearSubs() {
-      for (const fn of unsubscribers) { try { fn(); } catch(e){} }
-      unsubscribers = [];
+      if (current.alerts?.pool || current.alerts?.sos)
+        setStatus("emergency", "EMERGENCY");
+      else
+        setStatus("good", "GOOD");
     }
 
     function subscribe(name) {
-      clearSubs();
-      current = { name, room: "", enteredAt: null, alerts: {}, manualStatus: "", notes: "" };
-
-      // beacons
-      const bRef = db.ref(beaconPath(name));
-      const bCb = bRef.on("value", snap => {
-        const v = snap.val() || {};
+      current = { name, room:"", enteredAt:null, alerts:{} };
+      db.ref("/beacons/" + name).on("value", s => {
+        const v = s.val() || {};
         current.room = v.room || "";
         current.enteredAt = v.entered_at || null;
-        refreshUI();
+        refresh();
       });
-      unsubscribers.push(() => bRef.off("value", bCb));
-
-      // alerts
-      const aRef = db.ref(alertPath(name));
-      const aCb = aRef.on("value", snap => {
-        current.alerts = snap.val() || {};
-        refreshUI();
+      db.ref("/alerts/" + name).on("value", s => {
+        current.alerts = s.val() || {};
+        refresh();
       });
-      unsubscribers.push(() => aRef.off("value", aCb));
-
-      // notes
-      const nRef = db.ref(notesPath(name));
-      const nCb = nRef.on("value", snap => {
-        current.notes = (snap.val() || "");
-        els.notesBox.value = current.notes;
+      db.ref("/status/" + name + "/notes").on("value", s => {
+        els.notesBox.value = s.val() || "";
       });
-      unsubscribers.push(() => nRef.off("value", nCb));
-
-      // manual status override
-      const oRef = db.ref(overridePath(name));
-      const oCb = oRef.on("value", snap => {
-        current.manualStatus = snap.val() || "";
-        els.manual.value = current.manualStatus;
-        refreshUI();
-      });
-      unsubscribers.push(() => oRef.off("value", oCb));
-
-      refreshUI();
     }
 
-    // Notes + override actions
-    els.saveNotes.addEventListener("click", async () => {
-      await db.ref(notesPath(current.name)).set(els.notesBox.value || "");
-    });
+    els.saveNotes.onclick = () =>
+      db.ref("/status/" + current.name + "/notes").set(els.notesBox.value || "");
 
-    els.clearNotes.addEventListener("click", async () => {
-      els.notesBox.value = "";
-      await db.ref(notesPath(current.name)).set("");
-    });
+    els.clearNotes.onclick = () =>
+      db.ref("/status/" + current.name + "/notes").set("");
 
-    els.saveOverride.addEventListener("click", async () => {
-      const val = els.manual.value || "";
-      await db.ref(overridePath(current.name)).set(val);
-    });
+    els.person.onchange = () => location.reload();
 
-    els.person.addEventListener("change", () => subscribe(els.person.value));
-
-    // Update clock + time-in-room every second
-    setInterval(refreshUI, 1000);
-
-    // Start
-    subscribe(els.person.value);
+    setInterval(refresh, 1000);
+    subscribe(current.name);
   </script>
 </body>
 </html>
-
