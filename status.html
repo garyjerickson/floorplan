@@ -73,6 +73,17 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
+// Seconds before we show CHECK (yellow) for staying too long in a room
+const CHECK_THRESHOLDS = {
+  "Bathroom": 60 * 60,   // 60 minutes
+  "Kitchen": 4 * 60 * 60, // 4 hours
+  "Living Room": 4 * 60 * 60,
+  "Bedroom": 10 * 60 * 60,
+  "FrontDoor": 10 * 60        // 10 minutes
+  // Pool is handled as Emergency via /alerts/GRANDPA/pool
+};
+
+
     const els = {
       person: document.getElementById("personSelect"),
       nameVal: document.getElementById("nameVal"),
@@ -104,10 +115,29 @@
         els.timeInRoomVal.textContent = "—";
       }
 
-      if (current.alerts?.pool || current.alerts?.sos)
-        setStatus("emergency", "EMERGENCY");
-      else
-        setStatus("good", "GOOD");
+      // 1) EMERGENCY rules (red)
+      if (current.alerts?.sos === true) {
+        setStatus("emergency", "EMERGENCY (SOS)");
+        return;
+      }
+      if (current.alerts?.pool === true) {
+        setStatus("emergency", "EMERGENCY (POOL)");
+        return;
+      }
+
+      // 2) CHECK rules (yellow) based on time-in-room thresholds
+      const threshold = CHECK_THRESHOLDS[current.room];
+      if (threshold && current.enteredAt) {
+        const dwellSec = Math.floor(Date.now() / 1000) - current.enteredAt;
+        if (dwellSec >= threshold) {
+          setStatus("check", "CHECK");
+          return;
+        }
+      }
+
+      // 3) Otherwise GOOD (green)
+      setStatus("good", "GOOD");
+
     }
 
     function subscribe(name) {
