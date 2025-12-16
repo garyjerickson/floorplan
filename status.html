@@ -67,21 +67,21 @@
 
   <script>
     const firebaseConfig = {
-  databaseURL: "https://ultrawatch-home-default-rtdb.firebaseio.com/"
-};
+      databaseURL: "https://ultrawatch-home-default-rtdb.firebaseio.com/"
+    };
+
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-// Seconds before we show CHECK (yellow) for staying too long in a room
-const CHECK_THRESHOLDS = {
-  "Bathroom": 60 * 60,   // 60 minutes
-  "Kitchen": 4 * 60 * 60, // 4 hours
-  "Living Room": 4 * 60 * 60,
-  "Bedroom": 10 * 60 * 60,
-  "FrontDoor": 10 * 60        // 10 minutes
-  // Pool is handled as Emergency via /alerts/GRANDPA/pool
-};
-
+    // Seconds before we show CHECK (yellow) for staying too long in a room
+    const CHECK_THRESHOLDS = {
+      "Bathroom": 60 * 60,        // 60 minutes
+      "Kitchen": 4 * 60 * 60,     // 4 hours
+      "Living Room": 4 * 60 * 60,
+      "Bedroom": 10 * 60 * 60,
+      "FrontDoor": 10 * 60        // 10 minutes
+      // Pool is handled as Emergency via /alerts/GRANDPA/pool
+    };
 
     const els = {
       person: document.getElementById("personSelect"),
@@ -94,6 +94,12 @@ const CHECK_THRESHOLDS = {
       saveNotes: document.getElementById("saveNotesBtn"),
       clearNotes: document.getElementById("clearNotesBtn")
     };
+
+    // Remember last selected person (optional polish)
+    const savedPerson = localStorage.getItem("uw_person");
+    if (savedPerson && [...els.person.options].some(o => o.value === savedPerson)) {
+      els.person.value = savedPerson;
+    }
 
     let current = { name: els.person.value, room:"", enteredAt:null, alerts:{} };
 
@@ -136,22 +142,39 @@ const CHECK_THRESHOLDS = {
 
       // 3) Otherwise GOOD (green)
       setStatus("good", "GOOD");
-
     }
 
+    // Track active Firebase refs so we can unsubscribe when switching people
+    let beaconsRef = null;
+    let alertsRef = null;
+    let notesRef = null;
+
     function subscribe(name) {
+      // Unsubscribe old listeners
+      if (beaconsRef) beaconsRef.off();
+      if (alertsRef) alertsRef.off();
+      if (notesRef) notesRef.off();
+
       current = { name, room:"", enteredAt:null, alerts:{} };
-      db.ref("/beacons/" + name).on("value", s => {
+      refresh(); // update UI immediately when switching
+
+      beaconsRef = db.ref("/beacons/" + name);
+      alertsRef  = db.ref("/alerts/" + name);
+      notesRef   = db.ref("/status/" + name + "/notes");
+
+      beaconsRef.on("value", s => {
         const v = s.val() || {};
         current.room = v.room || "";
         current.enteredAt = v.entered_at || null;
         refresh();
       });
-      db.ref("/alerts/" + name).on("value", s => {
+
+      alertsRef.on("value", s => {
         current.alerts = s.val() || {};
         refresh();
       });
-      db.ref("/status/" + name + "/notes").on("value", s => {
+
+      notesRef.on("value", s => {
         els.notesBox.value = s.val() || "";
       });
     }
@@ -162,7 +185,10 @@ const CHECK_THRESHOLDS = {
     els.clearNotes.onclick = () =>
       db.ref("/status/" + current.name + "/notes").set("");
 
-    els.person.onchange = () => location.reload();
+    els.person.onchange = () => {
+      localStorage.setItem("uw_person", els.person.value);
+      subscribe(els.person.value);
+    };
 
     setInterval(refresh, 1000);
     subscribe(current.name);
