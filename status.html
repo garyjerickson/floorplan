@@ -119,29 +119,35 @@
       } else {
         els.timeInRoomVal.textContent = "—";
       }
+// 1) EMERGENCY rules (red)
+if (current.alerts?.sos === true) {
+  setStatus("emergency", "EMERGENCY (SOS)");
+  return;
+}
+if (current.alerts?.pool === true) {
+  setStatus("emergency", "EMERGENCY (POOL)");
+  return;
+}
 
-      // 1) EMERGENCY rules (red)
-      if (current.alerts?.sos === true) {
-        setStatus("emergency", "EMERGENCY (SOS)");
-        return;
-      }
-      if (current.alerts?.pool === true) {
-        setStatus("emergency", "EMERGENCY (POOL)");
-        return;
-      }
+// 1.5) NOT SEEN rule (yellow)
+if (!current.room) {
+  setStatus("check", current.name + " NOT SEEN");
+  return;
+}
 
-      // 2) CHECK rules (yellow) based on time-in-room thresholds
-      const threshold = CHECK_THRESHOLDS[current.room];
-      if (threshold && current.enteredAt) {
-        const dwellSec = Math.floor(Date.now() / 1000) - current.enteredAt;
-        if (dwellSec >= threshold) {
-          setStatus("check", "CHECK");
-          return;
-        }
-      }
+// 2) CHECK rules (yellow) based on time-in-room thresholds
+const threshold = CHECK_THRESHOLDS[current.room];
+if (threshold && current.enteredAt) {
+  const dwellSec = Math.floor(Date.now() / 1000) - current.enteredAt;
+  if (dwellSec >= threshold) {
+    setStatus("check", "CHECK");
+    return;
+  }
+}
 
-      // 3) Otherwise GOOD (green)
-      setStatus("good", "GOOD");
+// 3) Otherwise GOOD (green)
+setStatus("good", "GOOD");
+
     }
 
     // Track active Firebase refs so we can unsubscribe when switching people
