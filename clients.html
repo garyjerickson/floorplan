@@ -66,6 +66,16 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
+    function clearAlerts(firebaseKey) {
+  if (!firebaseKey) return;
+  db.ref("/alerts/" + firebaseKey).update({
+    sos: false,
+    pool: false,
+    timestamp: Math.floor(Date.now() / 1000)
+  });
+}
+
+
     // === Demo roster ===
     // Grammie -> Christine, Grandpa -> Jack
     // "firebaseKey" is the node name under /beacons and /alerts. For demo-only clients, leave firebaseKey null.
@@ -114,18 +124,20 @@
       const badgeClass = state.kind;
       const badgeText = badgeTextFromState(state);
 
-      tr.innerHTML = `
-        <td>
-          <div class="name">${client.displayName}</div>
-          <div class="small muted">${client.firebaseKey ? "Live (Firebase)" : "Demo"}</div>
-        </td>
-        <td><span class="badge ${badgeClass}">${badgeText}</span></td>
-        <td class="hide-mobile"><span class="muted">${state.note || ""}</span></td>
-        <td class="right">
-          <div><strong>${client.caretakerName}</strong></div>
-          <div class="small mono muted">${client.caretakerPhone}</div>
-        </td>
-      `;
+tr.innerHTML = `
+  <td>
+    <div class="name">${client.displayName}</div>
+    <div class="small muted">${client.firebaseKey ? "Live (Firebase)" : "Demo"}</div>
+  </td>
+  <td><span class="badge ${badgeClass}">${badgeText}</span></td>
+  <td class="hide-mobile"><span class="muted">${state.note || ""}</span></td>
+  <td class="right">
+    <div><strong>${client.caretakerName}</strong></div>
+    <div class="small mono muted">${client.caretakerPhone}</div>
+    ${client.firebaseKey ? `<div style="margin-top:8px;"><button data-clear="${client.firebaseKey}">Clear</button></div>` : ``}
+  </td>
+`;
+
       return tr;
     }
 
@@ -138,6 +150,15 @@
 
       tbody.appendChild(makeRow(id, c, demoState));
     });
+
+    // Handle Clear button clicks (event delegation)
+document.addEventListener("click", (e) => {
+  const btn = e.target.closest("button[data-clear]");
+  if (!btn) return;
+  const key = btn.getAttribute("data-clear");
+  clearAlerts(key);
+});
+
 
     function updateRowForClient(idx, state) {
       const id = `row_${idx}`;
