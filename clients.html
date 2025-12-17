@@ -23,6 +23,7 @@
     .muted { opacity:.75; }
     .right { text-align:right; }
     .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+    button { border-radius: 12px; padding: 8px 10px; font-weight: 800; }
     @media (max-width: 720px) {
       .hide-mobile { display:none; }
       .right { text-align:left; }
@@ -35,6 +36,10 @@
       <div>
         <h1>UltraWatch Client Status</h1>
         <div class="sub">One-line overview for all monitored clients</div>
+        <div class="sub" style="margin-top:8px;">
+          <button id="enableSoundBtn">Enable Sound</button>
+          <span class="muted" id="soundStatus" style="margin-left:10px;">Sound: off</span>
+        </div>
       </div>
       <div class="sub mono" id="clock">--:--:--</div>
     </div>
@@ -66,15 +71,55 @@
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
 
-    function clearAlerts(firebaseKey) {
-  if (!firebaseKey) return;
-  db.ref("/alerts/" + firebaseKey).update({
-    sos: false,
-    pool: false,
-    timestamp: Math.floor(Date.now() / 1000)
-  });
-}
+    // ===== Audible Alarm (browser side) =====
+    // Put alarm.mp3 in the same GitHub folder as this HTML file.
+    let soundEnabled = false;
+    const alarmAudio = new Audio("alarm.mp3");
+    alarmAudio.loop = true;
 
+    function startAlarm() {
+      if (!soundEnabled) return;
+      if (alarmAudio.paused) {
+        alarmAudio.currentTime = 0;
+        alarmAudio.play().catch(() => {
+          // Browser may still block if user hasn't interacted
+          console.log("Alarm blocked until user interaction");
+        });
+      }
+    }
+
+    function stopAlarm() {
+      if (!alarmAudio.paused) {
+        alarmAudio.pause();
+        alarmAudio.currentTime = 0;
+      }
+    }
+
+    // One-time user interaction to allow audio playback
+    const enableBtn = document.getElementById("enableSoundBtn");
+    const soundStatus = document.getElementById("soundStatus");
+    enableBtn.onclick = async () => {
+      try {
+        soundEnabled = true;
+        // Prime audio permissions
+        alarmAudio.currentTime = 0;
+        await alarmAudio.play();
+        alarmAudio.pause();
+        alarmAudio.currentTime = 0;
+        soundStatus.textContent = "Sound: on";
+      } catch (e) {
+        soundStatus.textContent = "Sound: blocked (tap again)";
+      }
+    };
+
+    function clearAlerts(firebaseKey) {
+      if (!firebaseKey) return;
+      db.ref("/alerts/" + firebaseKey).update({
+        sos: false,
+        pool: false,
+        timestamp: Math.floor(Date.now() / 1000)
+      });
+    }
 
     // === Demo roster ===
     // Grammie -> Christine, Grandpa -> Jack
@@ -124,19 +169,19 @@
       const badgeClass = state.kind;
       const badgeText = badgeTextFromState(state);
 
-tr.innerHTML = `
-  <td>
-    <div class="name">${client.displayName}</div>
-    <div class="small muted">${client.firebaseKey ? "Live (Firebase)" : "Demo"}</div>
-  </td>
-  <td><span class="badge ${badgeClass}">${badgeText}</span></td>
-  <td class="hide-mobile"><span class="muted">${state.note || ""}</span></td>
-  <td class="right">
-    <div><strong>${client.caretakerName}</strong></div>
-    <div class="small mono muted">${client.caretakerPhone}</div>
-    ${client.firebaseKey ? `<div style="margin-top:8px;"><button data-clear="${client.firebaseKey}">Clear</button></div>` : ``}
-  </td>
-`;
+      tr.innerHTML = `
+        <td>
+          <div class="name">${client.displayName}</div>
+          <div class="small muted">${client.firebaseKey ? "Live (Firebase)" : "Demo"}</div>
+        </td>
+        <td><span class="badge ${badgeClass}">${badgeText}</span></td>
+        <td class="hide-mobile"><span class="muted">${state.note || ""}</span></td>
+        <td class="right">
+          <div><strong>${client.caretakerName}</strong></div>
+          <div class="small mono muted">${client.caretakerPhone}</div>
+          ${client.firebaseKey ? `<div style="margin-top:8px;"><button data-clear="${client.firebaseKey}">Clear</button></div>` : ``}
+        </td>
+      `;
 
       return tr;
     }
@@ -152,13 +197,12 @@ tr.innerHTML = `
     });
 
     // Handle Clear button clicks (event delegation)
-document.addEventListener("click", (e) => {
-  const btn = e.target.closest("button[data-clear]");
-  if (!btn) return;
-  const key = btn.getAttribute("data-clear");
-  clearAlerts(key);
-});
-
+    document.addEventListener("click", (e) => {
+      const btn = e.target.closest("button[data-clear]");
+      if (!btn) return;
+      const key = btn.getAttribute("data-clear");
+      clearAlerts(key);
+    });
 
     function updateRowForClient(idx, state) {
       const id = `row_${idx}`;
@@ -174,11 +218,6 @@ document.addEventListener("click", (e) => {
     }
 
     // === Live status computation for Christine (Grammie) & Jack (Grandpa) ===
-    // Rules:
-    // - EMERGENCY if alerts.sos or alerts.pool === true
-    // - CHECK "<Name> NOT SEEN" if beacons.room is empty
-    // - CHECK if time-in-room exceeds thresholds (using same map)
-    // - else GOOD
     const CHECK_THRESHOLDS = {
       "Bathroom": 60 * 60,
       "Kitchen": 4 * 60 * 60,
@@ -195,29 +234,37 @@ document.addEventListener("click", (e) => {
       const enteredAt = v.entered_at || null;
       const alerts = v.alerts || {};
 
-      // Emergency
       if (alerts.sos === true) return { kind: "emergency", text: "EMERGENCY", note: "SOS triggered" };
       if (alerts.pool === true) return { kind: "emergency", text: "EMERGENCY", note: "Pool alarm" };
-
-      // Not seen
       if (!room) return { kind: "check", text: displayName + " NOT SEEN", note: "No room reported" };
 
-      // Dwell check
       const threshold = CHECK_THRESHOLDS[room];
       if (threshold && enteredAt) {
         const nowSec = Math.floor(Date.now()/1000);
         const dwell = nowSec - enteredAt;
         if (dwell >= threshold) return { kind: "check", text: "CHECK", note: room + " dwell exceeded" };
       }
-
       return { kind: "good", text: "GOOD", note: room };
+    }
+
+    function evaluateAnyEmergencyAndSound() {
+      // If ANY live client is in emergency, start alarm. Otherwise stop it.
+      let anyEmergency = false;
+      clients.forEach((c) => {
+        if (!c.firebaseKey) return;
+        const v = liveState[c.firebaseKey] || {};
+        const alerts = v.alerts || {};
+        if (alerts.sos === true || alerts.pool === true) anyEmergency = true;
+      });
+
+      if (anyEmergency) startAlarm();
+      else stopAlarm();
     }
 
     // Subscribe live for each firebaseKey entry
     clients.forEach((c, idx) => {
       if (!c.firebaseKey) return;
 
-      // beacons
       db.ref("/beacons/" + c.firebaseKey).on("value", snap => {
         const val = snap.val() || {};
         liveState[c.firebaseKey] = liveState[c.firebaseKey] || {};
@@ -226,24 +273,25 @@ document.addEventListener("click", (e) => {
         updateRowForClient(idx, computeState(c.displayName, c.firebaseKey));
       });
 
-      // alerts
       db.ref("/alerts/" + c.firebaseKey).on("value", snap => {
         const val = snap.val() || {};
         liveState[c.firebaseKey] = liveState[c.firebaseKey] || {};
         liveState[c.firebaseKey].alerts = val || {};
         updateRowForClient(idx, computeState(c.displayName, c.firebaseKey));
+        evaluateAnyEmergencyAndSound();
       });
     });
 
     // clock
     function tick() {
       document.getElementById("clock").textContent = new Date().toLocaleString();
-      // Refresh live dwell-based CHECK without waiting for DB change
       clients.forEach((c, idx) => {
         if (!c.firebaseKey) return;
         updateRowForClient(idx, computeState(c.displayName, c.firebaseKey));
       });
+      evaluateAnyEmergencyAndSound();
     }
+
     setInterval(tick, 1000);
     tick();
   </script>
