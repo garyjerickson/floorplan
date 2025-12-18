@@ -24,14 +24,25 @@
     .right { text-align:right; }
     .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
     button { border-radius: 12px; padding: 8px 10px; font-weight: 800; }
+
+    /* === System online/offline badge === */
+    .statusBadge { display:inline-block; padding:6px 10px; border-radius:12px; font-weight:900; letter-spacing:.3px; }
+    .statusBadge.green { background: rgba(0,255,0,0.15); color:#7CFF7C; }
+    .statusBadge.gray  { background: rgba(255,255,255,0.10); color:#B8C0D9; }
+    .statusLine { display:flex; gap:10px; align-items:center; justify-content:flex-end; }
+
+    /* Dim UI when no data is arriving */
+    .offlineDim { opacity: 0.55; filter: grayscale(100%); }
+
     @media (max-width: 720px) {
       .hide-mobile { display:none; }
       .right { text-align:left; }
+      .statusLine { justify-content:flex-start; margin-top:10px; }
     }
   </style>
 </head>
 <body>
-  <div class="wrap">
+  <div class="wrap" id="wrap">
     <div class="header">
       <div>
         <h1>UltraWatch Client Status</h1>
@@ -41,10 +52,18 @@
           <span class="muted" id="soundStatus" style="margin-left:10px;">Sound: off</span>
         </div>
       </div>
-      <div class="sub mono" id="clock">--:--:--</div>
+
+      <div>
+        <div class="statusLine">
+          <div id="systemStatus" class="statusBadge gray">OFFLINE</div>
+          <div class="sub mono" id="dataAge">Data age: --</div>
+          <div class="sub mono" id="updateCount" title="Increments when /system/lastDataRx changes">Updates: 0</div>
+        </div>
+        <div class="sub mono" id="clock" style="margin-top:6px;">--:--:--</div>
+      </div>
     </div>
 
-    <div class="card">
+    <div class="card" id="mainCard">
       <table class="table" id="clientTable">
         <thead class="muted">
           <tr>
@@ -64,7 +83,7 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
   <script>
-    // === Firebase DB URL (your new project) ===
+    // === Firebase DB URL (your project) ===
     const firebaseConfig = {
       databaseURL: "https://ultrawatch-home-default-rtdb.firebaseio.com/"
     };
@@ -82,7 +101,6 @@
       if (alarmAudio.paused) {
         alarmAudio.currentTime = 0;
         alarmAudio.play().catch(() => {
-          // Browser may still block if user hasn't interacted
           console.log("Alarm blocked until user interaction");
         });
       }
@@ -101,7 +119,6 @@
     enableBtn.onclick = async () => {
       try {
         soundEnabled = true;
-        // Prime audio permissions
         alarmAudio.currentTime = 0;
         await alarmAudio.play();
         alarmAudio.pause();
@@ -122,13 +139,10 @@
     }
 
     // === Demo roster ===
-    // Grammie -> Christine, Grandpa -> Jack
-    // "firebaseKey" is the node name under /beacons and /alerts. For demo-only clients, leave firebaseKey null.
     const clients = [
       { displayName: "Christine", firebaseKey: "Grammie", caretakerName: "Laura Simmons", caretakerPhone: "(407) 555-0127" },
       { displayName: "Jack",      firebaseKey: "GRANDPA", caretakerName: "Mark Delaney", caretakerPhone: "(321) 555-0188" },
 
-      // Demo clients (made up)
       { displayName: "Evelyn", caretakerName: "Dana Price", caretakerPhone: "(813) 555-0141", demoStatus: "GOOD", demoNote: "Living Room routine" },
       { displayName: "Harold", caretakerName: "Trent Wallace", caretakerPhone: "(352) 555-0194", demoStatus: "CHECK", demoNote: "Bathroom dwell > threshold" },
       { displayName: "Marjorie", caretakerName: "Sofia Ramos", caretakerPhone: "(954) 555-0103", demoStatus: "GOOD", demoNote: "Kitchen – normal" },
@@ -217,7 +231,7 @@
       if (noteCell) noteCell.textContent = state.note || "";
     }
 
-    // === Live status computation for Christine (Grammie) & Jack (Grandpa) ===
+    // === Live status computation ===
     const CHECK_THRESHOLDS = {
       "Bathroom": 60 * 60,
       "Kitchen": 4 * 60 * 60,
@@ -248,7 +262,6 @@
     }
 
     function evaluateAnyEmergencyAndSound() {
-      // If ANY live client is in emergency, start alarm. Otherwise stop it.
       let anyEmergency = false;
       clients.forEach((c) => {
         if (!c.firebaseKey) return;
@@ -259,6 +272,50 @@
 
       if (anyEmergency) startAlarm();
       else stopAlarm();
+    }
+
+    // === DATA HEARTBEAT (from Python on MQTT receive) ===
+    let lastDataRx = 0;
+    let dataUpdateCount = 0;
+    const STALE_SECONDS = 8;
+
+    const systemStatusEl = document.getElementById("systemStatus");
+    const dataAgeEl = document.getElementById("dataAge");
+    const updateCountEl = document.getElementById("updateCount");
+    const wrapEl = document.getElementById("wrap");
+
+    db.ref("/system/lastDataRx").on("value", (snap) => {
+      lastDataRx = snap.val() || 0;
+      dataUpdateCount++;
+      if (updateCountEl) updateCountEl.textContent = "Updates: " + dataUpdateCount;
+    });
+
+    function refreshOnlineOffline() {
+      const now = Math.floor(Date.now() / 1000);
+      const age = lastDataRx ? (now - lastDataRx) : null;
+      const stale = (age === null) || (age > STALE_SECONDS);
+
+      if (dataAgeEl) {
+        dataAgeEl.textContent = "Data age: " + (age === null ? "--" : (age + "s"));
+      }
+
+      if (systemStatusEl) {
+        if (stale) {
+          systemStatusEl.textContent = "OFFLINE";
+          systemStatusEl.classList.remove("green");
+          systemStatusEl.classList.add("gray");
+        } else {
+          systemStatusEl.textContent = "ONLINE";
+          systemStatusEl.classList.remove("gray");
+          systemStatusEl.classList.add("green");
+        }
+      }
+
+      // Dim the UI when offline
+      if (wrapEl) {
+        if (stale) wrapEl.classList.add("offlineDim");
+        else wrapEl.classList.remove("offlineDim");
+      }
     }
 
     // Subscribe live for each firebaseKey entry
@@ -282,14 +339,17 @@
       });
     });
 
-    // clock
+    // clock + periodic refresh
     function tick() {
       document.getElementById("clock").textContent = new Date().toLocaleString();
+
       clients.forEach((c, idx) => {
         if (!c.firebaseKey) return;
         updateRowForClient(idx, computeState(c.displayName, c.firebaseKey));
       });
+
       evaluateAnyEmergencyAndSound();
+      refreshOnlineOffline();
     }
 
     setInterval(tick, 1000);
