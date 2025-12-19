@@ -21,6 +21,7 @@
     .check { background:#b8860b; color:#fff7db; }
     .emergency { background:#b42318; }
     .offline { background: rgba(255,255,255,0.12); color:#c9d3ee; }
+    .away { background: rgba(120,180,255,0.18); color:#cfe3ff; } /* NEW */
     .muted { opacity:.75; }
     .right { text-align:right; }
     .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
@@ -175,6 +176,7 @@
       function badgeTextFromState(state) {
         const kind = state.kind || "good";
         if (kind === "emergency") return "EMERGENCY";
+        if (kind === "away") return "AWAY";
         if (kind === "offline") return "OFFLINE";
         if (kind === "check") return state.text || "CHECK";
         return "GOOD";
@@ -230,6 +232,7 @@
         const noteCell = row.querySelector(".hide-mobile .muted");
         if (noteCell) noteCell.textContent = state.note || "";
 
+        // Gray ONLY true offline rows (AWAY stays visible)
         if (kind === "offline") row.classList.add("rowOffline");
         else row.classList.remove("rowOffline");
       }
@@ -254,9 +257,23 @@
 
         const nowSec = Math.floor(Date.now()/1000);
 
-        if (!lastSeen || (nowSec - lastSeen) > BEACON_OFFLINE_SECONDS) {
-          const age = lastSeen ? (nowSec - lastSeen) : null;
-          return { kind: "offline", text: "OFFLINE", note: age === null ? "No signal yet" : `No signal (${age}s)` };
+        // Stale => AWAY if last room was FrontDoor, else OFFLINE
+        const age = lastSeen ? (nowSec - lastSeen) : null;
+        const isStale = (!lastSeen || age > BEACON_OFFLINE_SECONDS);
+
+        if (isStale) {
+          if ((room || "").toLowerCase() === "frontdoor") {
+            return {
+              kind: "away",
+              text: "AWAY",
+              note: age === null ? "FrontDoor (no signal yet)" : `Left from FrontDoor (${age}s)`
+            };
+          }
+          return {
+            kind: "offline",
+            text: "OFFLINE",
+            note: age === null ? "No signal yet" : `No signal (${age}s)`
+          };
         }
 
         if (alerts.sos === true) return { kind: "emergency", text: "EMERGENCY", note: "SOS triggered" };
