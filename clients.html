@@ -143,12 +143,27 @@
 
     const tbody = document.getElementById("tbody");
 
-    function statusClassFromText(t) {
-      const s = (t || "").toUpperCase();
-      if (s.includes("EMERGENCY")) return "emergency";
-      if (s.includes("CHECK") || s.includes("NOT SEEN")) return "check";
-      return "good";
-    }
+const clients = [
+  { displayName: "Christine", firebaseKey: "Grammie", caretakerName: "Laura Simmons", caretakerPhone: "(407) 555-0127" },
+  { displayName: "Jack",      firebaseKey: "GRANDPA", caretakerName: "Mark Delaney", caretakerPhone: "(321) 555-0188" },
+
+  // Demo clients (made up)
+  { displayName: "Evelyn", caretakerName: "Dana Price", caretakerPhone: "(813) 555-0141", demoStatus: "GOOD", demoNote: "Living Room routine" },
+  { displayName: "Harold", caretakerName: "Trent Wallace", caretakerPhone: "(352) 555-0194", demoStatus: "CHECK", demoNote: "Bathroom dwell > threshold" },
+  { displayName: "Marjorie", caretakerName: "Sofia Ramos", caretakerPhone: "(954) 555-0103", demoStatus: "GOOD", demoNote: "Kitchen – normal" },
+  { displayName: "Walter", caretakerName: "Chris Bennett", caretakerPhone: "(305) 555-0177", demoStatus: "EMERGENCY", demoNote: "SOS triggered" },
+  { displayName: "Dolores", caretakerName: "Priya Nair", caretakerPhone: "(239) 555-0138", demoStatus: "GOOD", demoNote: "Bedroom – resting" },
+  { displayName: "Frank", caretakerName: "Ethan Cole", caretakerPhone: "(727) 555-0160", demoStatus: "CHECK", demoNote: "Not seen (signal lost)" },
+  { displayName: "Helen", caretakerName: "Maya Johnson", caretakerPhone: "(386) 555-0119", demoStatus: "GOOD", demoNote: "FrontDoor – brief visit" },
+  { displayName: "Robert", caretakerName: "Noah Kim", caretakerPhone: "(561) 555-0155", demoStatus: "GOOD", demoNote: "Living Room – TV time" },
+  { displayName: "Patricia", caretakerName: "Ava Martinez", caretakerPhone: "(904) 555-0199", demoStatus: "CHECK", demoNote: "Kitchen linger" },
+  { displayName: "Stanley", caretakerName: "Jordan Lee", caretakerPhone: "(850) 555-0108", demoStatus: "GOOD", demoNote: "All clear" },
+  { displayName: "Ruth", caretakerName: "Olivia Chen", caretakerPhone: "(863) 555-0120", demoStatus: "GOOD", demoNote: "Bathroom – normal" },
+  { displayName: "George", caretakerName: "Sam Harper", caretakerPhone: "(941) 555-0184", demoStatus: "EMERGENCY", demoNote: "Pool alarm" },
+  { displayName: "Irene", caretakerName: "Taylor Fox", caretakerPhone: "(407) 555-0150", demoStatus: "GOOD", demoNote: "Bedroom – asleep" },
+  { displayName: "Bernard", caretakerName: "Casey Stone", caretakerPhone: "(321) 555-0171", demoStatus: "CHECK", demoNote: "Not seen > 2m" }
+];
+
 
     function badgeTextFromState(state) {
       if (state.kind === "emergency") return "EMERGENCY";
