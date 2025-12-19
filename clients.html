@@ -133,16 +133,6 @@
       });
     }
 
-    const clients = [
-      { displayName: "Christine", firebaseKey: "Grammie", caretakerName: "Laura Simmons", caretakerPhone: "(407) 555-0127" },
-      { displayName: "Jack",      firebaseKey: "GRANDPA", caretakerName: "Mark Delaney", caretakerPhone: "(321) 555-0188" },
-
-      { displayName: "Evelyn", caretakerName: "Dana Price", caretakerPhone: "(813) 555-0141", demoStatus: "GOOD", demoNote: "Living Room routine" }
-      // (rest unchanged in your file — keep your demo list as-is)
-    ];
-
-    const tbody = document.getElementById("tbody");
-
 const clients = [
   { displayName: "Christine", firebaseKey: "Grammie", caretakerName: "Laura Simmons", caretakerPhone: "(407) 555-0127" },
   { displayName: "Jack",      firebaseKey: "GRANDPA", caretakerName: "Mark Delaney", caretakerPhone: "(321) 555-0188" },
@@ -164,6 +154,7 @@ const clients = [
   { displayName: "Bernard", caretakerName: "Casey Stone", caretakerPhone: "(321) 555-0171", demoStatus: "CHECK", demoNote: "Not seen > 2m" }
 ];
 
+    const tbody = document.getElementById("tbody");
 
     function badgeTextFromState(state) {
       if (state.kind === "emergency") return "EMERGENCY";
