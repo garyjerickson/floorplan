@@ -35,6 +35,9 @@
     .statusBadge.gray  { background: rgba(255,255,255,0.10); color:#B8C0D9; }
     .statusLine { display:flex; gap:10px; align-items:center; justify-content:flex-end; }
 
+    /* Visible error banner (so page never looks “empty” with no clue) */
+    .err { margin-top: 10px; padding: 10px 12px; border-radius: 12px; background: rgba(180,35,24,0.18); color: #ffd2cd; display:none; }
+
     @media (max-width: 720px) {
       .hide-mobile { display:none; }
       .right { text-align:left; }
@@ -52,13 +55,14 @@
           <button id="enableSoundBtn">Enable Sound</button>
           <span class="muted" id="soundStatus" style="margin-left:10px;">Sound: off</span>
         </div>
+        <div class="err mono" id="errBox"></div>
       </div>
 
       <div>
         <div class="statusLine">
           <div id="systemStatus" class="statusBadge gray">OFFLINE</div>
           <div class="sub mono" id="dataAge">Data age: --</div>
-          <div class="sub mono" id="updateCount" title="Increments when /system/lastDataRx changes">Updates: 0</div>
+          <div class="sub mono" id="updateCount">Updates: 0</div>
         </div>
         <div class="sub mono" id="clock" style="margin-top:6px;">--:--:--</div>
       </div>
@@ -83,227 +87,224 @@
   <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
   <script>
-    const firebaseConfig = {
-      databaseURL: "https://ultrawatch-home-default-rtdb.firebaseio.com/"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
-
-    // ===== Audible Alarm =====
-    let soundEnabled = false;
-    const alarmAudio = new Audio("alarm.mp3");
-    alarmAudio.loop = true;
-
-    function startAlarm() {
-      if (!soundEnabled) return;
-      if (alarmAudio.paused) {
-        alarmAudio.currentTime = 0;
-        alarmAudio.play().catch(() => console.log("Alarm blocked until user interaction"));
-      }
+  (function () {
+    const errBox = document.getElementById("errBox");
+    function showError(msg) {
+      errBox.style.display = "block";
+      errBox.textContent = "JS ERROR: " + msg;
     }
 
-    function stopAlarm() {
-      if (!alarmAudio.paused) {
-        alarmAudio.pause();
-        alarmAudio.currentTime = 0;
-      }
-    }
+    try {
+      const firebaseConfig = { databaseURL: "https://ultrawatch-home-default-rtdb.firebaseio.com/" };
+      firebase.initializeApp(firebaseConfig);
+      const db = firebase.database();
 
-    const enableBtn = document.getElementById("enableSoundBtn");
-    const soundStatus = document.getElementById("soundStatus");
-    enableBtn.onclick = async () => {
-      try {
-        soundEnabled = true;
-        alarmAudio.currentTime = 0;
-        await alarmAudio.play();
-        alarmAudio.pause();
-        alarmAudio.currentTime = 0;
-        soundStatus.textContent = "Sound: on";
-      } catch (e) {
-        soundStatus.textContent = "Sound: blocked (tap again)";
-      }
-    };
+      // ===== Audible Alarm =====
+      let soundEnabled = false;
+      const alarmAudio = new Audio("alarm.mp3");
+      alarmAudio.loop = true;
 
-    function clearAlerts(firebaseKey) {
-      if (!firebaseKey) return;
-      db.ref("/alerts/" + firebaseKey).update({
-        sos: false,
-        pool: false,
-        timestamp: Math.floor(Date.now() / 1000)
+      function startAlarm() {
+        if (!soundEnabled) return;
+        if (alarmAudio.paused) {
+          alarmAudio.currentTime = 0;
+          alarmAudio.play().catch(() => console.log("Alarm blocked until user interaction"));
+        }
+      }
+      function stopAlarm() {
+        if (!alarmAudio.paused) {
+          alarmAudio.pause();
+          alarmAudio.currentTime = 0;
+        }
+      }
+
+      const enableBtn = document.getElementById("enableSoundBtn");
+      const soundStatus = document.getElementById("soundStatus");
+      enableBtn.onclick = async () => {
+        try {
+          soundEnabled = true;
+          alarmAudio.currentTime = 0;
+          await alarmAudio.play();
+          alarmAudio.pause();
+          alarmAudio.currentTime = 0;
+          soundStatus.textContent = "Sound: on";
+        } catch (e) {
+          soundStatus.textContent = "Sound: blocked (tap again)";
+        }
+      };
+
+      function clearAlerts(firebaseKey) {
+        if (!firebaseKey) return;
+        db.ref("/alerts/" + firebaseKey).update({
+          sos: false,
+          pool: false,
+          timestamp: Math.floor(Date.now() / 1000)
+        });
+      }
+
+      // ✅ ONE clients list (full)
+      const clients = [
+        { displayName: "Christine", firebaseKey: "Grammie", caretakerName: "Laura Simmons", caretakerPhone: "(407) 555-0127" },
+        { displayName: "Jack",      firebaseKey: "GRANDPA", caretakerName: "Mark Delaney", caretakerPhone: "(321) 555-0188" },
+
+        { displayName: "Evelyn", caretakerName: "Dana Price", caretakerPhone: "(813) 555-0141", demoStatus: "GOOD", demoNote: "Living Room routine" },
+        { displayName: "Harold", caretakerName: "Trent Wallace", caretakerPhone: "(352) 555-0194", demoStatus: "CHECK", demoNote: "Bathroom dwell > threshold" },
+        { displayName: "Marjorie", caretakerName: "Sofia Ramos", caretakerPhone: "(954) 555-0103", demoStatus: "GOOD", demoNote: "Kitchen – normal" },
+        { displayName: "Walter", caretakerName: "Chris Bennett", caretakerPhone: "(305) 555-0177", demoStatus: "EMERGENCY", demoNote: "SOS triggered" },
+        { displayName: "Dolores", caretakerName: "Priya Nair", caretakerPhone: "(239) 555-0138", demoStatus: "GOOD", demoNote: "Bedroom – resting" },
+        { displayName: "Frank", caretakerName: "Ethan Cole", caretakerPhone: "(727) 555-0160", demoStatus: "CHECK", demoNote: "Not seen (signal lost)" },
+        { displayName: "Helen", caretakerName: "Maya Johnson", caretakerPhone: "(386) 555-0119", demoStatus: "GOOD", demoNote: "FrontDoor – brief visit" },
+        { displayName: "Robert", caretakerName: "Noah Kim", caretakerPhone: "(561) 555-0155", demoStatus: "GOOD", demoNote: "Living Room – TV time" },
+        { displayName: "Patricia", caretakerName: "Ava Martinez", caretakerPhone: "(904) 555-0199", demoStatus: "CHECK", demoNote: "Kitchen linger" },
+        { displayName: "Stanley", caretakerName: "Jordan Lee", caretakerPhone: "(850) 555-0108", demoStatus: "GOOD", demoNote: "All clear" },
+        { displayName: "Ruth", caretakerName: "Olivia Chen", caretakerPhone: "(863) 555-0120", demoStatus: "GOOD", demoNote: "Bathroom – normal" },
+        { displayName: "George", caretakerName: "Sam Harper", caretakerPhone: "(941) 555-0184", demoStatus: "EMERGENCY", demoNote: "Pool alarm" },
+        { displayName: "Irene", caretakerName: "Taylor Fox", caretakerPhone: "(407) 555-0150", demoStatus: "GOOD", demoNote: "Bedroom – asleep" },
+        { displayName: "Bernard", caretakerName: "Casey Stone", caretakerPhone: "(321) 555-0171", demoStatus: "CHECK", demoNote: "Not seen > 2m" }
+      ];
+
+      const tbody = document.getElementById("tbody");
+
+      function statusClassFromText(t) {
+        const s = (t || "").toUpperCase();
+        if (s.includes("EMERGENCY")) return "emergency";
+        if (s.includes("CHECK") || s.includes("NOT SEEN")) return "check";
+        return "good";
+      }
+
+      function badgeTextFromState(state) {
+        const kind = state.kind || "good";
+        if (kind === "emergency") return "EMERGENCY";
+        if (kind === "offline") return "OFFLINE";
+        if (kind === "check") return state.text || "CHECK";
+        return "GOOD";
+      }
+
+      function makeRow(id, client, state) {
+        const tr = document.createElement("tr");
+        tr.className = "row";
+        tr.id = id;
+
+        const kind = state.kind || "good";
+        tr.innerHTML = `
+          <td>
+            <div class="name">${client.displayName}</div>
+            <div class="small muted">${client.firebaseKey ? "Live (Firebase)" : "Demo"}</div>
+          </td>
+          <td><span class="badge ${kind}">${badgeTextFromState(state)}</span></td>
+          <td class="hide-mobile"><span class="muted">${state.note || ""}</span></td>
+          <td class="right">
+            <div><strong>${client.caretakerName || ""}</strong></div>
+            <div class="small mono muted">${client.caretakerPhone || ""}</div>
+            ${client.firebaseKey ? `<div style="margin-top:8px;"><button data-clear="${client.firebaseKey}">Clear</button></div>` : ``}
+          </td>
+        `;
+        return tr;
+      }
+
+      // Initial render (always render demo rows)
+      clients.forEach((c, idx) => {
+        const id = `row_${idx}`;
+        const state = c.firebaseKey
+          ? { kind: "check", text: "LOADING", note: "Waiting for data…" }
+          : { kind: statusClassFromText(c.demoStatus), text: c.demoStatus, note: c.demoNote || "" };
+        tbody.appendChild(makeRow(id, c, state));
       });
-    }
 
-const clients = [
-  { displayName: "Christine", firebaseKey: "Grammie", caretakerName: "Laura Simmons", caretakerPhone: "(407) 555-0127" },
-  { displayName: "Jack",      firebaseKey: "GRANDPA", caretakerName: "Mark Delaney", caretakerPhone: "(321) 555-0188" },
+      // Clear button clicks
+      document.addEventListener("click", (e) => {
+        const btn = e.target.closest("button[data-clear]");
+        if (!btn) return;
+        clearAlerts(btn.getAttribute("data-clear"));
+      });
 
-  // Demo clients (made up)
-  { displayName: "Evelyn", caretakerName: "Dana Price", caretakerPhone: "(813) 555-0141", demoStatus: "GOOD", demoNote: "Living Room routine" },
-  { displayName: "Harold", caretakerName: "Trent Wallace", caretakerPhone: "(352) 555-0194", demoStatus: "CHECK", demoNote: "Bathroom dwell > threshold" },
-  { displayName: "Marjorie", caretakerName: "Sofia Ramos", caretakerPhone: "(954) 555-0103", demoStatus: "GOOD", demoNote: "Kitchen – normal" },
-  { displayName: "Walter", caretakerName: "Chris Bennett", caretakerPhone: "(305) 555-0177", demoStatus: "EMERGENCY", demoNote: "SOS triggered" },
-  { displayName: "Dolores", caretakerName: "Priya Nair", caretakerPhone: "(239) 555-0138", demoStatus: "GOOD", demoNote: "Bedroom – resting" },
-  { displayName: "Frank", caretakerName: "Ethan Cole", caretakerPhone: "(727) 555-0160", demoStatus: "CHECK", demoNote: "Not seen (signal lost)" },
-  { displayName: "Helen", caretakerName: "Maya Johnson", caretakerPhone: "(386) 555-0119", demoStatus: "GOOD", demoNote: "FrontDoor – brief visit" },
-  { displayName: "Robert", caretakerName: "Noah Kim", caretakerPhone: "(561) 555-0155", demoStatus: "GOOD", demoNote: "Living Room – TV time" },
-  { displayName: "Patricia", caretakerName: "Ava Martinez", caretakerPhone: "(904) 555-0199", demoStatus: "CHECK", demoNote: "Kitchen linger" },
-  { displayName: "Stanley", caretakerName: "Jordan Lee", caretakerPhone: "(850) 555-0108", demoStatus: "GOOD", demoNote: "All clear" },
-  { displayName: "Ruth", caretakerName: "Olivia Chen", caretakerPhone: "(863) 555-0120", demoStatus: "GOOD", demoNote: "Bathroom – normal" },
-  { displayName: "George", caretakerName: "Sam Harper", caretakerPhone: "(941) 555-0184", demoStatus: "EMERGENCY", demoNote: "Pool alarm" },
-  { displayName: "Irene", caretakerName: "Taylor Fox", caretakerPhone: "(407) 555-0150", demoStatus: "GOOD", demoNote: "Bedroom – asleep" },
-  { displayName: "Bernard", caretakerName: "Casey Stone", caretakerPhone: "(321) 555-0171", demoStatus: "CHECK", demoNote: "Not seen > 2m" }
-];
+      function updateRowForClient(idx, state) {
+        const row = document.getElementById(`row_${idx}`);
+        if (!row) return;
 
-    const tbody = document.getElementById("tbody");
+        const kind = state.kind || "good";
+        const badge = row.querySelector(".badge");
+        badge.className = "badge " + kind;
+        badge.textContent = badgeTextFromState(state);
 
-function statusClassFromText(t) {
-  const s = (t || "").toUpperCase();
-  if (s.includes("EMERGENCY")) return "emergency";
-  if (s.includes("CHECK") || s.includes("NOT SEEN")) return "check";
-  return "good";
-}
+        const noteCell = row.querySelector(".hide-mobile .muted");
+        if (noteCell) noteCell.textContent = state.note || "";
 
-    
-    function badgeTextFromState(state) {
-      if (state.kind === "emergency") return "EMERGENCY";
-      if (state.kind === "offline") return "OFFLINE";
-      if (state.kind === "check") return state.text || "CHECK";
-      return "GOOD";
-    }
-
-    function makeRow(id, client, state) {
-      const tr = document.createElement("tr");
-      tr.className = "row";
-      tr.id = id;
-
-      const badgeClass = state.kind;
-      const badgeText = badgeTextFromState(state);
-
-      tr.innerHTML = `
-        <td>
-          <div class="name">${client.displayName}</div>
-          <div class="small muted">${client.firebaseKey ? "Live (Firebase)" : "Demo"}</div>
-        </td>
-        <td><span class="badge ${badgeClass}">${badgeText}</span></td>
-        <td class="hide-mobile"><span class="muted">${state.note || ""}</span></td>
-        <td class="right">
-          <div><strong>${client.caretakerName}</strong></div>
-          <div class="small mono muted">${client.caretakerPhone}</div>
-          ${client.firebaseKey ? `<div style="margin-top:8px;"><button data-clear="${client.firebaseKey}">Clear</button></div>` : ``}
-        </td>
-      `;
-      return tr;
-    }
-
-    clients.forEach((c, idx) => {
-      const id = `row_${idx}`;
-      const demoState = c.firebaseKey
-        ? { kind: "check", text: "LOADING", note: "Waiting for data…" }
-        : { kind: statusClassFromText(c.demoStatus), text: c.demoStatus, note: c.demoNote || "" };
-      tbody.appendChild(makeRow(id, c, demoState));
-    });
-
-    document.addEventListener("click", (e) => {
-      const btn = e.target.closest("button[data-clear]");
-      if (!btn) return;
-      clearAlerts(btn.getAttribute("data-clear"));
-    });
-
-    function updateRowForClient(idx, state) {
-      const row = document.getElementById(`row_${idx}`);
-      if (!row) return;
-
-      row.querySelector(".badge").className = "badge " + state.kind;
-      row.querySelector(".badge").textContent = badgeTextFromState(state);
-
-      const noteCell = row.querySelector(".hide-mobile .muted");
-      if (noteCell) noteCell.textContent = state.note || "";
-
-      // Only gray THIS row if offline
-      if (state.kind === "offline") row.classList.add("rowOffline");
-      else row.classList.remove("rowOffline");
-    }
-
-    const CHECK_THRESHOLDS = {
-      "Bathroom": 60 * 60,
-      "Kitchen": 4 * 60 * 60,
-      "Living Room": 4 * 60 * 60,
-      "Bedroom": 10 * 60 * 60,
-      "FrontDoor": 10 * 60
-    };
-
-    // How long until a beacon row is considered offline
-    const BEACON_OFFLINE_SECONDS = 12;
-
-    const liveState = {}; // firebaseKey -> {room, entered_at, alerts, last_seen}
-
-    function computeState(displayName, firebaseKey) {
-      const v = liveState[firebaseKey] || {};
-      const room = v.room || "";
-      const enteredAt = v.entered_at || null;
-      const alerts = v.alerts || {};
-      const lastSeen = v.last_seen || 0;
-
-      const nowSec = Math.floor(Date.now()/1000);
-
-      // Per-row offline check (this is what you asked for)
-      if (!lastSeen || (nowSec - lastSeen) > BEACON_OFFLINE_SECONDS) {
-        const age = lastSeen ? (nowSec - lastSeen) : null;
-        return {
-          kind: "offline",
-          text: "OFFLINE",
-          note: age === null ? "No signal yet" : `No signal (${age}s)`
-        };
+        if (kind === "offline") row.classList.add("rowOffline");
+        else row.classList.remove("rowOffline");
       }
 
-      if (alerts.sos === true) return { kind: "emergency", text: "EMERGENCY", note: "SOS triggered" };
-      if (alerts.pool === true) return { kind: "emergency", text: "EMERGENCY", note: "Pool alarm" };
-      if (!room) return { kind: "check", text: displayName + " NOT SEEN", note: "No room reported" };
+      const CHECK_THRESHOLDS = {
+        "Bathroom": 60 * 60,
+        "Kitchen": 4 * 60 * 60,
+        "Living Room": 4 * 60 * 60,
+        "Bedroom": 10 * 60 * 60,
+        "FrontDoor": 10 * 60
+      };
 
-      const threshold = CHECK_THRESHOLDS[room];
-      if (threshold && enteredAt) {
-        const dwell = nowSec - enteredAt;
-        if (dwell >= threshold) return { kind: "check", text: "CHECK", note: room + " dwell exceeded" };
-      }
+      const BEACON_OFFLINE_SECONDS = 12;
+      const liveState = {}; // firebaseKey -> {room, entered_at, alerts, last_seen}
 
-      return { kind: "good", text: "GOOD", note: room };
-    }
-
-    function evaluateAnyEmergencyAndSound() {
-      let anyEmergency = false;
-      clients.forEach((c) => {
-        if (!c.firebaseKey) return;
-        const v = liveState[c.firebaseKey] || {};
+      function computeState(displayName, firebaseKey) {
+        const v = liveState[firebaseKey] || {};
+        const room = v.room || "";
+        const enteredAt = v.entered_at || null;
         const alerts = v.alerts || {};
-        if (alerts.sos === true || alerts.pool === true) anyEmergency = true;
+        const lastSeen = v.last_seen || 0;
+
+        const nowSec = Math.floor(Date.now()/1000);
+
+        if (!lastSeen || (nowSec - lastSeen) > BEACON_OFFLINE_SECONDS) {
+          const age = lastSeen ? (nowSec - lastSeen) : null;
+          return { kind: "offline", text: "OFFLINE", note: age === null ? "No signal yet" : `No signal (${age}s)` };
+        }
+
+        if (alerts.sos === true) return { kind: "emergency", text: "EMERGENCY", note: "SOS triggered" };
+        if (alerts.pool === true) return { kind: "emergency", text: "EMERGENCY", note: "Pool alarm" };
+        if (!room) return { kind: "check", text: displayName + " NOT SEEN", note: "No room reported" };
+
+        const threshold = CHECK_THRESHOLDS[room];
+        if (threshold && enteredAt) {
+          const dwell = nowSec - enteredAt;
+          if (dwell >= threshold) return { kind: "check", text: "CHECK", note: room + " dwell exceeded" };
+        }
+        return { kind: "good", text: "GOOD", note: room };
+      }
+
+      function evaluateAnyEmergencyAndSound() {
+        let anyEmergency = false;
+        clients.forEach((c) => {
+          if (!c.firebaseKey) return;
+          const v = liveState[c.firebaseKey] || {};
+          const alerts = v.alerts || {};
+          if (alerts.sos === true || alerts.pool === true) anyEmergency = true;
+        });
+        if (anyEmergency) startAlarm();
+        else stopAlarm();
+      }
+
+      // System badge based on /system/lastDataRx
+      let lastDataRx = 0;
+      let dataUpdateCount = 0;
+      const STALE_SECONDS = 8;
+
+      const systemStatusEl = document.getElementById("systemStatus");
+      const dataAgeEl = document.getElementById("dataAge");
+      const updateCountEl = document.getElementById("updateCount");
+
+      db.ref("/system/lastDataRx").on("value", (snap) => {
+        lastDataRx = snap.val() || 0;
+        dataUpdateCount++;
+        updateCountEl.textContent = "Updates: " + dataUpdateCount;
       });
-      if (anyEmergency) startAlarm();
-      else stopAlarm();
-    }
 
-    // System badge (still based on /system/lastDataRx)
-    let lastDataRx = 0;
-    let dataUpdateCount = 0;
-    const STALE_SECONDS = 8;
+      function refreshSystemBadge() {
+        const now = Math.floor(Date.now() / 1000);
+        const age = lastDataRx ? (now - lastDataRx) : null;
+        const stale = (age === null) || (age > STALE_SECONDS);
 
-    const systemStatusEl = document.getElementById("systemStatus");
-    const dataAgeEl = document.getElementById("dataAge");
-    const updateCountEl = document.getElementById("updateCount");
+        dataAgeEl.textContent = "Data age: " + (age === null ? "--" : (age + "s"));
 
-    db.ref("/system/lastDataRx").on("value", (snap) => {
-      lastDataRx = snap.val() || 0;
-      dataUpdateCount++;
-      if (updateCountEl) updateCountEl.textContent = "Updates: " + dataUpdateCount;
-    });
-
-    function refreshSystemBadge() {
-      const now = Math.floor(Date.now() / 1000);
-      const age = lastDataRx ? (now - lastDataRx) : null;
-      const stale = (age === null) || (age > STALE_SECONDS);
-
-      if (dataAgeEl) dataAgeEl.textContent = "Data age: " + (age === null ? "--" : (age + "s"));
-
-      if (systemStatusEl) {
         if (stale) {
           systemStatusEl.textContent = "OFFLINE";
           systemStatusEl.classList.remove("green");
@@ -314,45 +315,47 @@ function statusClassFromText(t) {
           systemStatusEl.classList.add("green");
         }
       }
-    }
 
-    // Subscribe live for each firebaseKey entry
-    clients.forEach((c, idx) => {
-      if (!c.firebaseKey) return;
-
-      db.ref("/beacons/" + c.firebaseKey).on("value", snap => {
-        const val = snap.val() || {};
-        liveState[c.firebaseKey] = liveState[c.firebaseKey] || {};
-        liveState[c.firebaseKey].room = val.room || "";
-        liveState[c.firebaseKey].entered_at = val.entered_at || null;
-
-        // NEW: last_seen from Python
-        liveState[c.firebaseKey].last_seen = val.last_seen || 0;
-
-        updateRowForClient(idx, computeState(c.displayName, c.firebaseKey));
-      });
-
-      db.ref("/alerts/" + c.firebaseKey).on("value", snap => {
-        const val = snap.val() || {};
-        liveState[c.firebaseKey] = liveState[c.firebaseKey] || {};
-        liveState[c.firebaseKey].alerts = val || {};
-        updateRowForClient(idx, computeState(c.displayName, c.firebaseKey));
-        evaluateAnyEmergencyAndSound();
-      });
-    });
-
-    function tick() {
-      document.getElementById("clock").textContent = new Date().toLocaleString();
+      // Subscribe live clients (firebaseKey only)
       clients.forEach((c, idx) => {
         if (!c.firebaseKey) return;
-        updateRowForClient(idx, computeState(c.displayName, c.firebaseKey));
-      });
-      evaluateAnyEmergencyAndSound();
-      refreshSystemBadge();
-    }
 
-    setInterval(tick, 1000);
-    tick();
+        db.ref("/beacons/" + c.firebaseKey).on("value", snap => {
+          const val = snap.val() || {};
+          liveState[c.firebaseKey] = liveState[c.firebaseKey] || {};
+          liveState[c.firebaseKey].room = val.room || "";
+          liveState[c.firebaseKey].entered_at = val.entered_at || null;
+          liveState[c.firebaseKey].last_seen = val.last_seen || 0;
+          updateRowForClient(idx, computeState(c.displayName, c.firebaseKey));
+        });
+
+        db.ref("/alerts/" + c.firebaseKey).on("value", snap => {
+          const val = snap.val() || {};
+          liveState[c.firebaseKey] = liveState[c.firebaseKey] || {};
+          liveState[c.firebaseKey].alerts = val || {};
+          updateRowForClient(idx, computeState(c.displayName, c.firebaseKey));
+          evaluateAnyEmergencyAndSound();
+        });
+      });
+
+      function tick() {
+        document.getElementById("clock").textContent = new Date().toLocaleString();
+        clients.forEach((c, idx) => {
+          if (!c.firebaseKey) return;
+          updateRowForClient(idx, computeState(c.displayName, c.firebaseKey));
+        });
+        evaluateAnyEmergencyAndSound();
+        refreshSystemBadge();
+      }
+
+      setInterval(tick, 1000);
+      tick();
+
+    } catch (e) {
+      showError(e && e.message ? e.message : String(e));
+      console.error(e);
+    }
+  })();
   </script>
 </body>
 </html>
