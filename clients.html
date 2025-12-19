@@ -156,6 +156,14 @@ const clients = [
 
     const tbody = document.getElementById("tbody");
 
+function statusClassFromText(t) {
+  const s = (t || "").toUpperCase();
+  if (s.includes("EMERGENCY")) return "emergency";
+  if (s.includes("CHECK") || s.includes("NOT SEEN")) return "check";
+  return "good";
+}
+
+    
     function badgeTextFromState(state) {
       if (state.kind === "emergency") return "EMERGENCY";
       if (state.kind === "offline") return "OFFLINE";
