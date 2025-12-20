@@ -21,7 +21,7 @@
     .check { background:#b8860b; color:#fff7db; }
     .emergency { background:#b42318; }
     .offline { background: rgba(255,255,255,0.12); color:#c9d3ee; }
-    .away { background: rgba(120,180,255,0.18); color:#cfe3ff; } /* NEW */
+    .away { background: rgba(120,140,255,0.18); color:#dbe2ff; } /* NEW: away badge */
     .muted { opacity:.75; }
     .right { text-align:right; }
     .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
@@ -36,7 +36,7 @@
     .statusBadge.gray  { background: rgba(255,255,255,0.10); color:#B8C0D9; }
     .statusLine { display:flex; gap:10px; align-items:center; justify-content:flex-end; }
 
-    /* Visible error banner (so page never looks “empty” with no clue) */
+    /* Visible error banner */
     .err { margin-top: 10px; padding: 10px 12px; border-radius: 12px; background: rgba(180,35,24,0.18); color: #ffd2cd; display:none; }
 
     @media (max-width: 720px) {
@@ -173,6 +173,16 @@
         return "good";
       }
 
+      // NEW: pretty time formatter
+      function formatDuration(seconds) {
+        const s = Math.max(0, Math.floor(seconds || 0));
+        const h = Math.floor(s / 3600);
+        const m = Math.floor((s % 3600) / 60);
+        const sec = s % 60;
+        if (h > 0) return `${h}:${String(m).padStart(2,"0")}:${String(sec).padStart(2,"0")}`;
+        return `${m}:${String(sec).padStart(2,"0")}`;
+      }
+
       function badgeTextFromState(state) {
         const kind = state.kind || "good";
         if (kind === "emergency") return "EMERGENCY";
@@ -204,7 +214,7 @@
         return tr;
       }
 
-      // Initial render (always render demo rows)
+      // Initial render
       clients.forEach((c, idx) => {
         const id = `row_${idx}`;
         const state = c.firebaseKey
@@ -232,7 +242,7 @@
         const noteCell = row.querySelector(".hide-mobile .muted");
         if (noteCell) noteCell.textContent = state.note || "";
 
-        // Gray ONLY true offline rows (AWAY stays visible)
+        // Gray only offline rows (not AWAY)
         if (kind === "offline") row.classList.add("rowOffline");
         else row.classList.remove("rowOffline");
       }
@@ -246,6 +256,7 @@
       };
 
       const BEACON_OFFLINE_SECONDS = 12;
+      const AWAY_IF_LAST_ROOM = "FrontDoor"; // NEW: away logic
       const liveState = {}; // firebaseKey -> {room, entered_at, alerts, last_seen}
 
       function computeState(displayName, firebaseKey) {
@@ -257,35 +268,44 @@
 
         const nowSec = Math.floor(Date.now()/1000);
 
-        // Stale => AWAY if last room was FrontDoor, else OFFLINE
-        const age = lastSeen ? (nowSec - lastSeen) : null;
-        const isStale = (!lastSeen || age > BEACON_OFFLINE_SECONDS);
+        // compute dwell time (if we have entered_at)
+        const dwell = (enteredAt && enteredAt > 0) ? (nowSec - enteredAt) : 0;
+        const dwellStr = enteredAt ? formatDuration(dwell) : "--:--";
 
-        if (isStale) {
-          if ((room || "").toLowerCase() === "frontdoor") {
+        const offline = (!lastSeen) || ((nowSec - lastSeen) > BEACON_OFFLINE_SECONDS);
+        if (offline) {
+          const age = lastSeen ? (nowSec - lastSeen) : null;
+
+          // If they were last known at FrontDoor and then vanished -> AWAY
+          if (room === AWAY_IF_LAST_ROOM) {
             return {
               kind: "away",
               text: "AWAY",
-              note: age === null ? "FrontDoor (no signal yet)" : `Left from FrontDoor (${age}s)`
+              note: `Left from ${room}${enteredAt ? ` • was there ${dwellStr}` : ""}${age === null ? "" : ` • last seen ${age}s ago`}`
             };
           }
+
           return {
             kind: "offline",
             text: "OFFLINE",
-            note: age === null ? "No signal yet" : `No signal (${age}s)`
+            note: age === null
+              ? "No signal yet"
+              : `${room ? (room + " • ") : ""}No signal (${age}s)${enteredAt && room ? ` • was there ${dwellStr}` : ""}`
           };
         }
 
-        if (alerts.sos === true) return { kind: "emergency", text: "EMERGENCY", note: "SOS triggered" };
-        if (alerts.pool === true) return { kind: "emergency", text: "EMERGENCY", note: "Pool alarm" };
+        if (alerts.sos === true) return { kind: "emergency", text: "EMERGENCY", note: `SOS triggered${room ? " • " + room : ""}` };
+        if (alerts.pool === true) return { kind: "emergency", text: "EMERGENCY", note: `Pool alarm${room ? " • " + room : ""}` };
+
         if (!room) return { kind: "check", text: displayName + " NOT SEEN", note: "No room reported" };
 
         const threshold = CHECK_THRESHOLDS[room];
         if (threshold && enteredAt) {
-          const dwell = nowSec - enteredAt;
-          if (dwell >= threshold) return { kind: "check", text: "CHECK", note: room + " dwell exceeded" };
+          if (dwell >= threshold) return { kind: "check", text: "CHECK", note: `${room} • ${dwellStr} • dwell exceeded` };
         }
-        return { kind: "good", text: "GOOD", note: room };
+
+        // GOOD: show room + time in room
+        return { kind: "good", text: "GOOD", note: `${room} • ${dwellStr}` };
       }
 
       function evaluateAnyEmergencyAndSound() {
@@ -333,7 +353,7 @@
         }
       }
 
-      // Subscribe live clients (firebaseKey only)
+      // Subscribe live clients
       clients.forEach((c, idx) => {
         if (!c.firebaseKey) return;
 
@@ -342,7 +362,10 @@
           liveState[c.firebaseKey] = liveState[c.firebaseKey] || {};
           liveState[c.firebaseKey].room = val.room || "";
           liveState[c.firebaseKey].entered_at = val.entered_at || null;
+
+          // expected from Python (you already added it)
           liveState[c.firebaseKey].last_seen = val.last_seen || 0;
+
           updateRowForClient(idx, computeState(c.displayName, c.firebaseKey));
         });
 
@@ -357,6 +380,7 @@
 
       function tick() {
         document.getElementById("clock").textContent = new Date().toLocaleString();
+        // Update ONLY live clients (demo rows stay as they were)
         clients.forEach((c, idx) => {
           if (!c.firebaseKey) return;
           updateRowForClient(idx, computeState(c.displayName, c.firebaseKey));
