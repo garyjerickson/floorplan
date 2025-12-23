@@ -21,23 +21,63 @@
     .check { background:#b8860b; color:#fff7db; }
     .emergency { background:#b42318; }
     .offline { background: rgba(255,255,255,0.12); color:#c9d3ee; }
-    .away { background: rgba(120,140,255,0.18); color:#dbe2ff; } /* NEW: away badge */
+    .away { background: rgba(120,140,255,0.18); color:#dbe2ff; }
     .muted { opacity:.75; }
     .right { text-align:right; }
     .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
     button { border-radius: 12px; padding: 8px 10px; font-weight: 800; }
 
-    /* Only gray the offline row (not the whole page) */
     .rowOffline { opacity: 0.55; filter: grayscale(100%); }
 
-    /* System badge */
     .statusBadge { display:inline-block; padding:6px 10px; border-radius:12px; font-weight:900; letter-spacing:.3px; }
     .statusBadge.green { background: rgba(0,255,0,0.15); color:#7CFF7C; }
     .statusBadge.gray  { background: rgba(255,255,255,0.10); color:#B8C0D9; }
     .statusLine { display:flex; gap:10px; align-items:center; justify-content:flex-end; }
 
-    /* Visible error banner */
     .err { margin-top: 10px; padding: 10px 12px; border-radius: 12px; background: rgba(180,35,24,0.18); color: #ffd2cd; display:none; }
+
+    /* NEW: make live rows feel clickable */
+    .row.clickable { cursor: pointer; }
+    .row.clickable:hover { outline: 2px solid rgba(255,255,255,0.10); }
+
+    /* NEW: history panel */
+    .historyWrap {
+      margin-top: 12px;
+      background: rgba(255,255,255,0.07);
+      border-radius: 16px;
+      padding: 12px;
+      display: none;
+    }
+    .historyHead {
+      display:flex;
+      justify-content: space-between;
+      align-items:center;
+      gap:10px;
+      margin-bottom: 8px;
+    }
+    .historyTitle {
+      font-weight: 900;
+      font-size: 15px;
+    }
+    .historyList {
+      display: grid;
+      gap: 10px;
+    }
+    .histRow {
+      background: rgba(255,255,255,0.06);
+      border-radius: 14px;
+      padding: 10px 12px;
+    }
+    .histTop {
+      display:flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap:10px;
+    }
+    .histRoom { font-weight: 900; }
+    .histDur { font-weight: 900; opacity: .95; }
+    .histMeta { margin-top: 4px; font-size: 12px; opacity: .85; }
+    .histMeta .mono { opacity: .95; }
 
     @media (max-width: 720px) {
       .hide-mobile { display:none; }
@@ -81,6 +121,18 @@
         </thead>
         <tbody id="tbody"></tbody>
       </table>
+
+      <!-- NEW: History panel -->
+      <div class="historyWrap" id="historyWrap">
+        <div class="historyHead">
+          <div class="historyTitle" id="historyTitle">History</div>
+          <div style="display:flex; gap:8px; align-items:center;">
+            <span class="sub mono" id="historyStatus"></span>
+            <button id="historyCloseBtn">Close</button>
+          </div>
+        </div>
+        <div class="historyList" id="historyList"></div>
+      </div>
     </div>
   </div>
 
@@ -173,7 +225,6 @@
         return "good";
       }
 
-      // NEW: pretty time formatter
       function formatDuration(seconds) {
         const s = Math.max(0, Math.floor(seconds || 0));
         const h = Math.floor(s / 3600);
@@ -181,6 +232,11 @@
         const sec = s % 60;
         if (h > 0) return `${h}:${String(m).padStart(2,"0")}:${String(sec).padStart(2,"0")}`;
         return `${m}:${String(sec).padStart(2,"0")}`;
+      }
+
+      function formatDateTime(ts) {
+        if (!ts) return "--";
+        return new Date(ts * 1000).toLocaleString();
       }
 
       function badgeTextFromState(state) {
@@ -194,14 +250,15 @@
 
       function makeRow(id, client, state) {
         const tr = document.createElement("tr");
-        tr.className = "row";
+        tr.className = "row" + (client.firebaseKey ? " clickable" : "");
         tr.id = id;
+        if (client.firebaseKey) tr.dataset.firebaseKey = client.firebaseKey;
 
         const kind = state.kind || "good";
         tr.innerHTML = `
           <td>
             <div class="name">${client.displayName}</div>
-            <div class="small muted">${client.firebaseKey ? "Live (Firebase)" : "Demo"}</div>
+            <div class="small muted">${client.firebaseKey ? "Live (Firebase) — click for history" : "Demo"}</div>
           </td>
           <td><span class="badge ${kind}">${badgeTextFromState(state)}</span></td>
           <td class="hide-mobile"><span class="muted">${state.note || ""}</span></td>
@@ -227,6 +284,7 @@
       document.addEventListener("click", (e) => {
         const btn = e.target.closest("button[data-clear]");
         if (!btn) return;
+        e.stopPropagation(); // NEW: don't trigger row click
         clearAlerts(btn.getAttribute("data-clear"));
       });
 
@@ -242,7 +300,6 @@
         const noteCell = row.querySelector(".hide-mobile .muted");
         if (noteCell) noteCell.textContent = state.note || "";
 
-        // Gray only offline rows (not AWAY)
         if (kind === "offline") row.classList.add("rowOffline");
         else row.classList.remove("rowOffline");
       }
@@ -252,11 +309,11 @@
         "Kitchen": 4 * 60 * 60,
         "Living Room": 4 * 60 * 60,
         "Bedroom": 10 * 60 * 60,
-        "FrontDoor": 10 * 60
+        "Front Door": 10 * 60
       };
 
       const BEACON_OFFLINE_SECONDS = 12;
-      const AWAY_IF_LAST_ROOM = "FrontDoor"; // NEW: away logic
+      const AWAY_IF_LAST_ROOM = "Front Door";
       const liveState = {}; // firebaseKey -> {room, entered_at, alerts, last_seen}
 
       function computeState(displayName, firebaseKey) {
@@ -267,8 +324,6 @@
         const lastSeen = v.last_seen || 0;
 
         const nowSec = Math.floor(Date.now()/1000);
-
-        // compute dwell time (if we have entered_at)
         const dwell = (enteredAt && enteredAt > 0) ? (nowSec - enteredAt) : 0;
         const dwellStr = enteredAt ? formatDuration(dwell) : "--:--";
 
@@ -276,7 +331,6 @@
         if (offline) {
           const age = lastSeen ? (nowSec - lastSeen) : null;
 
-          // If they were last known at FrontDoor and then vanished -> AWAY
           if (room === AWAY_IF_LAST_ROOM) {
             return {
               kind: "away",
@@ -304,7 +358,6 @@
           if (dwell >= threshold) return { kind: "check", text: "CHECK", note: `${room} • ${dwellStr} • dwell exceeded` };
         }
 
-        // GOOD: show room + time in room
         return { kind: "good", text: "GOOD", note: `${room} • ${dwellStr}` };
       }
 
@@ -353,7 +406,125 @@
         }
       }
 
+      // ======================
+      // NEW: History UI + loader
+      // ======================
+      const historyWrap = document.getElementById("historyWrap");
+      const historyTitle = document.getElementById("historyTitle");
+      const historyStatus = document.getElementById("historyStatus");
+      const historyList = document.getElementById("historyList");
+      const historyCloseBtn = document.getElementById("historyCloseBtn");
+
+      historyCloseBtn.onclick = () => {
+        historyWrap.style.display = "none";
+        historyTitle.textContent = "History";
+        historyStatus.textContent = "";
+        historyList.innerHTML = "";
+      };
+
+      function setHistoryLoading(clientLabel) {
+        historyWrap.style.display = "block";
+        historyTitle.textContent = `${clientLabel} — Last 10 rooms`;
+        historyStatus.textContent = "Loading…";
+        historyList.innerHTML = "";
+      }
+
+      function renderHistory(clientLabel, rows) {
+        historyWrap.style.display = "block";
+        historyTitle.textContent = `${clientLabel} — Last 10 rooms`;
+        historyStatus.textContent = rows.length ? `${rows.length} record(s)` : "No history yet";
+        historyList.innerHTML = "";
+
+        if (!rows.length) {
+          historyList.innerHTML = `<div class="histRow"><div class="muted">No history found.</div></div>`;
+          return;
+        }
+
+        rows.forEach((x) => {
+          const room = x.room || "—";
+
+          // New interval format
+          const enteredAt = x.entered_at || null;
+          const exitedAt  = x.exited_at  || null;
+          const durSec    = x.duration_sec || 0;
+
+          // Legacy format (your old logs)
+          const legacyTs = x.timestamp || null;
+
+          let durText = "";
+          let meta = "";
+
+          if (enteredAt && exitedAt) {
+            durText = formatDuration(durSec);
+            meta = `Entered: <span class="mono">${formatDateTime(enteredAt)}</span> • Exited: <span class="mono">${formatDateTime(exitedAt)}</span>`;
+          } else if (legacyTs) {
+            durText = "(legacy)";
+            meta = `Time: <span class="mono">${formatDateTime(legacyTs)}</span>`;
+          } else {
+            durText = "--:--";
+            meta = `<span class="muted">Incomplete record</span>`;
+          }
+
+          const div = document.createElement("div");
+          div.className = "histRow";
+          div.innerHTML = `
+            <div class="histTop">
+              <div class="histRoom">${room}</div>
+              <div class="histDur">${durText}</div>
+            </div>
+            <div class="histMeta">${meta}</div>
+          `;
+          historyList.appendChild(div);
+        });
+      }
+
+      function loadHistory(firebaseKey, clientLabel) {
+        if (!firebaseKey) return;
+
+        setHistoryLoading(clientLabel);
+
+        db.ref("/logs/" + firebaseKey)
+          .limitToLast(10)
+          .once("value")
+          .then((snap) => {
+            const rows = [];
+            snap.forEach((child) => rows.push(child.val() || {}));
+
+            // Sort newest-first:
+            // Prefer exited_at, else entered_at, else timestamp
+            rows.sort((a, b) => {
+              const at = (a.exited_at || a.entered_at || a.timestamp || 0);
+              const bt = (b.exited_at || b.entered_at || b.timestamp || 0);
+              return bt - at;
+            });
+
+            renderHistory(clientLabel, rows);
+          })
+          .catch((e) => {
+            historyWrap.style.display = "block";
+            historyTitle.textContent = `${clientLabel} — Last 10 rooms`;
+            historyStatus.textContent = "Error";
+            historyList.innerHTML = `<div class="histRow"><div class="muted">Failed to load history: ${String(e && e.message ? e.message : e)}</div></div>`;
+          });
+      }
+
+      // Row click → open history (ignore demo rows)
+      document.addEventListener("click", (e) => {
+        const row = e.target.closest("tr.row.clickable");
+        if (!row) return;
+        // Ignore clicks on buttons inside row (Clear handled above)
+        if (e.target.closest("button")) return;
+
+        const firebaseKey = row.dataset.firebaseKey;
+        const idx = parseInt(row.id.replace("row_", ""), 10);
+        const client = clients[idx];
+
+        loadHistory(firebaseKey, client.displayName);
+      });
+
+      // ======================
       // Subscribe live clients
+      // ======================
       clients.forEach((c, idx) => {
         if (!c.firebaseKey) return;
 
@@ -362,8 +533,6 @@
           liveState[c.firebaseKey] = liveState[c.firebaseKey] || {};
           liveState[c.firebaseKey].room = val.room || "";
           liveState[c.firebaseKey].entered_at = val.entered_at || null;
-
-          // expected from Python (you already added it)
           liveState[c.firebaseKey].last_seen = val.last_seen || 0;
 
           updateRowForClient(idx, computeState(c.displayName, c.firebaseKey));
@@ -380,7 +549,6 @@
 
       function tick() {
         document.getElementById("clock").textContent = new Date().toLocaleString();
-        // Update ONLY live clients (demo rows stay as they were)
         clients.forEach((c, idx) => {
           if (!c.firebaseKey) return;
           updateRowForClient(idx, computeState(c.displayName, c.firebaseKey));
