@@ -92,7 +92,7 @@
       <div>
         <h1>UltraWatch Client Status</h1>
         <div class="sub">One-line overview for all monitored clients</div>
-        <div class="sub mono">Build: 2025-12-24 13:47</div>      
+        <div class="sub mono">Build: 2025-12-24 13:50</div>      
         <div class="sub" style="margin-top:8px;">
           <button id="enableSoundBtn">Enable Sound</button>
           <span class="muted" id="soundStatus" style="margin-left:10px;">Sound: off</span>
@@ -451,7 +451,7 @@ function renderHistory(clientLabel, rows) {
   rows = [...rows].sort((a, b) => getEventTime(b) - getEventTime(a));
 
   // NEW: gap threshold (seconds). Pick what feels right.
-  const GAP_SECONDS = 5 * 60; // 5 minutes
+  const GAP_SECONDS = 2 * 60; // 2 minutes
 
   let prevT = null;
 
