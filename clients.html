@@ -92,7 +92,7 @@
       <div>
         <h1>UltraWatch Client Status</h1>
         <div class="sub">One-line overview for all monitored clients</div>
-        <div class="sub mono">Build: 2025-12-24 10:02</div>      
+        <div class="sub mono">Build: 2025-12-24 13:47</div>      
         <div class="sub" style="margin-top:8px;">
           <button id="enableSoundBtn">Enable Sound</button>
           <span class="muted" id="soundStatus" style="margin-left:10px;">Sound: off</span>
@@ -430,54 +430,93 @@
         historyList.innerHTML = "";
       }
 
-      function renderHistory(clientLabel, rows) {
-        historyWrap.style.display = "block";
-        historyTitle.textContent = `${clientLabel} — Last 10 rooms`;
-        historyStatus.textContent = rows.length ? `${rows.length} record(s)` : "No history yet";
-        historyList.innerHTML = "";
+function getEventTime(x) {
+  // Prefer exited_at, else entered_at, else legacy timestamp
+  return (x.exited_at || x.entered_at || x.timestamp || 0);
+}
 
-        if (!rows.length) {
-          historyList.innerHTML = `<div class="histRow"><div class="muted">No history found.</div></div>`;
-          return;
-        }
+      
+function renderHistory(clientLabel, rows) {
+  historyWrap.style.display = "block";
+  historyTitle.textContent = `${clientLabel} — Last 10 rooms`;
+  historyStatus.textContent = rows.length ? `${rows.length} record(s)` : "No history yet";
+  historyList.innerHTML = "";
 
-        rows.forEach((x) => {
-          const room = x.room || "—";
+  if (!rows.length) {
+    historyList.innerHTML = `<div class="histRow"><div class="muted">No history found.</div></div>`;
+    return;
+  }
 
-          // New interval format
-          const enteredAt = x.entered_at || null;
-          const exitedAt  = x.exited_at  || null;
-          const durSec    = x.duration_sec || 0;
+  // NEW: sort newest-first just to be safe
+  rows = [...rows].sort((a, b) => getEventTime(b) - getEventTime(a));
 
-          // Legacy format (your old logs)
-          const legacyTs = x.timestamp || null;
+  // NEW: gap threshold (seconds). Pick what feels right.
+  const GAP_SECONDS = 5 * 60; // 5 minutes
 
-          let durText = "";
-          let meta = "";
+  let prevT = null;
 
-          if (enteredAt && exitedAt) {
-            durText = formatDuration(durSec);
-            meta = `Entered: <span class="mono">${formatDateTime(enteredAt)}</span> • Exited: <span class="mono">${formatDateTime(exitedAt)}</span>`;
-          } else if (legacyTs) {
-            durText = "(legacy)";
-            meta = `Time: <span class="mono">${formatDateTime(legacyTs)}</span>`;
-          } else {
-            durText = "--:--";
-            meta = `<span class="muted">Incomplete record</span>`;
-          }
+  rows.forEach((x, idx) => {
+    const t = getEventTime(x);
 
-          const div = document.createElement("div");
-          div.className = "histRow";
-          div.innerHTML = `
-            <div class="histTop">
-              <div class="histRoom">${room}</div>
-              <div class="histDur">${durText}</div>
-            </div>
-            <div class="histMeta">${meta}</div>
-          `;
-          historyList.appendChild(div);
-        });
+    // NEW: If the time jump between entries is large, show a GAP row
+    if (prevT !== null && prevT && t) {
+      const gap = prevT - t; // because newest-first
+      if (gap >= GAP_SECONDS) {
+        const gapDiv = document.createElement("div");
+        gapDiv.className = "histRow";
+        gapDiv.innerHTML = `
+          <div class="histTop">
+            <div class="histRoom">⚠️ GAP — no updates</div>
+            <div class="histDur">${formatDuration(gap)}</div>
+          </div>
+          <div class="histMeta">
+            From: <span class="mono">${formatDateTime(t)}</span>
+            • To: <span class="mono">${formatDateTime(prevT)}</span>
+          </div>
+        `;
+        historyList.appendChild(gapDiv);
       }
+    }
+
+    prevT = t;
+
+    const room = x.room || "—";
+
+    // New interval format
+    const enteredAt = x.entered_at || null;
+    const exitedAt  = x.exited_at  || null;
+    const durSec    = x.duration_sec || 0;
+
+    // Legacy format
+    const legacyTs = x.timestamp || null;
+
+    let durText = "";
+    let meta = "";
+
+    if (enteredAt && exitedAt) {
+      durText = formatDuration(durSec);
+      meta = `Entered: <span class="mono">${formatDateTime(enteredAt)}</span> • Exited: <span class="mono">${formatDateTime(exitedAt)}</span>`;
+    } else if (legacyTs) {
+      durText = "(legacy)";
+      meta = `Time: <span class="mono">${formatDateTime(legacyTs)}</span>`;
+    } else {
+      durText = "--:--";
+      meta = `<span class="muted">Incomplete record</span>`;
+    }
+
+    const div = document.createElement("div");
+    div.className = "histRow";
+    div.innerHTML = `
+      <div class="histTop">
+        <div class="histRoom">${room}</div>
+        <div class="histDur">${durText}</div>
+      </div>
+      <div class="histMeta">${meta}</div>
+    `;
+    historyList.appendChild(div);
+  });
+}
+
 
 function loadHistory(firebaseKey, clientLabel) {
   if (!firebaseKey) return;
