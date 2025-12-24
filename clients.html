@@ -484,17 +484,24 @@ function loadHistory(firebaseKey, clientLabel) {
 
   setHistoryLoading(clientLabel);
 
+  // IMPORTANT: order by exited_at so "last 10" really means last 10 exits
   db.ref("/logs/" + firebaseKey)
-    .orderByChild("exited_at")     // ✅ order by real time
-    .limitToLast(10)              // ✅ last 10 exits
+    .orderByChild("exited_at")
+    .limitToLast(10)
     .once("value")
     .then((snap) => {
-      console.log("History numChildren:", snap.numChildren()); // ✅ debug
-      const rows = [];
-      snap.forEach((child) => rows.push(child.val() || {}));
+      console.log("History numChildren:", snap.numChildren()); // <-- keep this
 
-      // newest-first
-      rows.sort((a, b) => (b.exited_at || 0) - (a.exited_at || 0));
+      const obj = snap.val() || {};
+      const rows = Object.values(obj).filter(Boolean);
+
+      // Newest-first: exited_at -> entered_at -> timestamp
+      rows.sort((a, b) => {
+        const at = (a.exited_at || a.entered_at || a.timestamp || 0);
+        const bt = (b.exited_at || b.entered_at || b.timestamp || 0);
+        return bt - at;
+      });
+
       renderHistory(clientLabel, rows);
     })
     .catch((e) => {
@@ -505,8 +512,6 @@ function loadHistory(firebaseKey, clientLabel) {
         `<div class="histRow"><div class="muted">Failed to load history: ${String(e && e.message ? e.message : e)}</div></div>`;
     });
 }
-
-
       // Row click → open history (ignore demo rows)
 // Row click → open history (attach to tbody so it always works)
 tbody.addEventListener("click", (e) => {
