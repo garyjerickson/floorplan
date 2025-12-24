@@ -483,6 +483,8 @@
         if (!firebaseKey) return;
 
         setHistoryLoading(clientLabel);
+        historyWrap.scrollIntoView({ behavior: "smooth", block: "start" });
+        historyWrap.style.display = "block";
 
         db.ref("/logs/" + firebaseKey)
           .limitToLast(10)
