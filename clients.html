@@ -92,7 +92,7 @@
       <div>
         <h1>UltraWatch Client Status</h1>
         <div class="sub">One-line overview for all monitored clients</div>
-        <div class="sub mono">Build: 2025-12-24 09:25</div>      
+        <div class="sub mono">Build: 2025-12-24 09:55</div>      
         <div class="sub" style="margin-top:8px;">
           <button id="enableSoundBtn">Enable Sound</button>
           <span class="muted" id="soundStatus" style="margin-left:10px;">Sound: off</span>
@@ -479,37 +479,33 @@
         });
       }
 
-      function loadHistory(firebaseKey, clientLabel) {
-        if (!firebaseKey) return;
+function loadHistory(firebaseKey, clientLabel) {
+  if (!firebaseKey) return;
 
-        setHistoryLoading(clientLabel);
-        historyWrap.scrollIntoView({ behavior: "smooth", block: "start" });
-        historyWrap.style.display = "block";
+  setHistoryLoading(clientLabel);
 
-        db.ref("/logs/" + firebaseKey)
-          .limitToLast(10)
-          .once("value")
-          .then((snap) => {
-            const rows = [];
-            snap.forEach((child) => rows.push(child.val() || {}));
+  db.ref("/logs/" + firebaseKey)
+    .orderByChild("exited_at")     // ✅ order by real time
+    .limitToLast(10)              // ✅ last 10 exits
+    .once("value")
+    .then((snap) => {
+      console.log("History numChildren:", snap.numChildren()); // ✅ debug
+      const rows = [];
+      snap.forEach((child) => rows.push(child.val() || {}));
 
-            // Sort newest-first:
-            // Prefer exited_at, else entered_at, else timestamp
-            rows.sort((a, b) => {
-              const at = (a.exited_at || a.entered_at || a.timestamp || 0);
-              const bt = (b.exited_at || b.entered_at || b.timestamp || 0);
-              return bt - at;
-            });
+      // newest-first
+      rows.sort((a, b) => (b.exited_at || 0) - (a.exited_at || 0));
+      renderHistory(clientLabel, rows);
+    })
+    .catch((e) => {
+      historyWrap.style.display = "block";
+      historyTitle.textContent = `${clientLabel} — Last 10 rooms`;
+      historyStatus.textContent = "Error";
+      historyList.innerHTML =
+        `<div class="histRow"><div class="muted">Failed to load history: ${String(e && e.message ? e.message : e)}</div></div>`;
+    });
+}
 
-            renderHistory(clientLabel, rows);
-          })
-          .catch((e) => {
-            historyWrap.style.display = "block";
-            historyTitle.textContent = `${clientLabel} — Last 10 rooms`;
-            historyStatus.textContent = "Error";
-            historyList.innerHTML = `<div class="histRow"><div class="muted">Failed to load history: ${String(e && e.message ? e.message : e)}</div></div>`;
-          });
-      }
 
       // Row click → open history (ignore demo rows)
 // Row click → open history (attach to tbody so it always works)
