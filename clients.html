@@ -509,18 +509,23 @@
       }
 
       // Row click → open history (ignore demo rows)
-      document.addEventListener("click", (e) => {
-        const row = e.target.closest("tr.row.clickable");
-        if (!row) return;
-        // Ignore clicks on buttons inside row (Clear handled above)
-        if (e.target.closest("button")) return;
+// Row click → open history (attach to tbody so it always works)
+tbody.addEventListener("click", (e) => {
+  const row = e.target.closest("tr.row.clickable");
+  if (!row) return;
 
-        const firebaseKey = row.dataset.firebaseKey;
-        const idx = parseInt(row.id.replace("row_", ""), 10);
-        const client = clients[idx];
+  // Ignore clicks on the Clear button (handled separately)
+  if (e.target.closest("button")) return;
 
-        loadHistory(firebaseKey, client.displayName);
-      });
+  const firebaseKey = row.dataset.firebaseKey;
+  const idx = parseInt(row.id.replace("row_", ""), 10);
+  const client = clients[idx];
+
+  if (!firebaseKey || !client) return;
+
+  loadHistory(firebaseKey, client.displayName);
+});
+
 
       // ======================
       // Subscribe live clients
