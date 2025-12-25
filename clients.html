@@ -92,7 +92,7 @@
       <div>
         <h1>UltraWatch Client Status</h1>
         <div class="sub">One-line overview for all monitored clients</div>
-        <div class="sub mono">Build: 2025-12-24 13:50</div>      
+        <div class="sub mono">Build: 2025-12-25 10:08</div>      
         <div class="sub" style="margin-top:8px;">
           <button id="enableSoundBtn">Enable Sound</button>
           <span class="muted" id="soundStatus" style="margin-left:10px;">Sound: off</span>
@@ -456,29 +456,37 @@ function renderHistory(clientLabel, rows) {
   let prevT = null;
 
   rows.forEach((x, idx) => {
-    const t = getEventTime(x);
+// NEW: Gap detection between intervals (newer exit -> older enter)
+if (idx > 0) {
+  const newer = rows[idx - 1]; // newer record (because rows is newest-first)
+  const older = x;             // current record (older than "newer")
 
-    // NEW: If the time jump between entries is large, show a GAP row
-    if (prevT !== null && prevT && t) {
-      const gap = prevT - t; // because newest-first
-      if (gap >= GAP_SECONDS) {
-        const gapDiv = document.createElement("div");
-        gapDiv.className = "histRow";
-        gapDiv.innerHTML = `
-          <div class="histTop">
-            <div class="histRoom">⚠️ GAP — no updates</div>
-            <div class="histDur">${formatDuration(gap)}</div>
-          </div>
-          <div class="histMeta">
-            From: <span class="mono">${formatDateTime(t)}</span>
-            • To: <span class="mono">${formatDateTime(prevT)}</span>
-          </div>
-        `;
-        historyList.appendChild(gapDiv);
-      }
+  const newerExited = newer.exited_at || null;
+  const olderEntered = older.entered_at || null;
+
+  // Only compute a "downtime gap" if we have both endpoints
+  if (newerExited && olderEntered) {
+    const gap = olderEntered - newerExited; // positive means downtime/no updates
+
+    // show GAP only if it's truly a gap (not overlap/adjacent) and beyond threshold
+    if (gap >= GAP_SECONDS) {
+      const gapDiv = document.createElement("div");
+      gapDiv.className = "histRow";
+      gapDiv.innerHTML = `
+        <div class="histTop">
+          <div class="histRoom">⚠️ GAP — no updates</div>
+          <div class="histDur">${formatDuration(gap)}</div>
+        </div>
+        <div class="histMeta">
+          From: <span class="mono">${formatDateTime(newerExited)}</span>
+          • To: <span class="mono">${formatDateTime(olderEntered)}</span>
+        </div>
+      `;
+      historyList.appendChild(gapDiv);
     }
+  }
+}
 
-    prevT = t;
 
     const room = x.room || "—";
 
