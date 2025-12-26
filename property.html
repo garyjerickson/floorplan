@@ -109,7 +109,7 @@
       <div>
         <h1>UltraWatch — Property Monitor (Demo)</h1>
         <div class="sub">Single-location monitor page (AirBnB / VRBO demo)</div>
-        <div class="sub mono">Build: 2025-12-26 15:00</div>
+        <div class="sub mono">Build: 2025-12-26 15:14</div>
         <div class="err mono" id="errBox"></div>
       </div>
       <div class="mono muted" id="clock">--</div>
@@ -162,10 +162,12 @@
 
         <div>
           <div style="font-weight:900; margin-bottom:6px;">Emergency contact number(s)</div>
-          <div class="grid" style="grid-template-columns: 1fr auto; align-items:center;">
-            <input type="tel" id="phoneInput" placeholder="Enter phone number (e.g., 407-555-0123)" />
-            <button class="btn" id="addPhoneBtn">Add</button>
-          </div>
+<div class="grid" style="grid-template-columns: 1fr auto auto; align-items:center;">
+  <input type="tel" id="phoneInput" placeholder="Enter phone number (e.g., 407-555-0123)" />
+  <button class="btn" id="addPhoneBtn">Add</button>
+  <button class="btnDanger" id="clearPhonesBtn">Clear</button>
+</div>
+
           <div class="small muted">Numbers are stored locally in this browser (demo).</div>
 
           <div id="registeredBlock" style="margin-top:10px; display:none;">
@@ -320,6 +322,7 @@
       const addPhoneBtn = document.getElementById("addPhoneBtn");
       const registeredBlock = document.getElementById("registeredBlock");
       const registeredList = document.getElementById("registeredList");
+      const registeredList = document.getElementById("registeredList");
 
       const PHONE_STORE_KEY = "ultrawatch_property_demo_numbers_v1";
       function loadPhones() {
@@ -357,6 +360,12 @@
         phoneInput.value = "";
         renderPhones();
       });
+
+      clearPhonesBtn.addEventListener("click", () => {
+  localStorage.removeItem(PHONE_STORE_KEY);
+  renderPhones();
+});
+
 
       // ---- Pool alarm behavior (demo-only, local latch) ----
       const poolEnabledChk = document.getElementById("poolEnabledChk");
