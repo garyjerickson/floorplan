@@ -11,6 +11,7 @@
     h1 { margin:0; font-size: 22px; }
     .sub { opacity:.8; font-size: 13px; }
     .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
+    .muted { opacity:.75; }
 
     .card { background: rgba(255,255,255,0.07); border-radius: 16px; padding: 14px; margin-bottom: 12px; }
     .table { width:100%; border-collapse: separate; border-spacing: 0 10px; }
@@ -19,7 +20,7 @@
 
     .name { font-weight: 900; font-size: 16px; }
     .small { opacity: .85; font-size: 12px; margin-top: 3px; }
-    .muted { opacity:.75; }
+
     .right { text-align:right; }
     @media (max-width: 720px) { .right { text-align:left; } .hide-mobile { display:none; } }
 
@@ -28,7 +29,6 @@
     .check { background:#b8860b; color:#fff7db; }
     .emergency { background:#b42318; }
     .offline { background: rgba(255,255,255,0.12); color:#c9d3ee; }
-    .away { background: rgba(120,140,255,0.18); color:#dbe2ff; }
 
     .rowOffline { opacity: 0.55; filter: grayscale(100%); }
 
@@ -39,7 +39,11 @@
     @media (max-width: 720px) { .statusLine { justify-content:flex-start; margin-top:10px; } }
 
     button { border-radius: 12px; padding: 8px 10px; font-weight: 900; cursor:pointer; border:0; }
-    input[type="text"], input[type="tel"] {
+    .btn { background: rgba(255,255,255,0.10); color:#e9eefc; }
+    .btnPrimary { background: rgba(124,255,124,0.18); color:#dfffe0; border: 1px solid rgba(124,255,124,0.30); }
+    .btnDanger { background: rgba(255,90,90,0.20); color:#ffe2e2; border: 1px solid rgba(255,90,90,0.25); }
+
+    input[type="tel"] {
       width: 100%;
       box-sizing: border-box;
       background: rgba(255,255,255,0.06);
@@ -53,7 +57,7 @@
 
     .err { margin-top: 10px; padding: 10px 12px; border-radius: 12px; background: rgba(180,35,24,0.18); color: #ffd2cd; display:none; }
 
-    /* Live monitoring control box */
+    /* Controls layout */
     .controlGrid { display:grid; grid-template-columns: 1.4fr 1fr; gap: 12px; }
     @media (max-width: 720px) { .controlGrid { grid-template-columns: 1fr; } }
 
@@ -88,6 +92,11 @@
       font-weight: 900;
       letter-spacing: .2px;
     }
+    .pillOk { background: rgba(124,255,124,0.15); color:#dfffe0; border: 1px solid rgba(124,255,124,0.25); }
+    .pillWarn { background: rgba(255,210,80,0.15); color:#fff1cc; border: 1px solid rgba(255,210,80,0.25); }
+
+    .inlineActions { display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap; }
+    @media (max-width: 720px) { .inlineActions { justify-content:flex-start; margin-top:10px; } }
   </style>
 </head>
 
@@ -96,11 +105,11 @@
     <div class="header">
       <div>
         <h1>UltraWatch Property Demo</h1>
-        <div class="sub">Single-location page (AirBnB / VRBO style) monitoring Jack + Axel</div>
+        <div class="sub">Single-location page monitoring Jack + Axel</div>
         <div class="sub mono">Build: 2025-12-26</div>
 
         <div class="sub" style="margin-top:8px;">
-          <button id="enableSoundBtn">Enable Sound</button>
+          <button class="btn" id="enableSoundBtn">Enable Sound</button>
           <span class="muted" id="soundStatus" style="margin-left:10px;">Sound: off</span>
         </div>
 
@@ -117,7 +126,7 @@
       </div>
     </div>
 
-    <!-- NEW: Live monitoring request + contact numbers -->
+    <!-- Controls -->
     <div class="card">
       <div class="controlGrid">
         <div>
@@ -125,16 +134,30 @@
             <input type="checkbox" id="liveMonitorChk" />
             <div>
               <div style="font-weight:900;">Request Live Monitoring</div>
-              <div class="sub">Use UltraWatch as a “second pair of eyes” if you’re distracted.</div>
+              <div class="sub">UltraWatch backup monitoring for this property.</div>
             </div>
           </div>
 
           <div style="margin-top:10px;">
             <div style="font-weight:900; margin-bottom:6px;">Emergency Contact Phone Number(s)</div>
             <input id="phoneInput" type="tel" placeholder="Example: 407-555-0123, 321-555-0188" />
-            <div class="sub" style="margin-top:6px;">
+            <div style="display:flex; gap:10px; align-items:center; margin-top:10px;">
+              <button class="btnPrimary" id="registerPhonesBtn">Register</button>
+              <span class="pill mono" id="registeredPill" style="display:none;">Registered ✓</span>
+              <span class="sub muted" id="registeredTime" style="display:none;"></span>
+            </div>
+            <div class="sub muted" style="margin-top:8px;">
               Tip: separate multiple numbers with commas.
-              <span class="pill mono" id="savedTag" style="display:none; margin-left:8px;">Saved</span>
+            </div>
+          </div>
+
+          <div style="margin-top:14px;">
+            <div class="toggleRow">
+              <input type="checkbox" id="poolEnabledChk" checked />
+              <div>
+                <div style="font-weight:900;">Enable Pool Alarm</div>
+                <div class="sub">If enabled, pool alerts will trigger the alarm sound.</div>
+              </div>
             </div>
           </div>
         </div>
@@ -149,6 +172,7 @@
       </div>
     </div>
 
+    <!-- People table -->
     <div class="card">
       <table class="table" id="clientTable">
         <thead class="muted">
@@ -176,12 +200,12 @@
     }
 
     try {
-      // ===== Firebase =====
+      // ===== Firebase (read/write alerts only) =====
       const firebaseConfig = { databaseURL: "https://ultrawatch-home-default-rtdb.firebaseio.com/" };
       firebase.initializeApp(firebaseConfig);
       const db = firebase.database();
 
-      // ===== Real demo targets =====
+      // ===== Real targets =====
       const people = [
         { label: "Jack", firebaseKey: "GRANDPA" },
         { label: "Axel", firebaseKey: "Axel" }
@@ -221,25 +245,19 @@
         }
       };
 
-      // ===== Live monitoring UI (demo-only; stored locally) =====
-      const liveChk = document.getElementById("liveMonitorChk");
-      const phoneInput = document.getElementById("phoneInput");
-      const liveLamp = document.getElementById("liveLamp");
-      const liveStatusText = document.getElementById("liveStatusText");
-      const savedTag = document.getElementById("savedTag");
-
+      // ===== Local storage keys =====
       const LS_LIVE = "uw_property_live_requested";
       const LS_PHONES = "uw_property_phones";
+      const LS_PHONES_TS = "uw_property_phones_registered_ts";
+      const LS_POOL_ENABLED = "uw_property_pool_enabled";
 
+      // ===== Live monitoring UI (demo-only) =====
+      const liveChk = document.getElementById("liveMonitorChk");
+      const liveLamp = document.getElementById("liveLamp");
+      const liveStatusText = document.getElementById("liveStatusText");
       let liveTimer = null;
 
-      function setSavedPulse() {
-        savedTag.style.display = "inline-block";
-        setTimeout(() => { savedTag.style.display = "none"; }, 1200);
-      }
-
       function setLiveState(state) {
-        // state: "off" | "pending" | "on"
         liveLamp.classList.remove("on", "pending");
         if (state === "pending") {
           liveLamp.classList.add("pending");
@@ -254,12 +272,9 @@
 
       function applyLiveFromStorage() {
         const requested = localStorage.getItem(LS_LIVE) === "true";
-        const phones = localStorage.getItem(LS_PHONES) || "";
         liveChk.checked = requested;
-        phoneInput.value = phones;
 
         if (requested) {
-          // simulate it coming online after a few seconds
           setLiveState("pending");
           clearTimeout(liveTimer);
           liveTimer = setTimeout(() => setLiveState("on"), 2500);
@@ -270,8 +285,6 @@
 
       liveChk.addEventListener("change", () => {
         localStorage.setItem(LS_LIVE, liveChk.checked ? "true" : "false");
-        setSavedPulse();
-
         if (liveChk.checked) {
           setLiveState("pending");
           clearTimeout(liveTimer);
@@ -282,12 +295,60 @@
         }
       });
 
-      phoneInput.addEventListener("input", () => {
-        localStorage.setItem(LS_PHONES, phoneInput.value || "");
-      });
-      phoneInput.addEventListener("change", () => setSavedPulse());
-
       applyLiveFromStorage();
+
+      // ===== Phone registration UI =====
+      const phoneInput = document.getElementById("phoneInput");
+      const registerPhonesBtn = document.getElementById("registerPhonesBtn");
+      const registeredPill = document.getElementById("registeredPill");
+      const registeredTime = document.getElementById("registeredTime");
+
+      function formatTs(ts) {
+        if (!ts) return "";
+        return new Date(ts).toLocaleString();
+      }
+
+      function showRegistered(tsMs) {
+        registeredPill.style.display = "inline-block";
+        registeredTime.style.display = "inline-block";
+        registeredTime.textContent = "at " + formatTs(tsMs);
+        setTimeout(() => {
+          registeredPill.style.display = "none";
+          registeredTime.style.display = "none";
+        }, 2500);
+      }
+
+      function loadPhoneStorage() {
+        phoneInput.value = localStorage.getItem(LS_PHONES) || "";
+      }
+
+      registerPhonesBtn.addEventListener("click", () => {
+        const val = (phoneInput.value || "").trim();
+        localStorage.setItem(LS_PHONES, val);
+        const ts = Date.now();
+        localStorage.setItem(LS_PHONES_TS, String(ts));
+        showRegistered(ts);
+      });
+
+      loadPhoneStorage();
+
+      // ===== Pool alarm enable checkbox (local only) =====
+      const poolEnabledChk = document.getElementById("poolEnabledChk");
+
+      function applyPoolEnabledFromStorage() {
+        const v = localStorage.getItem(LS_POOL_ENABLED);
+        if (v === null) {
+          poolEnabledChk.checked = true; // default ON
+        } else {
+          poolEnabledChk.checked = (v === "true");
+        }
+      }
+      poolEnabledChk.addEventListener("change", () => {
+        localStorage.setItem(LS_POOL_ENABLED, poolEnabledChk.checked ? "true" : "false");
+        // If pool alarms are disabled and only pool was triggering, re-evaluate alarm immediately
+        evaluateAlarmNow();
+      });
+      applyPoolEnabledFromStorage();
 
       // ===== Helpers =====
       function formatDuration(seconds) {
@@ -299,16 +360,22 @@
         return `${m}:${String(sec).padStart(2,"0")}`;
       }
 
-      function badgeText(kind, fallback) {
+      function badgeText(kind) {
         if (kind === "emergency") return "EMERGENCY";
         if (kind === "offline") return "OFFLINE";
-        if (kind === "check") return fallback || "CHECK";
+        if (kind === "check") return "CHECK";
         return "GOOD";
       }
 
-      function clearAlerts(firebaseKey) {
+      // ===== Actions: clear SOS / clear pool (HTML controls both) =====
+      function clearSOS(firebaseKey) {
         db.ref("/alerts/" + firebaseKey).update({
           sos: false,
+          timestamp: Math.floor(Date.now() / 1000)
+        });
+      }
+      function clearPool(firebaseKey) {
+        db.ref("/alerts/" + firebaseKey).update({
           pool: false,
           timestamp: Math.floor(Date.now() / 1000)
         });
@@ -329,7 +396,10 @@
           <td><span class="badge offline">LOADING</span></td>
           <td class="hide-mobile"><span class="muted">Waiting for data…</span></td>
           <td class="right">
-            <button data-clear="${p.firebaseKey}">Clear</button>
+            <div class="inlineActions">
+              <button class="btnDanger" data-clear-sos="${p.firebaseKey}">Clear SOS</button>
+              <button class="btnDanger" data-clear-pool="${p.firebaseKey}">Clear Pool</button>
+            </div>
           </td>
         `;
         return tr;
@@ -338,9 +408,16 @@
       people.forEach((p, idx) => tbody.appendChild(makeRow(idx, p)));
 
       document.addEventListener("click", (e) => {
-        const btn = e.target.closest("button[data-clear]");
-        if (!btn) return;
-        clearAlerts(btn.getAttribute("data-clear"));
+        const sosBtn = e.target.closest("button[data-clear-sos]");
+        if (sosBtn) {
+          clearSOS(sosBtn.getAttribute("data-clear-sos"));
+          return;
+        }
+        const poolBtn = e.target.closest("button[data-clear-pool]");
+        if (poolBtn) {
+          clearPool(poolBtn.getAttribute("data-clear-pool"));
+          return;
+        }
       });
 
       // ===== Live data =====
@@ -358,13 +435,9 @@
         const dwell = (enteredAt && enteredAt > 0) ? (now - enteredAt) : 0;
         const dwellStr = enteredAt ? formatDuration(dwell) : "--:--";
 
-        // Emergency first
-        if (alerts.sos === true) {
-          return { kind:"emergency", note:`SOS triggered${room ? " • " + room : ""}` };
-        }
-        if (alerts.pool === true) {
-          return { kind:"emergency", note:`Pool alarm${room ? " • " + room : ""}` };
-        }
+        // Build emergency note
+        const sosActive = (alerts.sos === true);
+        const poolActive = (alerts.pool === true);
 
         // Offline / no signal
         const offline = (!lastSeen) || ((now - lastSeen) > BEACON_OFFLINE_SECONDS);
@@ -372,13 +445,26 @@
           const age = lastSeen ? (now - lastSeen) : null;
           return {
             kind:"offline",
-            note: age === null ? "No signal yet" : `${room ? room + " • " : ""}No signal (${age}s)${enteredAt && room ? ` • was there ${dwellStr}` : ""}`
+            note: age === null ? "No signal yet" : `${room ? room + " • " : ""}No signal (${age}s)${enteredAt && room ? ` • was there ${dwellStr}` : ""}`,
+            sosActive, poolActive
           };
         }
 
-        if (!room) return { kind:"check", note:"No room reported" };
+        // Any emergency sets red badge
+        if (sosActive || poolActive) {
+          const parts = [];
+          if (sosActive) parts.push("SOS");
+          if (poolActive) parts.push("POOL");
+          return {
+            kind:"emergency",
+            note: `${parts.join(" + ")} active${room ? " • " + room : ""}`,
+            sosActive, poolActive
+          };
+        }
 
-        return { kind:"good", note:`${room} • ${dwellStr}` };
+        if (!room) return { kind:"check", note:"No room reported", sosActive, poolActive };
+
+        return { kind:"good", note:`${room} • ${dwellStr}`, sosActive, poolActive };
       }
 
       function paintRow(idx, p) {
@@ -389,7 +475,7 @@
 
         const badge = row.querySelector(".badge");
         badge.className = "badge " + st.kind;
-        badge.textContent = badgeText(st.kind, "CHECK");
+        badge.textContent = badgeText(st.kind);
 
         const note = row.querySelector(".hide-mobile .muted");
         if (note) note.textContent = st.note || "";
@@ -398,12 +484,24 @@
         else row.classList.remove("rowOffline");
       }
 
-      function anyEmergency() {
+      function anyEmergencyTriggersAlarm() {
+        const poolEnabled = poolEnabledChk.checked;
+
         return people.some(p => {
           const v = live[p.firebaseKey] || {};
           const a = v.alerts || {};
-          return a.sos === true || a.pool === true;
+          const sos = (a.sos === true);
+          const pool = (a.pool === true);
+
+          if (sos) return true;
+          if (pool && poolEnabled) return true;
+          return false;
         });
+      }
+
+      function evaluateAlarmNow() {
+        if (anyEmergencyTriggersAlarm()) startAlarm();
+        else stopAlarm();
       }
 
       // Subscribe
@@ -422,7 +520,7 @@
           live[p.firebaseKey] = live[p.firebaseKey] || {};
           live[p.firebaseKey].alerts = val || {};
           paintRow(idx, p);
-          if (anyEmergency()) startAlarm(); else stopAlarm();
+          evaluateAlarmNow();
         });
       });
 
@@ -462,7 +560,7 @@
         document.getElementById("clock").textContent = new Date().toLocaleString();
         people.forEach((p, idx) => paintRow(idx, p));
         refreshSystemBadge();
-        if (anyEmergency()) startAlarm(); else stopAlarm();
+        evaluateAlarmNow();
       }
 
       setInterval(tick, 1000);
