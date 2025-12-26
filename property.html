@@ -57,7 +57,6 @@
 
     .err { margin-top: 10px; padding: 10px 12px; border-radius: 12px; background: rgba(180,35,24,0.18); color: #ffd2cd; display:none; }
 
-    /* Controls layout */
     .controlGrid { display:grid; grid-template-columns: 1.4fr 1fr; gap: 12px; }
     @media (max-width: 720px) { .controlGrid { grid-template-columns: 1fr; } }
 
@@ -93,10 +92,18 @@
       letter-spacing: .2px;
     }
     .pillOk { background: rgba(124,255,124,0.15); color:#dfffe0; border: 1px solid rgba(124,255,124,0.25); }
-    .pillWarn { background: rgba(255,210,80,0.15); color:#fff1cc; border: 1px solid rgba(255,210,80,0.25); }
 
     .inlineActions { display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap; }
     @media (max-width: 720px) { .inlineActions { justify-content:flex-start; margin-top:10px; } }
+
+    .registeredBox {
+      margin-top: 10px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.08);
+      display:none;
+    }
   </style>
 </head>
 
@@ -106,7 +113,7 @@
       <div>
         <h1>UltraWatch Property Demo</h1>
         <div class="sub">Single-location page monitoring Jack + Axel</div>
-        <div class="sub mono">Build: 2025-12-26</div>
+        <div class="sub mono">Build: 2025-12-26 1316</div>
 
         <div class="sub" style="margin-top:8px;">
           <button class="btn" id="enableSoundBtn">Enable Sound</button>
@@ -143,20 +150,28 @@
             <input id="phoneInput" type="tel" placeholder="Example: 407-555-0123, 321-555-0188" />
             <div style="display:flex; gap:10px; align-items:center; margin-top:10px;">
               <button class="btnPrimary" id="registerPhonesBtn">Register</button>
-              <span class="pill mono" id="registeredPill" style="display:none;">Registered ✓</span>
-              <span class="sub muted" id="registeredTime" style="display:none;"></span>
+              <span class="pill pillOk mono" id="registeredPill" style="display:none;">Registered ✓</span>
             </div>
+
+            <!-- NEW: show registered numbers below -->
+            <div class="registeredBox" id="registeredBox">
+              <div style="font-weight:900;">Registered numbers</div>
+              <div class="sub mono" id="registeredList" style="margin-top:6px;">--</div>
+            </div>
+
             <div class="sub muted" style="margin-top:8px;">
               Tip: separate multiple numbers with commas.
             </div>
           </div>
 
           <div style="margin-top:14px;">
+            <!-- IMPORTANT: per your rule, if NOT checked => alarm SHOULD sound.
+                 So this is a "Mute Pool Alarm" checkbox. -->
             <div class="toggleRow">
-              <input type="checkbox" id="poolEnabledChk" checked />
+              <input type="checkbox" id="poolMuteChk" />
               <div>
-                <div style="font-weight:900;">Enable Pool Alarm</div>
-                <div class="sub">If enabled, pool alerts will trigger the alarm sound.</div>
+                <div style="font-weight:900;">Mute Pool Alarm</div>
+                <div class="sub">If unchecked, entering pool area triggers red status + alarm.</div>
               </div>
             </div>
           </div>
@@ -200,7 +215,6 @@
     }
 
     try {
-      // ===== Firebase (read/write alerts only) =====
       const firebaseConfig = { databaseURL: "https://ultrawatch-home-default-rtdb.firebaseio.com/" };
       firebase.initializeApp(firebaseConfig);
       const db = firebase.database();
@@ -248,8 +262,7 @@
       // ===== Local storage keys =====
       const LS_LIVE = "uw_property_live_requested";
       const LS_PHONES = "uw_property_phones";
-      const LS_PHONES_TS = "uw_property_phones_registered_ts";
-      const LS_POOL_ENABLED = "uw_property_pool_enabled";
+      const LS_POOL_MUTE = "uw_property_pool_mute";
 
       // ===== Live monitoring UI (demo-only) =====
       const liveChk = document.getElementById("liveMonitorChk");
@@ -301,54 +314,60 @@
       const phoneInput = document.getElementById("phoneInput");
       const registerPhonesBtn = document.getElementById("registerPhonesBtn");
       const registeredPill = document.getElementById("registeredPill");
-      const registeredTime = document.getElementById("registeredTime");
+      const registeredBox = document.getElementById("registeredBox");
+      const registeredList = document.getElementById("registeredList");
 
-      function formatTs(ts) {
-        if (!ts) return "";
-        return new Date(ts).toLocaleString();
+      function normalizePhones(raw) {
+        // Keep it simple: split on commas, trim, drop empties
+        return (raw || "")
+          .split(",")
+          .map(x => x.trim())
+          .filter(Boolean);
       }
 
-      function showRegistered(tsMs) {
-        registeredPill.style.display = "inline-block";
-        registeredTime.style.display = "inline-block";
-        registeredTime.textContent = "at " + formatTs(tsMs);
-        setTimeout(() => {
-          registeredPill.style.display = "none";
-          registeredTime.style.display = "none";
-        }, 2500);
+      function refreshRegisteredUI() {
+        const saved = localStorage.getItem(LS_PHONES) || "";
+        const arr = normalizePhones(saved);
+
+        if (!arr.length) {
+          registeredBox.style.display = "none";
+          registeredList.textContent = "--";
+          return;
+        }
+
+        registeredBox.style.display = "block";
+        registeredList.textContent = arr.join(", ");
       }
 
       function loadPhoneStorage() {
         phoneInput.value = localStorage.getItem(LS_PHONES) || "";
+        refreshRegisteredUI();
       }
 
       registerPhonesBtn.addEventListener("click", () => {
         const val = (phoneInput.value || "").trim();
         localStorage.setItem(LS_PHONES, val);
-        const ts = Date.now();
-        localStorage.setItem(LS_PHONES_TS, String(ts));
-        showRegistered(ts);
+
+        // visual confirmation
+        registeredPill.style.display = "inline-block";
+        setTimeout(() => { registeredPill.style.display = "none"; }, 2500);
+
+        refreshRegisteredUI();
       });
 
       loadPhoneStorage();
 
-      // ===== Pool alarm enable checkbox (local only) =====
-      const poolEnabledChk = document.getElementById("poolEnabledChk");
-
-      function applyPoolEnabledFromStorage() {
-        const v = localStorage.getItem(LS_POOL_ENABLED);
-        if (v === null) {
-          poolEnabledChk.checked = true; // default ON
-        } else {
-          poolEnabledChk.checked = (v === "true");
-        }
+      // ===== Pool mute checkbox (IMPORTANT: unchecked => alarm can sound) =====
+      const poolMuteChk = document.getElementById("poolMuteChk");
+      function applyPoolMuteFromStorage() {
+        const v = localStorage.getItem(LS_POOL_MUTE);
+        poolMuteChk.checked = (v === "true"); // default false if missing
       }
-      poolEnabledChk.addEventListener("change", () => {
-        localStorage.setItem(LS_POOL_ENABLED, poolEnabledChk.checked ? "true" : "false");
-        // If pool alarms are disabled and only pool was triggering, re-evaluate alarm immediately
+      poolMuteChk.addEventListener("change", () => {
+        localStorage.setItem(LS_POOL_MUTE, poolMuteChk.checked ? "true" : "false");
         evaluateAlarmNow();
       });
-      applyPoolEnabledFromStorage();
+      applyPoolMuteFromStorage();
 
       // ===== Helpers =====
       function formatDuration(seconds) {
@@ -367,19 +386,18 @@
         return "GOOD";
       }
 
-      // ===== Actions: clear SOS / clear pool (HTML controls both) =====
+      // ===== Actions =====
+      // SOS: still uses Firebase alerts, like your existing setup
       function clearSOS(firebaseKey) {
         db.ref("/alerts/" + firebaseKey).update({
           sos: false,
           timestamp: Math.floor(Date.now() / 1000)
         });
       }
-      function clearPool(firebaseKey) {
-        db.ref("/alerts/" + firebaseKey).update({
-          pool: false,
-          timestamp: Math.floor(Date.now() / 1000)
-        });
-      }
+
+      // Pool: DEMO-LOCAL ONLY acknowledge (no Firebase writes)
+      const poolAck = {}; // firebaseKey -> true/false (clears automatically when they leave pool)
+      function ackPool(firebaseKey) { poolAck[firebaseKey] = true; evaluateAlarmNow(); }
 
       // ===== UI render =====
       const tbody = document.getElementById("tbody");
@@ -398,7 +416,7 @@
           <td class="right">
             <div class="inlineActions">
               <button class="btnDanger" data-clear-sos="${p.firebaseKey}">Clear SOS</button>
-              <button class="btnDanger" data-clear-pool="${p.firebaseKey}">Clear Pool</button>
+              <button class="btn" data-ack-pool="${p.firebaseKey}">Acknowledge Pool</button>
             </div>
           </td>
         `;
@@ -409,20 +427,31 @@
 
       document.addEventListener("click", (e) => {
         const sosBtn = e.target.closest("button[data-clear-sos]");
-        if (sosBtn) {
-          clearSOS(sosBtn.getAttribute("data-clear-sos"));
-          return;
-        }
-        const poolBtn = e.target.closest("button[data-clear-pool]");
-        if (poolBtn) {
-          clearPool(poolBtn.getAttribute("data-clear-pool"));
-          return;
-        }
+        if (sosBtn) { clearSOS(sosBtn.getAttribute("data-clear-sos")); return; }
+
+        const ackBtn = e.target.closest("button[data-ack-pool]");
+        if (ackBtn) { ackPool(ackBtn.getAttribute("data-ack-pool")); return; }
       });
 
       // ===== Live data =====
       const BEACON_OFFLINE_SECONDS = 12;
       const live = {}; // key -> { room, entered_at, last_seen, alerts }
+
+      // Pool room names (DEMO): add whatever your script uses
+      const POOL_ROOMS = new Set([
+        "Pool", "POOL",
+        "Pool Area", "POOL AREA",
+        "PoolDeck", "POOLDECK",
+        "Poolside", "POOLSIDE"
+      ]);
+
+      function isPoolRoom(room) {
+        const r = (room || "").trim();
+        if (!r) return false;
+        if (POOL_ROOMS.has(r)) return true;
+        // Also allow partial matches like "Pool - Back"
+        return r.toLowerCase().includes("pool");
+      }
 
       function computeState(p) {
         const v = live[p.firebaseKey] || {};
@@ -435,11 +464,13 @@
         const dwell = (enteredAt && enteredAt > 0) ? (now - enteredAt) : 0;
         const dwellStr = enteredAt ? formatDuration(dwell) : "--:--";
 
-        // Build emergency note
         const sosActive = (alerts.sos === true);
-        const poolActive = (alerts.pool === true);
 
-        // Offline / no signal
+        // Pool condition derived ONLY from room
+        const poolActive = isPoolRoom(room);
+        if (!poolActive) poolAck[p.firebaseKey] = false; // auto-clear ack when leaving pool
+
+        // Offline
         const offline = (!lastSeen) || ((now - lastSeen) > BEACON_OFFLINE_SECONDS);
         if (offline) {
           const age = lastSeen ? (now - lastSeen) : null;
@@ -450,14 +481,14 @@
           };
         }
 
-        // Any emergency sets red badge
+        // Emergency if SOS or Pool (pool is local demo)
         if (sosActive || poolActive) {
           const parts = [];
           if (sosActive) parts.push("SOS");
-          if (poolActive) parts.push("POOL");
+          if (poolActive) parts.push(poolAck[p.firebaseKey] ? "POOL (ACK)" : "POOL");
           return {
             kind:"emergency",
-            note: `${parts.join(" + ")} active${room ? " • " + room : ""}`,
+            note: `${parts.join(" + ")}${room ? " • " + room : ""}`,
             sosActive, poolActive
           };
         }
@@ -485,16 +516,18 @@
       }
 
       function anyEmergencyTriggersAlarm() {
-        const poolEnabled = poolEnabledChk.checked;
-
+        const poolMuted = poolMuteChk.checked; // IMPORTANT: if NOT checked, alarm should sound on pool
         return people.some(p => {
           const v = live[p.firebaseKey] || {};
           const a = v.alerts || {};
+
           const sos = (a.sos === true);
-          const pool = (a.pool === true);
+
+          const room = (v.room || "");
+          const pool = isPoolRoom(room) && !poolAck[p.firebaseKey];
 
           if (sos) return true;
-          if (pool && poolEnabled) return true;
+          if (pool && !poolMuted) return true;
           return false;
         });
       }
@@ -513,6 +546,7 @@
           live[p.firebaseKey].entered_at = val.entered_at || null;
           live[p.firebaseKey].last_seen = val.last_seen || 0;
           paintRow(idx, p);
+          evaluateAlarmNow();
         });
 
         db.ref("/alerts/" + p.firebaseKey).on("value", snap => {
