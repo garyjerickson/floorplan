@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>UltraWatch - Property Monitor</title>
+  <title>UltraWatch - Property Demo</title>
   <style>
     body { margin:0; font-family: Arial, sans-serif; background:#0b1220; color:#e9eefc; }
     .wrap { max-width: 980px; margin: 0 auto; padding: 16px; }
@@ -13,11 +13,15 @@
     .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
 
     .card { background: rgba(255,255,255,0.07); border-radius: 16px; padding: 14px; }
-    .rowCard { background: rgba(255,255,255,0.06); border-radius: 14px; padding: 12px; }
+    .table { width:100%; border-collapse: separate; border-spacing: 0 10px; }
+    .row { background: rgba(255,255,255,0.06); border-radius: 14px; overflow:hidden; }
+    .row td { padding: 12px 12px; vertical-align: middle; }
 
-    .grid { display:grid; gap:10px; }
-    .grid2 { display:grid; gap:10px; grid-template-columns: 1fr 1fr; }
-    @media (max-width: 720px) { .grid2 { grid-template-columns: 1fr; } }
+    .name { font-weight: 900; font-size: 16px; }
+    .small { opacity: .85; font-size: 12px; margin-top: 3px; }
+    .muted { opacity:.75; }
+    .right { text-align:right; }
+    @media (max-width: 720px) { .right { text-align:left; } .hide-mobile { display:none; } }
 
     .badge { display:inline-block; padding: 8px 10px; border-radius: 999px; font-weight: 900; letter-spacing: .3px; }
     .good { background:#0f7a3a; }
@@ -26,45 +30,16 @@
     .offline { background: rgba(255,255,255,0.12); color:#c9d3ee; }
     .away { background: rgba(120,140,255,0.18); color:#dbe2ff; }
 
+    .rowOffline { opacity: 0.55; filter: grayscale(100%); }
+
     .statusBadge { display:inline-block; padding:6px 10px; border-radius:12px; font-weight:900; letter-spacing:.3px; }
     .statusBadge.green { background: rgba(0,255,0,0.15); color:#7CFF7C; }
     .statusBadge.gray  { background: rgba(255,255,255,0.10); color:#B8C0D9; }
-    .statusBadge.yellow{ background: rgba(255,215,0,0.15); color:#ffe58a; }
-
     .statusLine { display:flex; gap:10px; align-items:center; justify-content:flex-end; }
     @media (max-width: 720px) { .statusLine { justify-content:flex-start; margin-top:10px; } }
 
-    button, input {
-      border-radius: 12px;
-      padding: 10px 10px;
-      font-weight: 800;
-      border: 0;
-      outline: none;
-    }
-    button { cursor:pointer; }
-    input {
-      width: 100%;
-      background: rgba(255,255,255,0.08);
-      color:#e9eefc;
-      font-weight: 700;
-      border: 1px solid rgba(255,255,255,0.10);
-    }
-    input::placeholder { color: rgba(233,238,252,0.6); }
-
+    button { border-radius: 12px; padding: 8px 10px; font-weight: 900; cursor:pointer; border:0; }
     .err { margin-top: 10px; padding: 10px 12px; border-radius: 12px; background: rgba(180,35,24,0.18); color: #ffd2cd; display:none; }
-    .hint { font-size: 12px; opacity: .8; margin-top: 6px; }
-
-    .kTitle { font-weight: 900; font-size: 14px; margin-bottom: 6px; }
-    .kRow { display:flex; gap:12px; align-items:center; flex-wrap: wrap; }
-    .pill { padding:6px 10px; border-radius: 999px; background: rgba(255,255,255,0.08); font-weight: 800; }
-
-    .kidLine { display:flex; justify-content:space-between; gap:12px; align-items:center; }
-    .kidName { font-weight: 900; font-size: 16px; }
-    .kidMeta { font-size: 12px; opacity: .85; margin-top:4px; }
-    .kidLeft { min-width: 0; }
-    .kidRight { text-align:right; }
-    .kidActions { margin-top: 8px; display:flex; gap:8px; justify-content:flex-end; flex-wrap: wrap; }
-    .muted { opacity:.75; }
   </style>
 </head>
 
@@ -72,11 +47,11 @@
   <div class="wrap">
     <div class="header">
       <div>
-        <h1 id="title">UltraWatch Property Monitor</h1>
-        <div class="sub" id="subtitle">Single-location monitoring for a rental property</div>
-        <div class="sub mono" id="build">Build: 2025-12-26</div>
+        <h1>UltraWatch Property Demo</h1>
+        <div class="sub">Live demo reading real locations for Jack (GRANDPA) and Axel</div>
+        <div class="sub mono">Build: 2025-12-26 12:00</div>
 
-        <div class="sub" style="margin-top:10px;">
+        <div class="sub" style="margin-top:8px;">
           <button id="enableSoundBtn">Enable Sound</button>
           <span class="muted" id="soundStatus" style="margin-left:10px;">Sound: off</span>
         </div>
@@ -94,50 +69,18 @@
       </div>
     </div>
 
-    <div class="card grid" style="gap:12px;">
-      <!-- Live Monitoring Controls -->
-      <div class="rowCard">
-        <div class="kTitle">Live Monitoring (backup eyes)</div>
-        <div class="kRow" style="justify-content:space-between;">
-          <label style="display:flex; gap:10px; align-items:center; font-weight:900;">
-            <input type="checkbox" id="liveReqChk" style="width:22px; height:22px; accent-color:#24d67b;" />
-            Request live monitoring
-          </label>
-
-          <div class="kRow">
-            <span class="pill">Status:</span>
-            <span id="liveStatusBadge" class="statusBadge gray">OFF</span>
-          </div>
-        </div>
-        <div class="hint">
-          When you turn this on, UltraWatch staff can monitor as backup. (Status turns ACTIVE when the server acknowledges.)
-        </div>
-      </div>
-
-      <!-- Contact numbers -->
-      <div class="rowCard">
-        <div class="kTitle">Emergency Contact Phone Number(s)</div>
-        <div class="grid2">
-          <div>
-            <input id="phonesInput" placeholder="Example: (407) 555-0127, (321) 555-0188" />
-            <div class="hint">Comma-separated. We will call/text these numbers if an emergency isn’t cleared.</div>
-          </div>
-          <div class="kRow" style="justify-content:flex-end; align-items:flex-start;">
-            <button id="saveContactsBtn">Save</button>
-            <button id="testNotifyBtn" title="Best effort on web (foreground only)">Test Notification</button>
-          </div>
-        </div>
-        <div class="sub mono" id="contactsSavedAt" style="margin-top:8px; opacity:.8;">Saved: --</div>
-      </div>
-
-      <!-- Kids list -->
-      <div class="rowCard">
-        <div class="kTitle">Monitored Children</div>
-        <div id="kidsList" class="grid"></div>
-        <div class="hint">
-          Web limitation: phones may silence alarms when you leave the browser. For “always works”, use push notifications (PWA) or a mobile app.
-        </div>
-      </div>
+    <div class="card">
+      <table class="table" id="clientTable">
+        <thead class="muted">
+          <tr>
+            <td>Person</td>
+            <td>Status</td>
+            <td class="hide-mobile">Notes</td>
+            <td class="right">Actions</td>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
     </div>
   </div>
 
@@ -152,79 +95,30 @@
       errBox.textContent = "JS ERROR: " + msg;
     }
 
-    // =========================
-    // CONFIG (edit these 3)
-    // =========================
-    const PROPERTY_ID = "demo_property_001"; // <-- change to something like "airbnb_123_mainst"
-    const PROPERTY_NAME = "UltraWatch Pool Rental (Demo)"; // <-- page title
-    const MONITORED_TAGS = [
-      // These names must match your Firebase paths: /beacons/<NAME> and /alerts/<NAME>
-      { name: "Kid1", label: "Child 1" },
-      { name: "Kid2", label: "Child 2" }
-      // Example if you reuse your existing naming:
-      // { name: "GRANDPA", label: "Jack" }
-    ];
-
-    // "Pool" can be either:
-    // - room === "Pool" (from /beacons/<NAME>/room), OR
-    // - /alerts/<NAME>/pool === true
-    const POOL_ROOM_NAME = "Pool";
-
-    // System online based on /system/lastDataRx
-    const STALE_SECONDS = 8;
-
-    // Offline beacon (per tag) based on /beacons/<NAME>/last_seen
-    const BEACON_OFFLINE_SECONDS = 12;
-
-    // =========================
-    // Firebase init
-    // =========================
     try {
+      // ===== Firebase =====
       const firebaseConfig = { databaseURL: "https://ultrawatch-home-default-rtdb.firebaseio.com/" };
       firebase.initializeApp(firebaseConfig);
       const db = firebase.database();
 
-      document.getElementById("title").textContent = PROPERTY_NAME;
-      document.getElementById("subtitle").textContent = "Property ID: " + PROPERTY_ID;
+      // ===== Demo targets (REAL) =====
+      const people = [
+        { label: "Jack", firebaseKey: "GRANDPA" },
+        { label: "Axel", firebaseKey: "Axel" }
+      ];
 
-      // =========================
-      // Sound + vibration + notifications (best effort)
-      // =========================
+      // ===== Audible alarm =====
       let soundEnabled = false;
       const alarmAudio = new Audio("alarm.mp3");
       alarmAudio.loop = true;
 
-      const enableBtn = document.getElementById("enableSoundBtn");
-      const soundStatus = document.getElementById("soundStatus");
-
-      function tryVibrate() {
-        try {
-          if (navigator.vibrate) navigator.vibrate([300, 150, 300, 150, 600]);
-        } catch (_) {}
-      }
-
-      async function tryNotify(title, body) {
-        try {
-          if (!("Notification" in window)) return;
-          if (Notification.permission === "default") {
-            await Notification.requestPermission();
-          }
-          if (Notification.permission === "granted") {
-            new Notification(title, { body });
-          }
-        } catch (_) {}
-      }
-
       function startAlarm() {
-        // Sound
-        if (soundEnabled && alarmAudio.paused) {
+        if (!soundEnabled) return;
+        if (alarmAudio.paused) {
           alarmAudio.currentTime = 0;
           alarmAudio.play().catch(() => console.log("Alarm blocked until user interaction"));
         }
-        // Vibration + notification (foreground best effort)
-        tryVibrate();
       }
-
       function stopAlarm() {
         if (!alarmAudio.paused) {
           alarmAudio.pause();
@@ -232,6 +126,8 @@
         }
       }
 
+      const enableBtn = document.getElementById("enableSoundBtn");
+      const soundStatus = document.getElementById("soundStatus");
       enableBtn.onclick = async () => {
         try {
           soundEnabled = true;
@@ -245,100 +141,147 @@
         }
       };
 
-      document.getElementById("testNotifyBtn").onclick = async () => {
-        await tryNotify("UltraWatch Test", "If you see this, notifications are enabled (foreground best-effort).");
-        tryVibrate();
-      };
-
-      // =========================
-      // Live monitoring request UI
-      // =========================
-      const liveReqChk = document.getElementById("liveReqChk");
-      const liveStatusBadge = document.getElementById("liveStatusBadge");
-
-      function setLiveBadge(state) {
-        // state: OFF | PENDING | ACTIVE
-        liveStatusBadge.classList.remove("gray","yellow","green");
-        if (state === "ACTIVE") {
-          liveStatusBadge.textContent = "ACTIVE";
-          liveStatusBadge.classList.add("green");
-        } else if (state === "PENDING") {
-          liveStatusBadge.textContent = "PENDING";
-          liveStatusBadge.classList.add("yellow");
-        } else {
-          liveStatusBadge.textContent = "OFF";
-          liveStatusBadge.classList.add("gray");
-        }
+      // ===== Helpers =====
+      function formatDuration(seconds) {
+        const s = Math.max(0, Math.floor(seconds || 0));
+        const h = Math.floor(s / 3600);
+        const m = Math.floor((s % 3600) / 60);
+        const sec = s % 60;
+        if (h > 0) return `${h}:${String(m).padStart(2,"0")}:${String(sec).padStart(2,"0")}`;
+        return `${m}:${String(sec).padStart(2,"0")}`;
       }
 
-      function livePath(suffix) {
-        return `/properties/${PROPERTY_ID}/live_monitoring/${suffix}`;
+      function badgeText(kind, fallback) {
+        if (kind === "emergency") return "EMERGENCY";
+        if (kind === "offline") return "OFFLINE";
+        if (kind === "check") return fallback || "CHECK";
+        return "GOOD";
       }
 
-      // Listen for server acknowledgment (active flag)
-      db.ref(livePath("active")).on("value", (snap) => {
-        const active = !!snap.val();
-        if (active) setLiveBadge("ACTIVE");
-        else {
-          // if checkbox is checked but server isn't active yet -> pending
-          setLiveBadge(liveReqChk.checked ? "PENDING" : "OFF");
-        }
+      function clearAlerts(firebaseKey) {
+        db.ref("/alerts/" + firebaseKey).update({
+          sos: false,
+          pool: false,
+          timestamp: Math.floor(Date.now() / 1000)
+        });
+      }
+
+      // ===== UI render =====
+      const tbody = document.getElementById("tbody");
+
+      function makeRow(idx, p) {
+        const tr = document.createElement("tr");
+        tr.className = "row";
+        tr.id = "row_" + idx;
+        tr.innerHTML = `
+          <td>
+            <div class="name">${p.label}</div>
+            <div class="small muted">Firebase key: <span class="mono">${p.firebaseKey}</span></div>
+          </td>
+          <td><span class="badge offline">LOADING</span></td>
+          <td class="hide-mobile"><span class="muted">Waiting for data…</span></td>
+          <td class="right">
+            <button data-clear="${p.firebaseKey}">Clear</button>
+          </td>
+        `;
+        return tr;
+      }
+
+      people.forEach((p, idx) => tbody.appendChild(makeRow(idx, p)));
+
+      document.addEventListener("click", (e) => {
+        const btn = e.target.closest("button[data-clear]");
+        if (!btn) return;
+        clearAlerts(btn.getAttribute("data-clear"));
       });
 
-      liveReqChk.addEventListener("change", async () => {
-        const requested = !!liveReqChk.checked;
+      // ===== Live data =====
+      const BEACON_OFFLINE_SECONDS = 12;
+      const live = {}; // key -> { room, entered_at, last_seen, alerts }
+
+      function computeState(p) {
+        const v = live[p.firebaseKey] || {};
+        const room = v.room || "";
+        const enteredAt = v.entered_at || null;
+        const lastSeen = v.last_seen || 0;
+        const alerts = v.alerts || {};
+
         const now = Math.floor(Date.now()/1000);
+        const dwell = (enteredAt && enteredAt > 0) ? (now - enteredAt) : 0;
+        const dwellStr = enteredAt ? formatDuration(dwell) : "--:--";
 
-        setLiveBadge(requested ? "PENDING" : "OFF");
+        // Emergency first
+        if (alerts.sos === true) {
+          return { kind:"emergency", note:`SOS triggered${room ? " • " + room : ""}` };
+        }
+        if (alerts.pool === true) {
+          return { kind:"emergency", note:`Pool alarm${room ? " • " + room : ""}` };
+        }
 
-        // Write request state
-        db.ref(`/properties/${PROPERTY_ID}/live_monitoring`).update({
-          requested,
-          requested_at: now
+        // Offline / no signal
+        const offline = (!lastSeen) || ((now - lastSeen) > BEACON_OFFLINE_SECONDS);
+        if (offline) {
+          const age = lastSeen ? (now - lastSeen) : null;
+          return {
+            kind:"offline",
+            note: age === null ? "No signal yet" : `${room ? room + " • " : ""}No signal (${age}s)${enteredAt && room ? ` • was there ${dwellStr}` : ""}`
+          };
+        }
+
+        if (!room) return { kind:"check", note:"No room reported" };
+
+        return { kind:"good", note:`${room} • ${dwellStr}` };
+      }
+
+      function paintRow(idx, p) {
+        const row = document.getElementById("row_" + idx);
+        if (!row) return;
+
+        const st = computeState(p);
+
+        const badge = row.querySelector(".badge");
+        badge.className = "badge " + st.kind;
+        badge.textContent = badgeText(st.kind, "CHECK");
+
+        const note = row.querySelector(".hide-mobile .muted");
+        if (note) note.textContent = st.note || "";
+
+        if (st.kind === "offline") row.classList.add("rowOffline");
+        else row.classList.remove("rowOffline");
+      }
+
+      function anyEmergency() {
+        return people.some(p => {
+          const v = live[p.firebaseKey] || {};
+          const a = v.alerts || {};
+          return a.sos === true || a.pool === true;
+        });
+      }
+
+      // Subscribe
+      people.forEach((p, idx) => {
+        db.ref("/beacons/" + p.firebaseKey).on("value", snap => {
+          const val = snap.val() || {};
+          live[p.firebaseKey] = live[p.firebaseKey] || {};
+          live[p.firebaseKey].room = val.room || "";
+          live[p.firebaseKey].entered_at = val.entered_at || null;
+          live[p.firebaseKey].last_seen = val.last_seen || 0;
+          paintRow(idx, p);
+        });
+
+        db.ref("/alerts/" + p.firebaseKey).on("value", snap => {
+          const val = snap.val() || {};
+          live[p.firebaseKey] = live[p.firebaseKey] || {};
+          live[p.firebaseKey].alerts = val || {};
+          paintRow(idx, p);
+          if (anyEmergency()) startAlarm(); else stopAlarm();
         });
       });
 
-      // =========================
-      // Contacts save
-      // =========================
-      const phonesInput = document.getElementById("phonesInput");
-      const saveContactsBtn = document.getElementById("saveContactsBtn");
-      const contactsSavedAt = document.getElementById("contactsSavedAt");
-
-      function parsePhones(raw) {
-        return String(raw || "")
-          .split(",")
-          .map(s => s.trim())
-          .filter(Boolean);
-      }
-
-      async function saveContacts() {
-        const phones = parsePhones(phonesInput.value);
-        const now = Math.floor(Date.now()/1000);
-        await db.ref(`/properties/${PROPERTY_ID}/contacts`).update({
-          phones,
-          updated_at: now
-        });
-        contactsSavedAt.textContent = "Saved: " + new Date(now*1000).toLocaleString();
-      }
-
-      saveContactsBtn.onclick = saveContacts;
-
-      // Load contacts on startup
-      db.ref(`/properties/${PROPERTY_ID}/contacts`).once("value").then((snap) => {
-        const v = snap.val() || {};
-        const phones = Array.isArray(v.phones) ? v.phones : [];
-        phonesInput.value = phones.join(", ");
-        if (v.updated_at) {
-          contactsSavedAt.textContent = "Saved: " + new Date(v.updated_at*1000).toLocaleString();
-        }
-      });
-
-      // =========================
-      // System online badge
-      // =========================
+      // ===== System online badge via /system/lastDataRx =====
       let lastDataRx = 0;
-      let dataUpdateCount = 0;
+      let updates = 0;
+      const STALE_SECONDS = 8;
 
       const systemStatusEl = document.getElementById("systemStatus");
       const dataAgeEl = document.getElementById("dataAge");
@@ -346,8 +289,8 @@
 
       db.ref("/system/lastDataRx").on("value", (snap) => {
         lastDataRx = snap.val() || 0;
-        dataUpdateCount++;
-        updateCountEl.textContent = "Updates: " + dataUpdateCount;
+        updates++;
+        updateCountEl.textContent = "Updates: " + updates;
       });
 
       function refreshSystemBadge() {
@@ -367,172 +310,15 @@
         }
       }
 
-      // =========================
-      // Kids list UI
-      // =========================
-      const kidsList = document.getElementById("kidsList");
-
-      const live = {}; // name -> { room, entered_at, last_seen, alerts }
-      const rowEls = {}; // name -> element
-
-      function formatDuration(seconds) {
-        const s = Math.max(0, Math.floor(seconds || 0));
-        const h = Math.floor(s / 3600);
-        const m = Math.floor((s % 3600) / 60);
-        const sec = s % 60;
-        if (h > 0) return `${h}:${String(m).padStart(2,"0")}:${String(sec).padStart(2,"0")}`;
-        return `${m}:${String(sec).padStart(2,"0")}`;
-      }
-
-      function computeKidState(tag) {
-        const v = live[tag.name] || {};
-        const room = v.room || "";
-        const enteredAt = v.entered_at || null;
-        const lastSeen = v.last_seen || 0;
-        const alerts = v.alerts || {};
-
-        const now = Math.floor(Date.now()/1000);
-
-        const offline = (!lastSeen) || ((now - lastSeen) > BEACON_OFFLINE_SECONDS);
-        const dwell = (enteredAt && enteredAt > 0) ? (now - enteredAt) : 0;
-        const dwellStr = enteredAt ? formatDuration(dwell) : "--:--";
-
-        // Emergency rules
-        const poolAlert = (alerts.pool === true) || (room === POOL_ROOM_NAME);
-        const sosAlert  = (alerts.sos === true);
-
-        if (sosAlert) return { kind:"emergency", title:"EMERGENCY", note:`SOS pressed${room ? " • " + room : ""}` };
-        if (poolAlert) return { kind:"emergency", title:"EMERGENCY", note:`Pool risk${room ? " • " + room : ""}` };
-
-        if (offline) {
-          const age = lastSeen ? (now - lastSeen) : null;
-          return {
-            kind:"offline",
-            title:"OFFLINE",
-            note: age === null ? "No signal yet" : `No signal (${age}s)${room ? " • last room " + room : ""}`
-          };
-        }
-
-        if (!room) return { kind:"check", title:"CHECK", note:"No room reported" };
-
-        return { kind:"good", title:"GOOD", note:`${room} • ${dwellStr}` };
-      }
-
-      function clearAlerts(tagName) {
-        db.ref("/alerts/" + tagName).update({
-          sos:false,
-          pool:false,
-          timestamp: Math.floor(Date.now()/1000)
-        });
-      }
-
-      function renderKidRow(tag) {
-        const el = document.createElement("div");
-        el.className = "rowCard";
-        el.innerHTML = `
-          <div class="kidLine">
-            <div class="kidLeft">
-              <div class="kidName">${tag.label}</div>
-              <div class="kidMeta mono" id="note_${tag.name}">--</div>
-            </div>
-            <div class="kidRight">
-              <span class="badge offline" id="badge_${tag.name}">LOADING</span>
-              <div class="kidActions">
-                <button data-clear="${tag.name}">Clear</button>
-              </div>
-            </div>
-          </div>
-        `;
-        rowEls[tag.name] = el;
-        kidsList.appendChild(el);
-      }
-
-      MONITORED_TAGS.forEach(renderKidRow);
-
-      // Clear buttons
-      document.addEventListener("click", (e) => {
-        const btn = e.target.closest("button[data-clear]");
-        if (!btn) return;
-        clearAlerts(btn.getAttribute("data-clear"));
-      });
-
-      // Subscribe tag data
-      MONITORED_TAGS.forEach((tag) => {
-        // /beacons/<NAME>
-        db.ref("/beacons/" + tag.name).on("value", (snap) => {
-          const val = snap.val() || {};
-          live[tag.name] = live[tag.name] || {};
-          live[tag.name].room = val.room || "";
-          live[tag.name].entered_at = val.entered_at || null;
-          live[tag.name].last_seen = val.last_seen || 0;
-        });
-
-        // /alerts/<NAME>
-        db.ref("/alerts/" + tag.name).on("value", (snap) => {
-          const val = snap.val() || {};
-          live[tag.name] = live[tag.name] || {};
-          live[tag.name].alerts = val || {};
-        });
-      });
-
-      // Alarm logic: if ANY emergency → alarm on
-      let lastAnyEmergency = false;
-
-      async function evaluateAlarm() {
-        let anyEmergency = false;
-
-        for (const tag of MONITORED_TAGS) {
-          const v = live[tag.name] || {};
-          const alerts = v.alerts || {};
-          const poolAlert = (alerts.pool === true) || ((v.room || "") === POOL_ROOM_NAME);
-          const sosAlert  = (alerts.sos === true);
-          if (poolAlert || sosAlert) { anyEmergency = true; break; }
-        }
-
-        if (anyEmergency && !lastAnyEmergency) {
-          // Best-effort notify when emergency begins
-          await tryNotify("UltraWatch Alert", "Emergency detected at " + PROPERTY_NAME);
-        }
-
-        if (anyEmergency) startAlarm();
-        else stopAlarm();
-
-        lastAnyEmergency = anyEmergency;
-      }
-
-      function paintUI() {
-        // clock
+      function tick() {
         document.getElementById("clock").textContent = new Date().toLocaleString();
-
-        // system
+        people.forEach((p, idx) => paintRow(idx, p));
         refreshSystemBadge();
-
-        // kids
-        MONITORED_TAGS.forEach((tag) => {
-          const st = computeKidState(tag);
-          const badge = document.getElementById("badge_" + tag.name);
-          const note = document.getElementById("note_" + tag.name);
-
-          badge.className = "badge " + st.kind;
-          badge.textContent = st.title;
-          note.textContent = st.note || "";
-        });
-      }
-
-      async function tick() {
-        paintUI();
-        await evaluateAlarm();
+        if (anyEmergency()) startAlarm(); else stopAlarm();
       }
 
       setInterval(tick, 1000);
       tick();
-
-      // If page is backgrounded, warn user (can’t truly fix from normal web)
-      document.addEventListener("visibilitychange", () => {
-        if (document.hidden) {
-          console.log("Page backgrounded: mobile browsers may pause audio/updates.");
-        }
-      });
 
     } catch (e) {
       showError(e && e.message ? e.message : String(e));
