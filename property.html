@@ -12,7 +12,7 @@
     .sub { opacity:.8; font-size: 13px; }
     .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; }
 
-    .card { background: rgba(255,255,255,0.07); border-radius: 16px; padding: 14px; }
+    .card { background: rgba(255,255,255,0.07); border-radius: 16px; padding: 14px; margin-bottom: 12px; }
     .table { width:100%; border-collapse: separate; border-spacing: 0 10px; }
     .row { background: rgba(255,255,255,0.06); border-radius: 14px; overflow:hidden; }
     .row td { padding: 12px 12px; vertical-align: middle; }
@@ -39,7 +39,55 @@
     @media (max-width: 720px) { .statusLine { justify-content:flex-start; margin-top:10px; } }
 
     button { border-radius: 12px; padding: 8px 10px; font-weight: 900; cursor:pointer; border:0; }
+    input[type="text"], input[type="tel"] {
+      width: 100%;
+      box-sizing: border-box;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.10);
+      color: #e9eefc;
+      border-radius: 12px;
+      padding: 10px 12px;
+      font-weight: 800;
+      outline: none;
+    }
+
     .err { margin-top: 10px; padding: 10px 12px; border-radius: 12px; background: rgba(180,35,24,0.18); color: #ffd2cd; display:none; }
+
+    /* Live monitoring control box */
+    .controlGrid { display:grid; grid-template-columns: 1.4fr 1fr; gap: 12px; }
+    @media (max-width: 720px) { .controlGrid { grid-template-columns: 1fr; } }
+
+    .toggleRow { display:flex; align-items:center; gap:10px; }
+    .toggleRow input { transform: scale(1.2); }
+
+    .lampWrap { display:flex; align-items:center; gap:10px; justify-content:flex-end; }
+    @media (max-width: 720px) { .lampWrap { justify-content:flex-start; } }
+
+    .lamp {
+      width: 14px; height: 14px; border-radius: 999px;
+      background: rgba(255,255,255,0.18);
+      box-shadow: 0 0 0 rgba(0,0,0,0);
+      border: 1px solid rgba(255,255,255,0.12);
+    }
+    .lamp.on {
+      background: rgba(124,255,124,0.95);
+      box-shadow: 0 0 18px rgba(124,255,124,0.55);
+      border-color: rgba(124,255,124,0.75);
+    }
+    .lamp.pending {
+      background: rgba(255,210,80,0.95);
+      box-shadow: 0 0 18px rgba(255,210,80,0.35);
+      border-color: rgba(255,210,80,0.70);
+    }
+
+    .pill {
+      display:inline-block;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.08);
+      font-weight: 900;
+      letter-spacing: .2px;
+    }
   </style>
 </head>
 
@@ -48,8 +96,8 @@
     <div class="header">
       <div>
         <h1>UltraWatch Property Demo</h1>
-        <div class="sub">Live demo reading real locations for Jack (GRANDPA) and Axel</div>
-        <div class="sub mono">Build: 2025-12-26 12:00</div>
+        <div class="sub">Single-location page (AirBnB / VRBO style) monitoring Jack + Axel</div>
+        <div class="sub mono">Build: 2025-12-26</div>
 
         <div class="sub" style="margin-top:8px;">
           <button id="enableSoundBtn">Enable Sound</button>
@@ -66,6 +114,38 @@
           <div class="sub mono" id="updateCount">Updates: 0</div>
         </div>
         <div class="sub mono" id="clock" style="margin-top:6px;">--</div>
+      </div>
+    </div>
+
+    <!-- NEW: Live monitoring request + contact numbers -->
+    <div class="card">
+      <div class="controlGrid">
+        <div>
+          <div class="toggleRow">
+            <input type="checkbox" id="liveMonitorChk" />
+            <div>
+              <div style="font-weight:900;">Request Live Monitoring</div>
+              <div class="sub">Use UltraWatch as a “second pair of eyes” if you’re distracted.</div>
+            </div>
+          </div>
+
+          <div style="margin-top:10px;">
+            <div style="font-weight:900; margin-bottom:6px;">Emergency Contact Phone Number(s)</div>
+            <input id="phoneInput" type="tel" placeholder="Example: 407-555-0123, 321-555-0188" />
+            <div class="sub" style="margin-top:6px;">
+              Tip: separate multiple numbers with commas.
+              <span class="pill mono" id="savedTag" style="display:none; margin-left:8px;">Saved</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="lampWrap">
+          <div>
+            <div style="font-weight:900;">Live Monitoring Status</div>
+            <div class="sub" id="liveStatusText">Not requested</div>
+          </div>
+          <div class="lamp" id="liveLamp" title="Live monitoring status"></div>
+        </div>
       </div>
     </div>
 
@@ -101,7 +181,7 @@
       firebase.initializeApp(firebaseConfig);
       const db = firebase.database();
 
-      // ===== Demo targets (REAL) =====
+      // ===== Real demo targets =====
       const people = [
         { label: "Jack", firebaseKey: "GRANDPA" },
         { label: "Axel", firebaseKey: "Axel" }
@@ -140,6 +220,74 @@
           soundStatus.textContent = "Sound: blocked (tap again)";
         }
       };
+
+      // ===== Live monitoring UI (demo-only; stored locally) =====
+      const liveChk = document.getElementById("liveMonitorChk");
+      const phoneInput = document.getElementById("phoneInput");
+      const liveLamp = document.getElementById("liveLamp");
+      const liveStatusText = document.getElementById("liveStatusText");
+      const savedTag = document.getElementById("savedTag");
+
+      const LS_LIVE = "uw_property_live_requested";
+      const LS_PHONES = "uw_property_phones";
+
+      let liveTimer = null;
+
+      function setSavedPulse() {
+        savedTag.style.display = "inline-block";
+        setTimeout(() => { savedTag.style.display = "none"; }, 1200);
+      }
+
+      function setLiveState(state) {
+        // state: "off" | "pending" | "on"
+        liveLamp.classList.remove("on", "pending");
+        if (state === "pending") {
+          liveLamp.classList.add("pending");
+          liveStatusText.textContent = "Connecting…";
+        } else if (state === "on") {
+          liveLamp.classList.add("on");
+          liveStatusText.textContent = "Live monitoring active";
+        } else {
+          liveStatusText.textContent = "Not requested";
+        }
+      }
+
+      function applyLiveFromStorage() {
+        const requested = localStorage.getItem(LS_LIVE) === "true";
+        const phones = localStorage.getItem(LS_PHONES) || "";
+        liveChk.checked = requested;
+        phoneInput.value = phones;
+
+        if (requested) {
+          // simulate it coming online after a few seconds
+          setLiveState("pending");
+          clearTimeout(liveTimer);
+          liveTimer = setTimeout(() => setLiveState("on"), 2500);
+        } else {
+          setLiveState("off");
+        }
+      }
+
+      liveChk.addEventListener("change", () => {
+        localStorage.setItem(LS_LIVE, liveChk.checked ? "true" : "false");
+        setSavedPulse();
+
+        if (liveChk.checked) {
+          setLiveState("pending");
+          clearTimeout(liveTimer);
+          liveTimer = setTimeout(() => setLiveState("on"), 2500);
+        } else {
+          clearTimeout(liveTimer);
+          setLiveState("off");
+        }
+      });
+
+      phoneInput.addEventListener("input", () => {
+        localStorage.setItem(LS_PHONES, phoneInput.value || "");
+      });
+      phoneInput.addEventListener("change", () => setSavedPulse());
+
+      applyLiveFromStorage();
 
       // ===== Helpers =====
       function formatDuration(seconds) {
