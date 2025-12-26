@@ -81,6 +81,26 @@
       font-weight: 800;
       font-size: 12px;
     }
+
+    /* NEW: Sound gate shown immediately on load until enabled */
+    .soundGate {
+      position: sticky;
+      top: 0;
+      z-index: 9999;
+      margin-bottom: 12px;
+      padding: 12px;
+      border-radius: 14px;
+      background: rgba(15, 122, 58, 0.18);
+      border: 1px solid rgba(70,255,106,0.22);
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+    }
+    .soundGateTitle { font-weight: 900; }
+    .soundGateHint { font-size: 12px; opacity: .85; }
+    .soundGateRight { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
   </style>
 </head>
 <body>
@@ -95,6 +115,18 @@
       <div class="mono muted" id="clock">--</div>
     </div>
 
+    <!-- NEW: SOUND GATE (always visible until sound is enabled) -->
+    <div class="soundGate" id="soundGate">
+      <div>
+        <div class="soundGateTitle">🔔 Tap to enable alarms</div>
+        <div class="soundGateHint">Phones block alarm audio until you tap once on this page.</div>
+      </div>
+      <div class="soundGateRight">
+        <button class="btn" id="soundGateBtn">Enable Sound</button>
+        <span class="sub mono muted" id="soundStatus" style="align-self:center;">Sound: off</span>
+      </div>
+    </div>
+
     <!-- RED ALERT BANNER -->
     <div class="banner" id="alertBanner">
       <div class="bannerTop">
@@ -106,7 +138,7 @@
           <button class="btnDanger" id="clearAllBtn">Clear All</button>
           <button class="btn" id="testAlarmBtn">Test Alarm</button>
           <button class="btn" id="enableSoundBtn">Enable Sound</button>
-          <span class="sub mono muted" id="soundStatus" style="align-self:center;">Sound: off</span>
+          <!-- soundStatus is up top in the gate -->
         </div>
       </div>
     </div>
@@ -189,8 +221,6 @@
       const db = firebase.database();
 
       // ---- People to monitor (REAL Firebase keys) ----
-      // Jack = GRANDPA (your existing key)
-      // Axel = Axel (your existing key)
       const people = [
         { label: "Jack", firebaseKey: "GRANDPA" },
         { label: "Axel", firebaseKey: "Axel" }
@@ -203,6 +233,8 @@
 
       const soundStatus = document.getElementById("soundStatus");
       const enableSoundBtn = document.getElementById("enableSoundBtn");
+      const soundGate = document.getElementById("soundGate");
+      const soundGateBtn = document.getElementById("soundGateBtn");
 
       function startAlarm() {
         if (!soundEnabled) return;
@@ -218,18 +250,40 @@
         }
       }
 
-      enableSoundBtn.addEventListener("click", async () => {
+      async function armSound() {
         try {
           soundEnabled = true;
+
+          // "warm up" for iOS/Android
           alarmAudio.currentTime = 0;
-          await alarmAudio.play();   // "warm up" for iOS/Android
+          await alarmAudio.play();
           alarmAudio.pause();
           alarmAudio.currentTime = 0;
+
           soundStatus.textContent = "Sound: on";
+          soundGate.style.display = "none"; // hide gate once enabled
+          return true;
         } catch (e) {
+          soundEnabled = false;
           soundStatus.textContent = "Sound: blocked (tap again)";
+          soundGate.style.display = "flex";
+          return false;
         }
-      });
+      }
+
+      // Gate button
+      soundGateBtn.addEventListener("click", armSound);
+
+      // Banner button (same behavior)
+      enableSoundBtn.addEventListener("click", armSound);
+
+      // Optional: first tap anywhere attempts to arm (helps users)
+      document.addEventListener("click", (e) => {
+        if (soundEnabled) return;
+        if (e.target.closest("input, textarea")) return;
+        if (e.target.closest("#soundGateBtn")) return;
+        armSound();
+      }, { passive:true });
 
       // ---- Demo-only: Live monitoring request ----
       const liveMonitorChk = document.getElementById("liveMonitorChk");
@@ -346,16 +400,13 @@
         const now = Math.floor(Date.now()/1000);
         testAlarmUntil = now + 8;
         startAlarm();
-        refreshBanner(); // so user sees banner even if no SOS/pool
+        refreshBanner();
         setTimeout(() => { evaluateAlarmNow(); refreshBanner(); }, 8200);
       }
-
       testAlarmBtn.addEventListener("click", triggerTestAlarm);
 
       clearAllBtn.addEventListener("click", () => {
-        // clear local pool latches
         people.forEach(p => poolLatched[p.firebaseKey] = false);
-        // clear firebase SOS flags
         people.forEach(p => clearSOS(p.firebaseKey));
         evaluateAlarmNow();
         refreshBanner();
@@ -385,7 +436,6 @@
         const sosActive = (alerts.sos === true);
         const poolActive = (poolLatched[p.firebaseKey] === true);
 
-        // basic "stale" logic
         const now = Math.floor(Date.now()/1000);
         const age = lastSeen ? (now - lastSeen) : null;
         const offline = (age === null) || (age > 12);
@@ -452,7 +502,6 @@
 
         noteEl.textContent = s.note || "";
 
-        // show/hide buttons
         const clearSOSBtn = row.querySelector("button[data-clear-sos]");
         const clearPoolBtn = row.querySelector("button[data-clear-pool]");
 
@@ -462,8 +511,6 @@
 
       function anyEmergencyTriggersAlarm() {
         const now = Math.floor(Date.now()/1000);
-
-        // Test alarm forces sound
         if (testAlarmUntil && now <= testAlarmUntil) return true;
 
         const poolEnabled = poolEnabledChk.checked;
@@ -554,7 +601,6 @@
       });
 
       poolEnabledChk.addEventListener("change", () => {
-        // if user disables pool alarm, it may stop sound immediately unless SOS is active
         evaluateAlarmNow();
         refreshBanner();
       });
