@@ -6,7 +6,7 @@
 
   <!--
     UltraWatch
-    Build: DEMO-VACATIONHOME v0.1.0
+    Build: DEMO-VACATIONHOME v0.2.0
     Last Updated: 2025-12-30
   -->
 
@@ -35,6 +35,7 @@
     }
     .wrap{max-width:1200px;margin:0 auto;padding:16px}
 
+    /* Build banner (internal) */
     .build{
       background:rgba(96,165,250,.15);
       border:1px solid rgba(96,165,250,.35);
@@ -48,17 +49,22 @@
       align-items:center;
       gap:12px;
     }
-    .build b{font-weight:800}
+    .build b{font-weight:900}
 
+    /* Header */
     .header{
       display:flex;
       justify-content:space-between;
       align-items:flex-end;
-      gap:12px;
+      gap:16px;
       margin-bottom:12px;
+      flex-wrap:wrap;
     }
     h1{margin:0;font-size:20px;letter-spacing:.2px}
     .sub{color:var(--muted);font-size:12px;margin-top:4px}
+    .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;}
+    .muted{color:var(--muted)}
+
     .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 
     .btn{
@@ -67,24 +73,27 @@
       color:var(--text);
       padding:9px 12px;
       border-radius:14px;
-      font-weight:700;
+      font-weight:800;
       cursor:pointer;
       text-decoration:none;
       user-select:none;
     }
     .btn:hover{filter:brightness(1.08)}
-    .btn.danger{
-      border-color:rgba(251,113,133,.45);
-      background:rgba(251,113,133,.12);
+    .btnDanger{
+      border:1px solid rgba(251,113,133,.45);
+      background:rgba(251,113,133,.15);
+      color:#ffe6ea;
     }
+    .btnDanger:hover{filter:brightness(1.12)}
 
+    /* Layout */
     .grid{
       display:grid;
       grid-template-columns:1fr;
       gap:12px;
     }
     @media(min-width:980px){
-      .grid{grid-template-columns:330px 1.25fr .75fr}
+      .grid{grid-template-columns:330px 1.3fr .8fr}
     }
 
     .card{
@@ -95,40 +104,41 @@
       overflow:hidden;
     }
 
-    /* Tabs for kids */
-    .tabs{
-      display:flex;
-      gap:8px;
-      flex-wrap:wrap;
-      margin-top:8px;
+    /* Sound Gate */
+    .soundGate{
+      position: sticky;
+      top: 0;
+      z-index: 9999;
+      margin-bottom: 12px;
+      padding: 12px;
+      border-radius: 14px;
+      background: rgba(15, 122, 58, 0.18);
+      border: 1px solid rgba(70,255,106,0.22);
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
     }
-    .tab{
-      display:inline-flex;
-      gap:8px;
-      align-items:center;
-      padding:7px 10px;
-      border-radius:999px;
-      border:1px solid var(--line);
-      background:rgba(0,0,0,.15);
-      cursor:pointer;
-      font-size:12px;
-      color:var(--muted);
-      user-select:none;
+    .soundGateTitle{font-weight:900}
+    .soundGateHint{font-size:12px;color:var(--muted)}
+    .soundGateRight{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+
+    /* Red Alert Banner */
+    .banner{
+      display:none;
+      margin-bottom: 12px;
+      padding: 12px 12px;
+      border-radius: 14px;
+      background: rgba(180,35,24,0.26);
+      border: 1px solid rgba(255,120,120,0.25);
     }
-    .tab.active{
-      border-color:rgba(96,165,250,.55);
-      background:rgba(96,165,250,.16);
-      color:var(--text);
-      font-weight:900;
-    }
+    .bannerTop{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+    .bannerTitle{font-weight:900;font-size:14px}
+    .bannerText{margin-top:4px;color:rgba(233,238,252,.9)}
 
     /* People list */
-    .search{
-      display:flex;
-      gap:8px;
-      align-items:center;
-      margin-bottom:10px;
-    }
+    .search{display:flex;gap:8px;align-items:center;margin-bottom:10px}
     .search input{
       width:100%;
       border:1px solid var(--line);
@@ -138,7 +148,7 @@
       padding:10px 12px;
       outline:none;
     }
-    .list{max-height:650px;overflow:auto}
+    .list{max-height:680px;overflow:auto}
     .person{
       display:flex;
       justify-content:space-between;
@@ -163,12 +173,13 @@
       color:var(--muted);
       white-space:nowrap;
       height:fit-content;
+      background:rgba(0,0,0,.12);
     }
     .dot{width:9px;height:9px;border-radius:50%;background:var(--good)}
     .dot.warn{background:var(--warn)}
     .dot.bad{background:var(--bad)}
 
-    /* Status row */
+    /* Status */
     .status{
       display:flex;
       justify-content:space-between;
@@ -189,11 +200,12 @@
       font-size:12px;
       color:var(--muted);
       white-space:nowrap;
+      background:rgba(0,0,0,.12);
     }
 
-    /* "Property map" panel */
+    /* Property map */
     .property{
-      height:420px;
+      height:440px;
       border-radius:16px;
       border:1px solid var(--line);
       background:rgba(0,0,0,.18);
@@ -201,7 +213,6 @@
       overflow:hidden;
       margin-top:12px;
     }
-
     .zone{
       position:absolute;
       border:2px dashed rgba(96,165,250,.55);
@@ -210,13 +221,12 @@
       font-size:12px;
       color:rgba(233,238,252,.8);
       background:rgba(96,165,250,.06);
+      pointer-events:none;
     }
-
     .pool{
       border-color:rgba(250,204,21,.65);
       background:rgba(250,204,21,.06);
     }
-
     .label{
       position:absolute;
       font-size:12px;
@@ -225,44 +235,92 @@
       border:1px solid rgba(255,255,255,.12);
       background:rgba(0,0,0,.18);
       border-radius:999px;
+      pointer-events:none;
     }
 
+    /* Per-person pins (multi-person) */
     .pin{
       position:absolute;
-      width:14px;height:14px;border-radius:50%;
-      background:var(--good);
-      box-shadow:0 0 0 6px rgba(74,222,128,.18);
+      width:12px;height:12px;border-radius:50%;
       transform:translate(-50%,-50%);
+      background:var(--good);
+      box-shadow:0 0 0 6px rgba(74,222,128,.12);
+      border:2px solid rgba(255,255,255,.65);
+      cursor:pointer;
     }
-    .pin.warn{background:var(--warn);box-shadow:0 0 0 6px rgba(250,204,21,.18)}
-    .pin.bad{background:var(--bad);box-shadow:0 0 0 6px rgba(251,113,133,.20)}
+    .pin.warn{background:var(--warn);box-shadow:0 0 0 6px rgba(250,204,21,.12)}
+    .pin.bad{background:var(--bad);box-shadow:0 0 0 6px rgba(251,113,133,.14)}
+    .pin.selected{
+      width:14px;height:14px;
+      border-color:#fff;
+      box-shadow:0 0 0 7px rgba(96,165,250,.16);
+    }
+    .pinTag{
+      position:absolute;
+      transform:translate(-50%,-160%);
+      font-size:11px;
+      padding:4px 8px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.12);
+      background:rgba(0,0,0,.30);
+      color:rgba(233,238,252,.85);
+      white-space:nowrap;
+      pointer-events:none;
+    }
+
+    /* Controls blocks */
+    .grid2{display:grid;gap:10px}
+    @media(min-width:980px){ .grid2{grid-template-columns:1fr 1fr} }
+
+    label{display:flex;align-items:center;gap:10px;user-select:none}
+    input[type="checkbox"]{transform:scale(1.1)}
+    input[type="tel"]{
+      width:100%;
+      box-sizing:border-box;
+      border-radius:12px;
+      padding:10px 10px;
+      border:1px solid rgba(255,255,255,0.12);
+      background: rgba(0,0,0,.18);
+      color:var(--text);
+      outline:none;
+    }
+    .pillList{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+    .miniPill{
+      background: rgba(255,255,255,0.10);
+      border: 1px solid rgba(255,255,255,0.10);
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-weight: 800;
+      font-size: 12px;
+    }
+
+    .statusPill{
+      display:inline-flex; align-items:center; gap:8px;
+      padding: 6px 10px; border-radius: 999px; font-weight: 900;
+      background: rgba(255,255,255,0.10); color:#B8C0D9;
+    }
+    .statusPill .sdot{width:10px;height:10px;border-radius:99px;background:rgba(255,255,255,0.35)}
+    .liveOn{ background: rgba(0,255,0,0.15); color:#7CFF7C; }
+    .liveOn .sdot{ background:#46ff6a; }
+    .livePending{ background: rgba(255,200,0,0.15); color:#ffd37a; }
+    .livePending .sdot{ background:#ffd37a; }
 
     /* Activity */
-    .log{max-height:650px;overflow:auto}
+    .log{max-height:680px;overflow:auto}
     .evt{
       display:flex;justify-content:space-between;gap:12px;
       padding:9px 0;border-bottom:1px solid var(--line);
     }
     .evt .t{font-size:12px;color:var(--muted)}
 
-    /* Alert modal */
-    .alert{
+    .err{
+      margin-top: 10px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: rgba(180,35,24,0.18);
+      color: #ffd2cd;
       display:none;
-      position:fixed;inset:0;
-      background:rgba(0,0,0,.7);
-      padding:16px;
-      z-index:50;
     }
-    .alertBox{
-      max-width:560px;
-      margin:80px auto;
-      background:rgba(20,26,40,.98);
-      border:1px solid var(--line);
-      border-radius:22px;
-      padding:16px;
-    }
-    .alertBox h2{margin:0 0 6px 0}
-    .alertBox .sub{margin:0}
 
     footer{
       margin-top:16px;
@@ -280,85 +338,158 @@
 <div class="wrap">
 
   <div class="build">
-    <div><b>UltraWatch</b> — Build <b>DEMO-VACATIONHOME v0.1.0</b></div>
+    <div><b>UltraWatch</b> — Build <b>DEMO-VACATIONHOME v0.2.0</b></div>
     <div>Updated: <b>Dec 30, 2025</b></div>
   </div>
 
   <div class="header">
     <div>
       <h1>Vacation Home & Pool Safety</h1>
-      <div class="sub">Instant alerts when kids approach the pool • Guest-friendly monitoring • Works with wristbands & room sensors</div>
-      <div class="tabs" id="tabs"></div>
+      <div class="sub">Property monitor page for AirBnB / VRBO guests • Pool proximity alerts • Emergency contact & live monitoring</div>
+      <div class="sub mono">Build string: <span id="buildString">2025-12-30 12:00</span></div>
+      <div class="err mono" id="errBox"></div>
     </div>
+    <div class="mono muted" id="clock">--</div>
+  </div>
 
-    <div class="row">
-      <a class="btn" href="DemoIndex.html">← Back</a>
-      <button class="btn" onclick="simulateMove()">Move</button>
-      <button class="btn" onclick="simulatePoolNear()">Near Pool</button>
-      <button class="btn danger" onclick="simulatePoolBreach()">Pool Breach</button>
-      <button class="btn" onclick="simulateNotSeen()">Not Seen</button>
-      <button class="btn danger" onclick="testRandomAlert()">Test Alert</button>
+  <!-- SOUND GATE -->
+  <div class="soundGate" id="soundGate">
+    <div>
+      <div class="soundGateTitle">🔔 Tap to enable alarms</div>
+      <div class="soundGateHint">Phones block alarm audio until you tap once on this page.</div>
+    </div>
+    <div class="soundGateRight">
+      <button class="btn" id="soundGateBtn">Enable Sound</button>
+      <span class="sub mono muted" id="soundStatus">Sound: off</span>
+    </div>
+  </div>
+
+  <!-- EMERGENCY BANNER -->
+  <div class="banner" id="alertBanner">
+    <div class="bannerTop">
+      <div>
+        <div class="bannerTitle">⚠️ EMERGENCY ALERT ACTIVE</div>
+        <div class="sub mono bannerText" id="alertBannerText">--</div>
+      </div>
+      <div class="row" style="justify-content:flex-end">
+        <button class="btnDanger" id="clearAllBtn">Clear All</button>
+        <button class="btn" id="testAlarmBtn">Test Alarm</button>
+        <button class="btn" id="enableSoundBtn">Enable Sound</button>
+      </div>
     </div>
   </div>
 
   <div class="grid">
 
-    <!-- Guest list / kids list -->
+    <!-- LEFT: People -->
     <div class="card">
       <div class="search">
-        <input id="search" placeholder="Search guests…" oninput="renderPeople()" />
+        <input id="search" placeholder="Search guests…" oninput="renderPeopleList()" />
       </div>
-      <div class="sub" style="margin-bottom:10px">Monitored Guests</div>
+      <div class="sub" style="margin-bottom:10px">Guests at this property</div>
       <div class="list" id="peopleList"></div>
     </div>
 
-    <!-- Main view -->
+    <!-- CENTER: Property Map + Selected Status -->
     <div class="card">
 
       <div class="status">
         <div>
-          <div id="name" style="font-weight:900;font-size:16px">—</div>
+          <div id="selName" style="font-weight:900;font-size:16px">—</div>
           <div class="sub">
-            Wristband <span id="band">—</span> • Last update <span id="lastSeen">—</span> • Sensor <span id="lastSensor">—</span>
+            Key <span class="mono" id="selKey">—</span> • Room <span class="mono" id="selRoom">—</span> • Dwell <span class="mono" id="selDwell">—</span>
+          </div>
+          <div class="sub">
+            Last seen <span class="mono" id="selLastSeen">—</span> • Data age <span class="mono" id="selAge">—</span>
           </div>
         </div>
         <div class="row">
-          <span class="pill"><span id="stateDot" class="dot"></span><span id="stateText">OK</span></span>
-          <span class="pill">Zone: <b id="zone">—</b></span>
-          <span class="pill">Status: <b id="statusText">Safe</b></span>
+          <span class="pill"><span id="selStateDot" class="dot"></span><span id="selStateText">OK</span></span>
+          <span class="pill">Zone: <b id="selZone">—</b></span>
+          <span class="pill">Pool: <b id="selPool">—</b></span>
         </div>
       </div>
 
       <div class="property" id="property">
-        <!-- Property labels -->
         <div class="label" style="left:18px;top:14px;">Main House</div>
         <div class="label" style="left:18px;top:46px;">Backyard</div>
 
-        <!-- Zones -->
-        <div class="zone" style="left:18px;top:70px;width:56%;height:42%;">House Interior (Rooms)</div>
-        <div class="zone" style="left:18px;top:260px;width:56%;height:34%;">Patio / Backyard</div>
-        <div class="zone pool" id="poolZone" style="left:63%;top:120px;width:33%;height:44%;">Pool Zone</div>
+        <div class="zone" style="left:18px;top:70px;width:56%;height:42%;">House Interior</div>
+        <div class="zone" style="left:18px;top:280px;width:56%;height:34%;">Patio / Backyard</div>
+        <div class="zone pool" style="left:63%;top:120px;width:33%;height:44%;">Pool Zone</div>
         <div class="zone" style="left:63%;top:300px;width:33%;height:20%;">Driveway / Front</div>
 
-        <!-- Dot -->
-        <div id="pin" class="pin" style="left:40%;top:140%"></div>
+        <!-- Pins go here -->
+        <div id="pins"></div>
       </div>
 
       <div class="sub" style="margin-top:10px">
-        Pool Safety Logic: <b>Near Pool</b> triggers a yellow warning. <b>Pool Breach</b> triggers immediate red alert + audible alarm.
+        Pool logic: If a guest’s room contains “pool”, the pool alarm <b>latches</b> until cleared (when enabled).
       </div>
-
     </div>
 
-    <!-- Activity -->
+    <!-- RIGHT: Controls + Activity -->
     <div class="card">
+
+      <div class="grid2">
+        <div>
+          <div style="font-weight:900;margin-bottom:6px;">Live monitoring request</div>
+          <label>
+            <input type="checkbox" id="liveMonitorChk" />
+            <span>Request live monitoring</span>
+          </label>
+          <div style="margin-top:10px;">
+            <span class="statusPill" id="livePill">
+              <span class="sdot"></span>
+              <span id="liveText">LIVE MONITORING: OFF</span>
+            </span>
+            <div class="sub">Demo-only: turns green a few seconds after checking.</div>
+          </div>
+        </div>
+
+        <div>
+          <div style="font-weight:900;margin-bottom:6px;">Pool alarm</div>
+          <label>
+            <input type="checkbox" id="poolEnabledChk" checked />
+            <span>Enable pool alarm</span>
+          </label>
+          <div class="sub">Pool alarms latch ON when “pool” is detected in the room string.</div>
+        </div>
+      </div>
+
+      <hr style="border:0;border-top:1px solid rgba(255,255,255,.10); margin:12px 0;">
+
+      <div>
+        <div style="font-weight:900;margin-bottom:6px;">Emergency contact number(s)</div>
+        <div class="grid2" style="grid-template-columns: 1fr auto auto; align-items:center;">
+          <input type="tel" id="phoneInput" placeholder="Enter phone number (e.g., 407-555-0123)" />
+          <button class="btn" id="addPhoneBtn">Add</button>
+          <button class="btnDanger" id="clearPhonesBtn">Clear</button>
+        </div>
+        <div class="sub">Numbers are stored locally in this browser (demo).</div>
+
+        <div id="registeredBlock" style="margin-top:10px; display:none;">
+          <div class="sub">Registered:</div>
+          <div class="pillList" id="registeredList"></div>
+        </div>
+      </div>
+
+      <hr style="border:0;border-top:1px solid rgba(255,255,255,.10); margin:12px 0;">
+
       <div class="row" style="justify-content:space-between;align-items:flex-end">
         <div>
           <div style="font-weight:900">Activity</div>
           <div class="sub">Recent events for the selected guest</div>
+          <div class="sub mono" id="systemLine">System: --</div>
+          <div class="sub mono" id="dataAgeLine">Data age: --</div>
+          <div class="sub mono" id="modeLine">Mode: --</div>
         </div>
-        <button class="btn" onclick="clearActivity()">Clear</button>
+        <div class="row">
+          <button class="btn" id="demoMoveBtn">Move (Demo)</button>
+          <button class="btnDanger" id="demoSosBtn">SOS (Demo)</button>
+        </div>
       </div>
+
       <div style="height:10px"></div>
       <div class="log" id="log"></div>
     </div>
@@ -372,268 +503,637 @@
 
 </div>
 
-<!-- Alert Modal -->
-<div id="alert" class="alert" onclick="dismissAlert()">
-  <div class="alertBox" onclick="event.stopPropagation()">
-    <h2 id="alertTitle">Alert</h2>
-    <p id="alertBody" class="sub">Message</p>
-    <div style="height:12px"></div>
-    <div class="row" style="justify-content:flex-end">
-      <button class="btn" onclick="dismissAlert()">Dismiss</button>
-    </div>
-  </div>
-</div>
+<!-- Firebase compat (optional) -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <script>
-  // ===== Demo people (Vacation Home guests) =====
-  const people = [
-    { id:"k1", name:"Axel", band:"Wristband A", zone:"House Interior", lastSensor:"Kitchen MK", lastSeenSec:2, state:"ok", status:"Safe", pos:{x:40,y:35} },
-    { id:"k2", name:"Minnie", band:"Wristband B", zone:"Patio / Backyard", lastSensor:"Patio MK", lastSeenSec:5, state:"ok", status:"Safe", pos:{x:40,y:72} },
-    { id:"k3", name:"Mickey", band:"Wristband C", zone:"House Interior", lastSensor:"Living MK", lastSeenSec:4, state:"ok", status:"Safe", pos:{x:30,y:30} },
-    { id:"k4", name:"Sully", band:"Wristband D", zone:"Driveway / Front", lastSensor:"Front MK", lastSeenSec:8, state:"ok", status:"Safe", pos:{x:80,y:82} },
-    { id:"k5", name:"Mike", band:"Wristband E", zone:"House Interior", lastSensor:"Hall MK", lastSeenSec:6, state:"ok", status:"Safe", pos:{x:45,y:28} },
+(function(){
+  const errBox = document.getElementById("errBox");
+  function showError(msg){
+    errBox.style.display = "block";
+    errBox.textContent = "JS ERROR: " + msg;
+  }
+
+  // ====== CONFIG ======
+  const firebaseConfig = { databaseURL: "https://ultrawatch-home-default-rtdb.firebaseio.com/" };
+
+  // People to monitor (REAL Firebase keys)
+  // You can add more guests here anytime.
+  const PEOPLE = [
+    { label: "Jack", firebaseKey: "GRANDPA" },
+    { label: "Axel", firebaseKey: "Axel" }
   ];
 
-  let selectedId = "k1";
+  // ====== STATE ======
+  let selectedKey = PEOPLE[0].firebaseKey;
 
-  // ===== Activity per person =====
+  // live data shape: live[key] = { room, entered_at, last_seen, alerts }
+  const live = {};
+  let lastSystemRx = 0;
+
+  // pool latch (per person)
+  const poolLatched = {}; // key -> bool
+
+  // Activity feed (per person)
   const activity = {};
-  people.forEach(p => activity[p.id] = [
-    { msg:"System online", t:timeNow() },
-    { msg:`${p.name} detected — ${p.zone}`, t:timeNow() }
-  ]);
+  PEOPLE.forEach(p => activity[p.firebaseKey] = [{ msg:"System online", t:timeNow() }]);
 
-  // ===== Alarm audio =====
-  let audioCtx = null, osc = null, gain = null, alarmTimer = null;
+  // Demo fallback if Firebase isn't reachable
+  let firebaseOk = false;
+  let demoMode = false;
+
+  // Demo-only alarm test timer
+  let testAlarmUntil = 0;
+
+  // ====== AUDIO (Sound Gate) ======
+  // Using alarm.mp3 like your property.html
+  let soundEnabled = false;
+  const alarmAudio = new Audio("alarm.mp3");
+  alarmAudio.loop = true;
+
+  const soundStatus = document.getElementById("soundStatus");
+  const enableSoundBtn = document.getElementById("enableSoundBtn");
+  const soundGate = document.getElementById("soundGate");
+  const soundGateBtn = document.getElementById("soundGateBtn");
 
   function startAlarm(){
-    try{
-      if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      if(audioCtx.state === "suspended") audioCtx.resume();
-      if(alarmTimer) return;
-
-      gain = audioCtx.createGain();
-      gain.gain.value = 0.0001;
-      gain.connect(audioCtx.destination);
-
-      osc = audioCtx.createOscillator();
-      osc.type = "square";
-      osc.frequency.value = 880;
-      osc.connect(gain);
-      osc.start();
-
-      alarmTimer = setInterval(() => {
-        const now = audioCtx.currentTime;
-        gain.gain.cancelScheduledValues(now);
-        gain.gain.setValueAtTime(0.0001, now);
-        gain.gain.linearRampToValueAtTime(0.12, now + 0.01);
-        gain.gain.linearRampToValueAtTime(0.0001, now + 0.25);
-      }, 350);
-    }catch(e){ console.log(e); }
+    if(!soundEnabled) return;
+    if(alarmAudio.paused){
+      alarmAudio.currentTime = 0;
+      alarmAudio.play().catch(()=>console.log("Alarm blocked until user interaction"));
+    }
   }
-
   function stopAlarm(){
+    if(!alarmAudio.paused){
+      alarmAudio.pause();
+      alarmAudio.currentTime = 0;
+    }
+  }
+
+  async function armSound(){
     try{
-      if(alarmTimer){ clearInterval(alarmTimer); alarmTimer = null; }
-      if(osc){ osc.stop(); osc.disconnect(); osc = null; }
-      if(gain){ gain.disconnect(); gain = null; }
-    }catch(e){ console.log(e); }
+      soundEnabled = true;
+      alarmAudio.currentTime = 0;
+      await alarmAudio.play();
+      alarmAudio.pause();
+      alarmAudio.currentTime = 0;
+
+      soundStatus.textContent = "Sound: on";
+      soundGate.style.display = "none";
+      return true;
+    }catch(e){
+      soundEnabled = false;
+      soundStatus.textContent = "Sound: blocked (tap again)";
+      soundGate.style.display = "flex";
+      return false;
+    }
   }
 
-  // ===== Render =====
-  function timeNow(){ return new Date().toLocaleTimeString(); }
-  function getSelected(){ return people.find(p => p.id === selectedId); }
+  soundGateBtn.addEventListener("click", armSound);
+  enableSoundBtn.addEventListener("click", armSound);
 
-  function renderTabs(){
-    const tabs = document.getElementById("tabs");
-    tabs.innerHTML = "";
-    people.forEach(p => {
+  document.addEventListener("click", (e)=>{
+    if(soundEnabled) return;
+    if(e.target.closest("input, textarea")) return;
+    if(e.target.closest("#soundGateBtn")) return;
+    armSound();
+  }, { passive:true });
+
+  // ====== LIVE MONITOR PILL (demo-only) ======
+  const liveMonitorChk = document.getElementById("liveMonitorChk");
+  const livePill = document.getElementById("livePill");
+  const liveText = document.getElementById("liveText");
+  let livePendingTimer = null;
+
+  function setLivePill(state){
+    livePill.classList.remove("liveOn","livePending");
+    if(state==="ON"){
+      livePill.classList.add("liveOn");
+      liveText.textContent = "LIVE MONITORING: ON";
+    }else if(state==="PENDING"){
+      livePill.classList.add("livePending");
+      liveText.textContent = "LIVE MONITORING: PENDING…";
+    }else{
+      liveText.textContent = "LIVE MONITORING: OFF";
+    }
+  }
+  setLivePill("OFF");
+
+  liveMonitorChk.addEventListener("change", ()=>{
+    if(livePendingTimer){ clearTimeout(livePendingTimer); livePendingTimer=null; }
+    if(liveMonitorChk.checked){
+      setLivePill("PENDING");
+      livePendingTimer = setTimeout(()=>setLivePill("ON"), 2500);
+    }else{
+      setLivePill("OFF");
+    }
+  });
+
+  // ====== PHONE REGISTRATION (localStorage) ======
+  const phoneInput = document.getElementById("phoneInput");
+  const addPhoneBtn = document.getElementById("addPhoneBtn");
+  const clearPhonesBtn = document.getElementById("clearPhonesBtn");
+  const registeredBlock = document.getElementById("registeredBlock");
+  const registeredList = document.getElementById("registeredList");
+
+  const PHONE_STORE_KEY = "ultrawatch_vacation_demo_numbers_v1";
+  function loadPhones(){ try{return JSON.parse(localStorage.getItem(PHONE_STORE_KEY) || "[]");}catch{return[];} }
+  function savePhones(arr){ localStorage.setItem(PHONE_STORE_KEY, JSON.stringify(arr)); }
+  function normalizePhone(s){ return String(s||"").trim(); }
+  function renderPhones(){
+    const arr = loadPhones();
+    registeredList.innerHTML = "";
+    if(!arr.length){ registeredBlock.style.display="none"; return; }
+    registeredBlock.style.display="block";
+    arr.forEach(p=>{
       const el = document.createElement("div");
-      el.className = "tab" + (p.id === selectedId ? " active" : "");
-      el.innerHTML = `<span class="dot ${p.state==='warn'?'warn':p.state==='bad'?'bad':''}"></span>${escapeHtml(p.name)}`;
-      el.onclick = () => selectPerson(p.id);
-      tabs.appendChild(el);
+      el.className = "miniPill mono";
+      el.textContent = p;
+      registeredList.appendChild(el);
     });
   }
+  renderPhones();
 
-  function renderPeople(){
-    const q = (document.getElementById("search").value || "").toLowerCase().trim();
-    const list = document.getElementById("peopleList");
-    list.innerHTML = "";
+  addPhoneBtn.addEventListener("click", ()=>{
+    const p = normalizePhone(phoneInput.value);
+    if(!p) return;
+    const arr = loadPhones();
+    if(!arr.includes(p)) arr.push(p);
+    savePhones(arr);
+    phoneInput.value = "";
+    renderPhones();
+  });
 
-    people
-      .filter(p => !q || p.name.toLowerCase().includes(q))
-      .forEach(p => {
-        const el = document.createElement("div");
-        el.className = "person" + (p.id === selectedId ? " active" : "");
-        const stateDot = p.state === "warn" ? "warn" : p.state === "bad" ? "bad" : "";
-        el.innerHTML = `
-          <div>
-            <div class="pname">${escapeHtml(p.name)}</div>
-            <div class="pmeta">${escapeHtml(p.band)} • Last ${p.lastSeenSec}s • ${escapeHtml(p.lastSensor)}</div>
-          </div>
-          <span class="badge"><span class="dot ${stateDot}"></span>${escapeHtml(p.zone)}</span>
-        `;
-        el.onclick = () => selectPerson(p.id);
-        list.appendChild(el);
-      });
-  }
+  clearPhonesBtn.addEventListener("click", ()=>{
+    localStorage.removeItem(PHONE_STORE_KEY);
+    renderPhones();
+  });
 
-  function renderMain(){
-    const p = getSelected();
-    document.getElementById("name").textContent = p.name;
-    document.getElementById("band").textContent = p.band;
-    document.getElementById("lastSeen").textContent = p.lastSeenSec + "s ago";
-    document.getElementById("lastSensor").textContent = p.lastSensor;
-    document.getElementById("zone").textContent = p.zone;
-    document.getElementById("statusText").textContent = p.status;
-
-    const sd = document.getElementById("stateDot");
-    sd.className = "dot" + (p.state==="warn" ? " warn" : p.state==="bad" ? " bad" : "");
-    document.getElementById("stateText").textContent =
-      p.state==="ok" ? "OK" : p.state==="warn" ? "WARNING" : "ALERT";
-
-    // pin
-    const pin = document.getElementById("pin");
-    pin.className = "pin" + (p.state==="warn" ? " warn" : p.state==="bad" ? " bad" : "");
-    pin.style.left = p.pos.x + "%";
-    pin.style.top = p.pos.y + "%";
-
-    renderActivity();
-  }
-
-  function renderActivity(){
-    const p = getSelected();
-    const log = document.getElementById("log");
-    log.innerHTML = "";
-    (activity[p.id] || []).slice().reverse().forEach(e => {
-      const row = document.createElement("div");
-      row.className = "evt";
-      row.innerHTML = `<div><b>${escapeHtml(e.msg)}</b></div><div class="t">${escapeHtml(e.t)}</div>`;
-      log.appendChild(row);
-    });
-    log.scrollTop = log.scrollHeight;
-  }
-
-  function addEvent(pid, msg){
-    if(!activity[pid]) activity[pid] = [];
-    activity[pid].push({ msg, t: timeNow() });
-  }
-
-  function clearActivity(){
-    const p = getSelected();
-    activity[p.id] = [];
-    addEvent(p.id, "Activity cleared");
-    renderActivity();
-  }
-
-  function selectPerson(pid){
-    selectedId = pid;
-    renderTabs();
-    renderPeople();
-    renderMain();
-  }
-
+  // ====== HELPERS ======
+  function timeNow(){ return new Date().toLocaleTimeString(); }
   function escapeHtml(s){
-    return String(s).replace(/[&<>"']/g, (c) => ({
+    return String(s).replace(/[&<>"']/g, (c)=>({
       "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"
     }[c]));
   }
+  function isPoolRoom(room){
+    const r = String(room||"").toLowerCase();
+    return r.includes("pool");
+  }
+  function formatDuration(seconds){
+    const s = Math.max(0, Math.floor(seconds||0));
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const sec = s % 60;
+    if(h>0) return `${h}:${String(m).padStart(2,"0")}:${String(sec).padStart(2,"0")}`;
+    return `${m}:${String(sec).padStart(2,"0")}`;
+  }
+  function nowSec(){ return Math.floor(Date.now()/1000); }
 
-  // ===== Simulations =====
-  function simulateMove(){
-    const p = getSelected();
-    // cycle zones for demo
-    const zones = ["House Interior","Patio / Backyard","Pool Zone","Driveway / Front"];
-    const idx = Math.max(0, zones.indexOf(p.zone));
-    const next = zones[(idx+1) % zones.length];
+  // Map a room string to a property zone + default position
+  function mapRoomToZoneAndPos(room){
+    const r = String(room||"").toLowerCase();
 
-    p.zone = next;
-    p.lastSeenSec = 2;
-    p.lastSensor = (next==="House Interior") ? "Kitchen MK" :
-                   (next==="Patio / Backyard") ? "Patio MK" :
-                   (next==="Pool Zone") ? "Pool MK" : "Front MK";
+    // Pool
+    if(r.includes("pool")) return { zone:"Pool Zone", pos:{x:80,y:40} };
 
-    // positions
-    p.pos = (next==="House Interior") ? {x:40,y:30} :
-            (next==="Patio / Backyard") ? {x:40,y:74} :
-            (next==="Pool Zone") ? {x:80,y:40} : {x:80,y:82};
+    // Backyard / patio
+    if(r.includes("backyard") || r.includes("patio") || r.includes("lanai")) return { zone:"Patio / Backyard", pos:{x:40,y:74} };
 
-    // reset states
-    p.state = "ok"; p.status = "Safe";
-    addEvent(p.id, "Zone update — " + next);
-    renderTabs(); renderPeople(); renderMain();
+    // Front / driveway / door
+    if(r.includes("front") || r.includes("drive") || r.includes("garage") || r.includes("door")) return { zone:"Driveway / Front", pos:{x:80,y:82} };
+
+    // Interior rooms
+    if(r.includes("kitchen")) return { zone:"House Interior", pos:{x:45,y:30} };
+    if(r.includes("living")) return { zone:"House Interior", pos:{x:35,y:34} };
+    if(r.includes("bed"))    return { zone:"House Interior", pos:{x:32,y:26} };
+    if(r.includes("bath"))   return { zone:"House Interior", pos:{x:50,y:26} };
+
+    // Default interior
+    return { zone: room ? "House Interior" : "—", pos:{x:42,y:34} };
   }
 
-  function simulatePoolNear(){
-    const p = getSelected();
-    p.zone = "Pool Zone";
-    p.lastSensor = "Pool MK";
-    p.pos = {x:80,y:42};
-    p.state = "warn";
-    p.status = "Near Pool";
-    addEvent(p.id, "Pool proximity warning");
-    showAlert("Pool Proximity Warning", `${p.name} is near the pool. Caregiver notified.`);
-    renderTabs(); renderPeople(); renderMain();
+  function addEvent(key, msg){
+    activity[key] = activity[key] || [];
+    activity[key].push({ msg, t: timeNow() });
   }
 
-  function simulatePoolBreach(){
-    const p = getSelected();
-    p.zone = "Pool Zone";
-    p.lastSensor = "Pool MK";
-    p.pos = {x:82,y:38};
-    p.state = "bad";
-    p.status = "POOL BREACH";
-    addEvent(p.id, "Pool breach — immediate alert");
-    showAlert("Pool Alert", `${p.name} entered the pool zone. Alarm triggered.`);
+  // ====== COMPUTE STATUS ======
+  function computeStatus(key){
+    const v = live[key] || {};
+    const room = v.room || "";
+    const enteredAt = v.entered_at || 0;
+    const lastSeen = v.last_seen || 0;
+    const alerts = v.alerts || {};
+
+    // latch pool if pool room detected
+    if(isPoolRoom(room)) poolLatched[key] = true;
+
+    const sosActive = (alerts.sos === true);
+    const poolActive = (poolLatched[key] === true);
+
+    const now = nowSec();
+    const age = lastSeen ? (now - lastSeen) : null;
+    const offline = (age === null) || (age > 12);
+
+    const dwell = enteredAt ? (now - enteredAt) : 0;
+    const dwellStr = enteredAt ? formatDuration(dwell) : "--:--";
+
+    const mapped = mapRoomToZoneAndPos(room);
+
+    // Severity
+    let state = "ok";
+    if(sosActive) state = "bad";
+    else if(poolActive && document.getElementById("poolEnabledChk").checked) state = "bad";
+    else if(offline) state = "warn";
+
+    return {
+      room,
+      zone: mapped.zone,
+      pos: mapped.pos,
+      dwellStr,
+      age,
+      offline,
+      sosActive,
+      poolActive,
+      state
+    };
+  }
+
+  // ====== ALARM + BANNER ======
+  const alertBanner = document.getElementById("alertBanner");
+  const alertBannerText = document.getElementById("alertBannerText");
+  const clearAllBtn = document.getElementById("clearAllBtn");
+  const testAlarmBtn = document.getElementById("testAlarmBtn");
+  const poolEnabledChk = document.getElementById("poolEnabledChk");
+
+  function anyEmergencyTriggersAlarm(){
+    const now = nowSec();
+    if(testAlarmUntil && now <= testAlarmUntil) return true;
+
+    const poolEnabled = poolEnabledChk.checked;
+
+    return PEOPLE.some(p=>{
+      const key = p.firebaseKey;
+      const v = live[key] || {};
+      const a = v.alerts || {};
+      const sos = (a.sos === true);
+      const pool = (poolLatched[key] === true);
+      if(sos) return true;
+      if(pool && poolEnabled) return true;
+      return false;
+    });
+  }
+
+  function evaluateAlarmNow(){
+    if(anyEmergencyTriggersAlarm()) startAlarm();
+    else stopAlarm();
+  }
+
+  function refreshBanner(){
+    const now = nowSec();
+    const testActive = (testAlarmUntil && now <= testAlarmUntil);
+
+    const sosNames = [];
+    const poolNames = [];
+
+    PEOPLE.forEach(p=>{
+      const key = p.firebaseKey;
+      const v = live[key] || {};
+      const a = v.alerts || {};
+      if(a.sos === true) sosNames.push(p.label);
+      if(poolLatched[key] === true) poolNames.push(p.label);
+    });
+
+    if(!testActive && !sosNames.length && !poolNames.length){
+      alertBanner.style.display = "none";
+      alertBannerText.textContent = "--";
+      return;
+    }
+
+    alertBanner.style.display = "block";
+    const parts = [];
+    if(testActive) parts.push("TEST ALARM");
+    if(sosNames.length) parts.push("SOS: " + sosNames.join(", "));
+    if(poolNames.length) parts.push("POOL: " + poolNames.join(", "));
+    alertBannerText.textContent = parts.join("  |  ");
+  }
+
+  function triggerTestAlarm(){
+    testAlarmUntil = nowSec() + 8;
     startAlarm();
-    renderTabs(); renderPeople(); renderMain();
+    refreshBanner();
+    setTimeout(()=>{ evaluateAlarmNow(); refreshBanner(); }, 8200);
+  }
+  testAlarmBtn.addEventListener("click", triggerTestAlarm);
+
+  function clearPool(key){
+    poolLatched[key] = false;
+    evaluateAlarmNow();
+    refreshBanner();
+    renderAll();
   }
 
-  function simulateNotSeen(){
-    const p = getSelected();
-    p.lastSeenSec = 45;
-    p.state = "warn";
-    p.status = "Not Detected";
-    addEvent(p.id, "Wristband not detected — check location");
-    showAlert("Not Detected", `${p.name} has not been detected recently. Check the property.`);
-    renderTabs(); renderPeople(); renderMain();
+  // Clears SOS in Firebase (if Firebase ok). In demo mode, just flips local.
+  let db = null;
+  function clearSOS(key){
+    if(!key) return;
+    if(firebaseOk && db){
+      db.ref("/alerts/" + key).update({ sos:false, timestamp: nowSec() });
+    }else{
+      live[key] = live[key] || {};
+      live[key].alerts = live[key].alerts || {};
+      live[key].alerts.sos = false;
+    }
   }
 
-  function testRandomAlert(){
-    const r = people[Math.floor(Math.random()*people.length)];
-    selectedId = r.id;
+  clearAllBtn.addEventListener("click", ()=>{
+    PEOPLE.forEach(p => poolLatched[p.firebaseKey] = false);
+    PEOPLE.forEach(p => clearSOS(p.firebaseKey));
+    evaluateAlarmNow();
+    refreshBanner();
+    renderAll();
+  });
 
-    const type = Math.floor(Math.random()*3);
-    if(type===0) simulatePoolNear();
-    else if(type===1) simulatePoolBreach();
-    else simulateNotSeen();
+  poolEnabledChk.addEventListener("change", ()=>{
+    evaluateAlarmNow();
+    refreshBanner();
+  });
+
+  // ====== RENDERING ======
+  const peopleList = document.getElementById("peopleList");
+  const pinsDiv = document.getElementById("pins");
+  const logDiv = document.getElementById("log");
+
+  function renderPeopleList(){
+    const q = (document.getElementById("search").value || "").toLowerCase().trim();
+    peopleList.innerHTML = "";
+
+    PEOPLE
+      .filter(p => !q || p.label.toLowerCase().includes(q))
+      .forEach(p=>{
+        const key = p.firebaseKey;
+        const s = computeStatus(key);
+
+        const dotClass = (s.state==="bad") ? "bad" : (s.state==="warn") ? "warn" : "";
+        const badgeText =
+          (s.state==="bad") ? (s.sosActive ? "SOS" : "POOL") :
+          (s.offline) ? "OFFLINE" :
+          (s.room || s.zone || "OK");
+
+        const el = document.createElement("div");
+        el.className = "person" + (key === selectedKey ? " active" : "");
+        el.innerHTML = `
+          <div>
+            <div class="pname">${escapeHtml(p.label)}</div>
+            <div class="pmeta mono">Key: ${escapeHtml(key)} • ${escapeHtml(s.room || "—")} • Dwell ${escapeHtml(s.dwellStr)}</div>
+          </div>
+          <span class="badge"><span class="dot ${dotClass}"></span>${escapeHtml(badgeText)}</span>
+        `;
+        el.onclick = ()=>{ selectedKey = key; renderAll(); };
+        peopleList.appendChild(el);
+      });
   }
 
-  // ===== Alert modal =====
-  function showAlert(title, body){
-    document.getElementById("alertTitle").textContent = title;
-    document.getElementById("alertBody").textContent = body;
-    document.getElementById("alert").style.display = "block";
-  }
-  function dismissAlert(){
-    document.getElementById("alert").style.display = "none";
-    stopAlarm();
+  function renderPins(){
+    pinsDiv.innerHTML = "";
+    PEOPLE.forEach(p=>{
+      const key = p.firebaseKey;
+      const s = computeStatus(key);
+
+      // If no info yet, still show pin in default interior
+      const pos = s.pos || {x:42,y:34};
+
+      const pin = document.createElement("div");
+      pin.className = "pin" +
+        (s.state==="warn" ? " warn" : s.state==="bad" ? " bad" : "") +
+        (key===selectedKey ? " selected" : "");
+      pin.style.left = pos.x + "%";
+      pin.style.top  = pos.y + "%";
+      pin.title = p.label + (s.room ? " — " + s.room : "");
+
+      pin.onclick = ()=>{ selectedKey = key; renderAll(); };
+
+      const tag = document.createElement("div");
+      tag.className = "pinTag";
+      tag.textContent = p.label;
+
+      // tag must be positioned relative to same point
+      const tagWrap = document.createElement("div");
+      tagWrap.style.position = "absolute";
+      tagWrap.style.left = pos.x + "%";
+      tagWrap.style.top  = pos.y + "%";
+      tagWrap.appendChild(tag);
+
+      pinsDiv.appendChild(pin);
+      pinsDiv.appendChild(tagWrap);
+    });
   }
 
-  // ===== Live feel =====
-  setInterval(() => {
-    people.forEach(p => p.lastSeenSec = Math.min(999, p.lastSeenSec + 1));
-    renderTabs();
-    renderPeople();
-    renderMain();
-  }, 3000);
+  function renderSelected(){
+    const person = PEOPLE.find(p=>p.firebaseKey===selectedKey) || PEOPLE[0];
+    const key = person.firebaseKey;
+    const s = computeStatus(key);
+    const v = live[key] || {};
 
-  // init
-  renderTabs();
-  renderPeople();
-  renderMain();
-</script>
+    document.getElementById("selName").textContent = person.label;
+    document.getElementById("selKey").textContent = key;
+    document.getElementById("selRoom").textContent = s.room || "—";
+    document.getElementById("selZone").textContent = s.zone || "—";
+    document.getElementById("selDwell").textContent = s.dwellStr || "—";
+
+    const ageStr = (s.age===null) ? "—" : (s.age + "s");
+    document.getElementById("selAge").textContent = ageStr;
+
+    const lastSeenStr = v.last_seen ? new Date(v.last_seen*1000).toLocaleTimeString() : "—";
+    document.getElementById("selLastSeen").textContent = lastSeenStr;
+
+    const poolText = (s.poolActive && poolEnabledChk.checked) ? "ACTIVE" : (s.poolActive ? "latched (disabled)" : "off");
+    document.getElementById("selPool").textContent = poolText;
+
+    const sd = document.getElementById("selStateDot");
+    sd.className = "dot" + (s.state==="warn" ? " warn" : s.state==="bad" ? " bad" : "");
+    document.getElementById("selStateText").textContent =
+      (s.state==="bad") ? "ALERT" : (s.state==="warn") ? "CHECK" : "OK";
+  }
+
+  function renderActivity(){
+    const key = selectedKey;
+    logDiv.innerHTML = "";
+    (activity[key] || []).slice().reverse().forEach(e=>{
+      const row = document.createElement("div");
+      row.className = "evt";
+      row.innerHTML = `<div><b>${escapeHtml(e.msg)}</b></div><div class="t">${escapeHtml(e.t)}</div>`;
+      logDiv.appendChild(row);
+    });
+    logDiv.scrollTop = logDiv.scrollHeight;
+  }
+
+  function renderAll(){
+    renderPeopleList();
+    renderPins();
+    renderSelected();
+    renderActivity();
+  }
+
+  // ====== SYSTEM LINES + CLOCK ======
+  const systemLine = document.getElementById("systemLine");
+  const dataAgeLine = document.getElementById("dataAgeLine");
+  const modeLine = document.getElementById("modeLine");
+
+  function tick(){
+    document.getElementById("clock").textContent = new Date().toLocaleString();
+
+    const now = nowSec();
+    if(!firebaseOk || !lastSystemRx){
+      systemLine.textContent = "System: " + (demoMode ? "DEMO" : "—");
+      dataAgeLine.textContent = "Data age: —";
+    }else{
+      const age = now - lastSystemRx;
+      systemLine.textContent = "System: " + (age <= 8 ? "ONLINE" : "OFFLINE");
+      dataAgeLine.textContent = "Data age: " + age + "s";
+    }
+
+    modeLine.textContent = "Mode: " + (firebaseOk ? "LIVE (Firebase)" : "DEMO (Local)");
+    evaluateAlarmNow();
+    refreshBanner();
+    renderAll();
+  }
+
+  // ====== DEMO SIMULATION (fallback + buttons) ======
+  function ensureDemoSeed(){
+    PEOPLE.forEach((p,i)=>{
+      const key = p.firebaseKey;
+      live[key] = live[key] || {};
+      live[key].room = live[key].room || (i%2===0 ? "Kitchen" : "Living Room");
+      live[key].entered_at = live[key].entered_at || (nowSec() - (120 + i*25));
+      live[key].last_seen = live[key].last_seen || nowSec();
+      live[key].alerts = live[key].alerts || { sos:false };
+    });
+  }
+
+  function demoMove(){
+    ensureDemoSeed();
+    const key = selectedKey;
+    const v = live[key];
+
+    const rooms = ["Kitchen","Living Room","Backyard","Front Door","Pool Area"];
+    const idx = Math.max(0, rooms.map(r=>r.toLowerCase()).indexOf(String(v.room||"").toLowerCase()));
+    const next = rooms[(idx+1)%rooms.length];
+
+    v.room = next;
+    v.entered_at = nowSec();
+    v.last_seen = nowSec();
+    addEvent(key, "Room update — " + next);
+
+    // latch pool if needed
+    if(isPoolRoom(next)) poolLatched[key] = true;
+
+    renderAll();
+    refreshBanner();
+    evaluateAlarmNow();
+  }
+
+  function demoSOS(){
+    ensureDemoSeed();
+    const key = selectedKey;
+    live[key].alerts = live[key].alerts || {};
+    live[key].alerts.sos = true;
+    live[key].last_seen = nowSec();
+    addEvent(key, "Emergency alert — SOS triggered");
+    refreshBanner();
+    evaluateAlarmNow();
+    renderAll();
+  }
+
+  document.getElementById("demoMoveBtn").addEventListener("click", ()=>{
+    demoMode = true;
+    firebaseOk = false;
+    demoMove();
+  });
+  document.getElementById("demoSosBtn").addEventListener("click", ()=>{
+    demoMode = true;
+    firebaseOk = false;
+    demoSOS();
+  });
+
+  // ====== FIREBASE WIRING (if available) ======
+  try{
+    firebase.initializeApp(firebaseConfig);
+    db = firebase.database();
+
+    // heartbeat (optional)
+    db.ref("/system/lastDataRx").on("value", (snap)=>{
+      lastSystemRx = snap.val() || 0;
+    });
+
+    // subscribe each person
+    PEOPLE.forEach(p=>{
+      const key = p.firebaseKey;
+
+      db.ref("/beacons/" + key).on("value", (snap)=>{
+        const val = snap.val() || {};
+        live[key] = live[key] || {};
+        live[key].room = val.room || "";
+        live[key].entered_at = val.entered_at || 0;
+        live[key].last_seen = val.last_seen || 0;
+
+        // activity hints
+        if(val.room){
+          addEvent(key, "Room update — " + val.room);
+        }
+
+        firebaseOk = true;
+        demoMode = false;
+
+        renderAll();
+        evaluateAlarmNow();
+        refreshBanner();
+      });
+
+      db.ref("/alerts/" + key).on("value", (snap)=>{
+        const val = snap.val() || {};
+        live[key] = live[key] || {};
+        live[key].alerts = val || {};
+
+        if(val && val.sos === true){
+          addEvent(key, "Emergency alert — SOS active");
+        }
+
+        firebaseOk = true;
+        demoMode = false;
+
+        renderAll();
+        evaluateAlarmNow();
+        refreshBanner();
+      });
+    });
+
+  }catch(e){
+    // Firebase not available -> demo mode
+    demoMode = true;
+    firebaseOk = false;
+    ensureDemoSeed();
+  }
+
+  // Test alarm button works in either mode
+  // (Test alarm is always local audible alarm + banner)
+  // If sound isn't enabled, alarm won't play (as intended).
+  // triggerTestAlarm already handles it.
+  // Hook the button:
+  // (already attached above)
+
+  // Extra: allow clicking a guest pin to select person
+  // (done in renderPins)
+
+  // Initial
+  ensureDemoSeed();
+  renderAll();
+  tick();
+  setInterval(tick, 1000);
+
+})();</script>
 
 </body>
 </html>
