@@ -5,13 +5,12 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
 
   <!--
-    UltraWatch Demo
-    Build: DEMO-INDEX v0.1.0
+    UltraWatch
+    Build: DEMO-INDEX v0.1.1
     Last Updated: 2025-12-29
-    Notes: Initial demo landing page
   -->
 
-  <title>UltraWatch — Demo Index</title>
+  <title>UltraWatch</title>
 
   <style>
     :root{
@@ -40,7 +39,7 @@
       padding:18px;
     }
 
-    /* ===== Build Banner ===== */
+    /* ===== Build Banner (internal) ===== */
     .build{
       background:rgba(96,165,250,.15);
       border:1px solid rgba(96,165,250,.35);
@@ -165,6 +164,10 @@
       margin-top:18px;
       color:var(--muted);
       font-size:12px;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:12px;
     }
   </style>
 </head>
@@ -172,10 +175,10 @@
 <body>
   <div class="wrap">
 
-    <!-- Build / Version Banner -->
+    <!-- Build / Version Banner (internal reference) -->
     <div class="build">
       <div>
-        <b>UltraWatch Demo</b> — Build <b>DEMO-INDEX v0.1.0</b>
+        <b>UltraWatch</b> — Build <b>DEMO-INDEX v0.1.1</b>
       </div>
       <div>
         Updated: <b>Dec 29, 2025</b>
@@ -185,15 +188,15 @@
     <!-- Header -->
     <div class="top">
       <div>
-        <h1>UltraWatch — Demo Pages</h1>
+        <h1>UltraWatch</h1>
         <div class="sub">
-          Interactive concept previews • Not a live system
+          Real-time proximity monitoring for families, caregivers, and organizations
         </div>
       </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <span class="pill">Mobile-first</span>
-        <span class="pill">Clickable UI</span>
-        <span class="pill">Fake data</span>
+        <span class="pill">Live Alerts</span>
+        <span class="pill">Indoor + Outdoor</span>
+        <span class="pill">Privacy-First</span>
       </div>
     </div>
 
@@ -201,59 +204,60 @@
     <div class="grid">
 
       <div class="card">
-        <div class="tag"><span class="dot"></span> Elderly Caregivers</div>
-        <h2 class="title">Home Monitoring + SOS + Room Linger</h2>
+        <div class="tag"><span class="dot"></span> Elderly Care</div>
+        <h2 class="title">In-Home Safety & Monitoring</h2>
         <p class="desc">
-          Room-level location, linger alerts, SOS button events,
-          and automatic map fallback when not detected.
+          Room-level location, dwell monitoring, emergency alerts,
+          and seamless transition to map view when indoors isn’t available.
         </p>
-        <a class="btn" href="DemoElderly.html">Open Demo →</a>
+        <a class="btn" href="DemoElderly.html">Open Dashboard →</a>
       </div>
 
       <div class="card">
-        <div class="tag"><span class="dot"></span> AirBnB / VRBO</div>
-        <h2 class="title">Guest Pool Safety Mode</h2>
+        <div class="tag"><span class="dot"></span> Vacation Rentals</div>
+        <h2 class="title">Guest Pool Safety</h2>
         <p class="desc">
-          Pool perimeter alerts, silent hours, group tracking,
-          and incident timelines for vacation rentals.
+          Pool perimeter monitoring, configurable alert timing,
+          and event history for property owners and managers.
         </p>
-        <a class="btn" href="DemoVacationRental.html">Open Demo →</a>
+        <a class="btn" href="DemoVacationRental.html">Open Dashboard →</a>
       </div>
 
       <div class="card">
         <div class="tag"><span class="dot"></span> Pool Owners</div>
-        <h2 class="title">Home Pool Perimeter Alerts</h2>
+        <h2 class="title">Family Pool Protection</h2>
         <p class="desc">
           Near-water detection, escalating alerts,
-          and simple safety timelines for families.
+          and clear visibility into pool-related activity.
         </p>
-        <a class="btn" href="DemoPoolOwner.html">Open Demo →</a>
+        <a class="btn" href="DemoPoolOwner.html">Open Dashboard →</a>
       </div>
 
       <div class="card">
         <div class="tag"><span class="dot"></span> Parents</div>
-        <h2 class="title">Multiple Kids + Proximity Alerts</h2>
+        <h2 class="title">Child Proximity & Awareness</h2>
         <p class="desc">
-          Home and park modes, multiple children,
-          and “near water” or “out of range” alerts.
+          Monitor multiple children at home or in public spaces,
+          with instant alerts when distance or location changes.
         </p>
-        <a class="btn" href="DemoParents.html">Open Demo →</a>
+        <a class="btn" href="DemoParents.html">Open Dashboard →</a>
       </div>
 
       <div class="card">
         <div class="tag"><span class="dot"></span> Schools</div>
-        <h2 class="title">Campus Map + Missing Student Workflow</h2>
+        <h2 class="title">Student Visibility & Accountability</h2>
         <p class="desc">
-          Classroom map, roster view,
-          bathroom/office pulls, and missing student alerts.
+          Campus-level awareness, classroom tracking,
+          and fast response to missing or out-of-place students.
         </p>
-        <a class="btn" href="DemoSchools.html">Open Demo →</a>
+        <a class="btn" href="DemoSchools.html">Open Dashboard →</a>
       </div>
 
     </div>
 
     <footer>
-      Tip: Update the build string at the top whenever you change any demo page so you always know what version you’re showing.
+      <div>UltraWatch © 2025</div>
+      <div>Demo Version</div>
     </footer>
 
   </div>
