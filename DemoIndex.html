@@ -3,91 +3,259 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>UltraWatch — Capability Demos</title>
+
+  <!--
+    UltraWatch Demo
+    Build: DEMO-INDEX v0.1.0
+    Last Updated: 2025-12-29
+    Notes: Initial demo landing page
+  -->
+
+  <title>UltraWatch — Demo Index</title>
+
   <style>
     :root{
-      --bg:#0b1220; --panel:rgba(255,255,255,.07); --panel2:rgba(255,255,255,.10);
-      --text:#e9eefc; --muted:rgba(233,238,252,.72); --line:rgba(255,255,255,.12);
-      --good:#4ade80; --warn:#facc15; --bad:#fb7185; --accent:#60a5fa;
+      --bg:#0b1220;
+      --panel:rgba(255,255,255,.07);
+      --panel2:rgba(255,255,255,.10);
+      --text:#e9eefc;
+      --muted:rgba(233,238,252,.72);
+      --line:rgba(255,255,255,.12);
+      --accent:#60a5fa;
       --radius:18px;
     }
+
     *{box-sizing:border-box}
-    body{margin:0;font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;background:var(--bg);color:var(--text)}
-    .wrap{max-width:1100px;margin:0 auto;padding:18px}
-    .top{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:14px}
-    h1{margin:0;font-size:22px;letter-spacing:.2px}
-    .sub{color:var(--muted);font-size:13px}
-    .grid{display:grid;gap:12px;grid-template-columns:repeat(1,minmax(0,1fr))}
-    @media(min-width:720px){ .grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
-    @media(min-width:1020px){ .grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
-    .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:14px;display:flex;flex-direction:column;gap:10px}
-    .tag{display:inline-flex;align-items:center;gap:8px;color:var(--muted);font-size:12px}
-    .dot{width:9px;height:9px;border-radius:50%;background:var(--accent);display:inline-block}
-    .title{font-size:16px;margin:0}
-    .desc{color:var(--muted);font-size:13px;line-height:1.35;margin:0}
-    .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;
-      padding:10px 12px;border-radius:14px;border:1px solid var(--line);
-      background:var(--panel2);color:var(--text);text-decoration:none;font-weight:600}
-    .btn:hover{filter:brightness(1.08)}
-    .row{display:flex;gap:10px;flex-wrap:wrap}
-    .pill{padding:6px 10px;border-radius:999px;border:1px solid var(--line);color:var(--muted);font-size:12px}
-    footer{margin-top:18px;color:var(--muted);font-size:12px}
+
+    body{
+      margin:0;
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;
+      background:var(--bg);
+      color:var(--text);
+    }
+
+    .wrap{
+      max-width:1100px;
+      margin:0 auto;
+      padding:18px;
+    }
+
+    /* ===== Build Banner ===== */
+    .build{
+      background:rgba(96,165,250,.15);
+      border:1px solid rgba(96,165,250,.35);
+      color:#cfe3ff;
+      padding:8px 12px;
+      border-radius:12px;
+      font-size:12px;
+      margin-bottom:14px;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:12px;
+    }
+
+    .build b{
+      font-weight:800;
+      letter-spacing:.3px;
+    }
+
+    /* ===== Header ===== */
+    .top{
+      display:flex;
+      align-items:flex-end;
+      justify-content:space-between;
+      gap:12px;
+      margin-bottom:14px;
+    }
+
+    h1{
+      margin:0;
+      font-size:22px;
+      letter-spacing:.2px;
+    }
+
+    .sub{
+      color:var(--muted);
+      font-size:13px;
+      margin-top:4px;
+    }
+
+    .pill{
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid var(--line);
+      color:var(--muted);
+      font-size:12px;
+    }
+
+    /* ===== Cards ===== */
+    .grid{
+      display:grid;
+      gap:12px;
+      grid-template-columns:repeat(1,minmax(0,1fr));
+    }
+
+    @media(min-width:720px){
+      .grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+    }
+
+    @media(min-width:1020px){
+      .grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+    }
+
+    .card{
+      background:var(--panel);
+      border:1px solid var(--line);
+      border-radius:var(--radius);
+      padding:14px;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+    }
+
+    .tag{
+      font-size:12px;
+      color:var(--muted);
+      display:flex;
+      align-items:center;
+      gap:8px;
+    }
+
+    .dot{
+      width:9px;
+      height:9px;
+      border-radius:50%;
+      background:var(--accent);
+      display:inline-block;
+    }
+
+    .title{
+      font-size:16px;
+      margin:0;
+    }
+
+    .desc{
+      color:var(--muted);
+      font-size:13px;
+      line-height:1.35;
+      margin:0;
+    }
+
+    .btn{
+      margin-top:auto;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      gap:8px;
+      padding:10px 12px;
+      border-radius:14px;
+      border:1px solid var(--line);
+      background:var(--panel2);
+      color:var(--text);
+      text-decoration:none;
+      font-weight:700;
+    }
+
+    .btn:hover{
+      filter:brightness(1.08);
+    }
+
+    footer{
+      margin-top:18px;
+      color:var(--muted);
+      font-size:12px;
+    }
   </style>
 </head>
+
 <body>
   <div class="wrap">
+
+    <!-- Build / Version Banner -->
+    <div class="build">
+      <div>
+        <b>UltraWatch Demo</b> — Build <b>DEMO-INDEX v0.1.0</b>
+      </div>
+      <div>
+        Updated: <b>Dec 29, 2025</b>
+      </div>
+    </div>
+
+    <!-- Header -->
     <div class="top">
       <div>
-        <h1>UltraWatch — Capability Demo Pages</h1>
-        <div class="sub">Static mockups for pitching UltraWatch to different client types (no backend required).</div>
+        <h1>UltraWatch — Demo Pages</h1>
+        <div class="sub">
+          Interactive concept previews • Not a live system
+        </div>
       </div>
-      <div class="row">
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
         <span class="pill">Mobile-first</span>
         <span class="pill">Clickable UI</span>
         <span class="pill">Fake data</span>
       </div>
     </div>
 
+    <!-- Demo Cards -->
     <div class="grid">
+
       <div class="card">
-        <div class="tag"><span class="dot"></span> Elderly Caregiver Dashboard</div>
-        <h2 class="title">Home Monitoring + SOS + Room Linger + GPS Fallback</h2>
-        <p class="desc">Shows room location, how long in room, yellow linger alerts, SOS popups, and “not detected → map view.”</p>
-        <a class="btn" href="elderly.html">Open Demo →</a>
+        <div class="tag"><span class="dot"></span> Elderly Caregivers</div>
+        <h2 class="title">Home Monitoring + SOS + Room Linger</h2>
+        <p class="desc">
+          Room-level location, linger alerts, SOS button events,
+          and automatic map fallback when not detected.
+        </p>
+        <a class="btn" href="DemoElderly.html">Open Demo →</a>
       </div>
 
       <div class="card">
-        <div class="tag"><span class="dot"></span> AirBnB / VRBO Pool Safety</div>
-        <h2 class="title">Guest Safety Mode (Pool Perimeter + Alerts)</h2>
-        <p class="desc">Property owner dashboard: guests/groups, pool zone alerts, silent hours, event log for liability.</p>
-        <a class="btn" href="vacation-rental.html">Open Demo →</a>
+        <div class="tag"><span class="dot"></span> AirBnB / VRBO</div>
+        <h2 class="title">Guest Pool Safety Mode</h2>
+        <p class="desc">
+          Pool perimeter alerts, silent hours, group tracking,
+          and incident timelines for vacation rentals.
+        </p>
+        <a class="btn" href="DemoVacationRental.html">Open Demo →</a>
       </div>
 
       <div class="card">
-        <div class="tag"><span class="dot"></span> New/Existing Pool Owners</div>
-        <h2 class="title">Pool Perimeter Alerts + Incident Timeline</h2>
-        <p class="desc">Family pool safety with quick “Pool Mode,” escalating alerts, and a simple timeline of events.</p>
-        <a class="btn" href="pool-owner.html">Open Demo →</a>
+        <div class="tag"><span class="dot"></span> Pool Owners</div>
+        <h2 class="title">Home Pool Perimeter Alerts</h2>
+        <p class="desc">
+          Near-water detection, escalating alerts,
+          and simple safety timelines for families.
+        </p>
+        <a class="btn" href="DemoPoolOwner.html">Open Demo →</a>
       </div>
 
       <div class="card">
-        <div class="tag"><span class="dot"></span> Parents (Home / Park)</div>
+        <div class="tag"><span class="dot"></span> Parents</div>
         <h2 class="title">Multiple Kids + Proximity Alerts</h2>
-        <p class="desc">Shows kids “in range,” “near water,” geofence mode for parks, and “last seen” info.</p>
-        <a class="btn" href="parents.html">Open Demo →</a>
+        <p class="desc">
+          Home and park modes, multiple children,
+          and “near water” or “out of range” alerts.
+        </p>
+        <a class="btn" href="DemoParents.html">Open Demo →</a>
       </div>
 
       <div class="card">
         <div class="tag"><span class="dot"></span> Schools</div>
-        <h2 class="title">Roster + Map + Missing Student Workflow</h2>
-        <p class="desc">Teacher/chaperone view: student list, campus map, alerts for missing, bathroom/office pull tracking.</p>
-        <a class="btn" href="schools.html">Open Demo →</a>
+        <h2 class="title">Campus Map + Missing Student Workflow</h2>
+        <p class="desc">
+          Classroom map, roster view,
+          bathroom/office pulls, and missing student alerts.
+        </p>
+        <a class="btn" href="DemoSchools.html">Open Demo →</a>
       </div>
+
     </div>
 
     <footer>
-      Tip: Put these files in one folder and open <b>index.html</b>. Customize the logo/name, screenshots, and the demo data to match each pitch.
+      Tip: Update the build string at the top whenever you change any demo page so you always know what version you’re showing.
     </footer>
+
   </div>
 </body>
 </html>
