@@ -539,6 +539,10 @@
   const activity = {};
   PEOPLE.forEach(p => activity[p.firebaseKey] = [{ msg:"System online", t:timeNow() }]);
 
+  // ✅ NEW: Transition trackers to prevent log spam
+  const prevRoom = {};     // key -> last room string
+  const prevSOS  = {};     // key -> last sos boolean
+
   // Demo fallback if Firebase isn't reachable
   let firebaseOk = false;
   let demoMode = false;
@@ -717,6 +721,11 @@
   function addEvent(key, msg){
     activity[key] = activity[key] || [];
     activity[key].push({ msg, t: timeNow() });
+
+    // ✅ NEW: Keep last 200 events per person (prevents slowdowns)
+    if(activity[key].length > 200){
+      activity[key].splice(0, activity[key].length - 200);
+    }
   }
 
   // ====== COMPUTE STATUS ======
@@ -1027,6 +1036,9 @@
     v.last_seen = nowSec();
     addEvent(key, "Room update — " + next);
 
+    // Keep transition tracker aligned in demo mode too
+    prevRoom[key] = next;
+
     // latch pool if needed
     if(isPoolRoom(next)) poolLatched[key] = true;
 
@@ -1042,6 +1054,10 @@
     live[key].alerts.sos = true;
     live[key].last_seen = nowSec();
     addEvent(key, "Emergency alert — SOS triggered");
+
+    // Keep transition tracker aligned in demo mode too
+    prevSOS[key] = true;
+
     refreshBanner();
     evaluateAlarmNow();
     renderAll();
@@ -1075,13 +1091,21 @@
       db.ref("/beacons/" + key).on("value", (snap)=>{
         const val = snap.val() || {};
         live[key] = live[key] || {};
-        live[key].room = val.room || "";
+
+        const newRoom = (val.room || "").trim();
+        const oldRoom = (prevRoom[key] || "").trim();
+
+        live[key].room = newRoom;
         live[key].entered_at = val.entered_at || 0;
         live[key].last_seen = val.last_seen || 0;
 
-        // activity hints
-        if(val.room){
-          addEvent(key, "Room update — " + val.room);
+        // ✅ Log ONLY when room actually changes (or first time we get a room)
+        if(newRoom && newRoom !== oldRoom){
+          addEvent(key, "Room update — " + newRoom);
+          prevRoom[key] = newRoom;
+        }else if(!oldRoom && newRoom){
+          addEvent(key, "Room update — " + newRoom);
+          prevRoom[key] = newRoom;
         }
 
         firebaseOk = true;
@@ -1097,8 +1121,13 @@
         live[key] = live[key] || {};
         live[key].alerts = val || {};
 
-        if(val && val.sos === true){
-          addEvent(key, "Emergency alert — SOS active");
+        const newSOS = (live[key].alerts && live[key].alerts.sos === true);
+        const oldSOS = (prevSOS[key] === true);
+
+        // ✅ Log ONLY on SOS transitions
+        if(newSOS !== oldSOS){
+          addEvent(key, newSOS ? "Emergency alert — SOS active" : "Emergency cleared — SOS off");
+          prevSOS[key] = newSOS;
         }
 
         firebaseOk = true;
@@ -1116,16 +1145,6 @@
     firebaseOk = false;
     ensureDemoSeed();
   }
-
-  // Test alarm button works in either mode
-  // (Test alarm is always local audible alarm + banner)
-  // If sound isn't enabled, alarm won't play (as intended).
-  // triggerTestAlarm already handles it.
-  // Hook the button:
-  // (already attached above)
-
-  // Extra: allow clicking a guest pin to select person
-  // (done in renderPins)
 
   // Initial
   ensureDemoSeed();
