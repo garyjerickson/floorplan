@@ -1,0 +1,732 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+
+  <!--
+    UltraWatch (Android Shell Mimic)
+    Build: DEMO-ANDROID-SHELL v0.1.0
+    Last Updated: 2025-12-30
+  -->
+
+  <title>UltraWatch</title>
+
+  <style>
+    :root{
+      --bg:#0b1220;
+      --surface:#111a2f;
+      --card:rgba(255,255,255,.07);
+      --card2:rgba(255,255,255,.10);
+      --line:rgba(255,255,255,.12);
+      --text:#e9eefc;
+      --muted:rgba(233,238,252,.70);
+      --accent:#60a5fa;    /* MAUI-ish blue */
+      --good:#4ade80;
+      --warn:#facc15;
+      --bad:#fb7185;
+      --radius:18px;
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+      --font: system-ui,-apple-system,Segoe UI,Roboto,Arial;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      background: radial-gradient(1200px 600px at 30% -20%, rgba(96,165,250,.18), transparent 60%),
+                  radial-gradient(900px 700px at 90% 10%, rgba(74,222,128,.10), transparent 55%),
+                  var(--bg);
+      color:var(--text);
+      font-family:var(--font);
+    }
+
+    /* "Device" frame (optional). Looks like an Android app screen. */
+    .deviceWrap{
+      max-width: 420px;
+      margin: 18px auto;
+      padding: 0 12px 18px;
+    }
+    .device{
+      background: rgba(0,0,0,.20);
+      border: 1px solid rgba(255,255,255,.10);
+      border-radius: 28px;
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+
+    /* Status bar */
+    .statusBar{
+      height: 26px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      padding: 0 12px;
+      font-size:12px;
+      color: rgba(233,238,252,.85);
+      background: rgba(0,0,0,.20);
+      border-bottom: 1px solid rgba(255,255,255,.06);
+    }
+    .sbRight{display:flex;gap:10px;align-items:center;color:rgba(233,238,252,.75)}
+    .pillMini{
+      border:1px solid rgba(255,255,255,.10);
+      padding: 2px 8px;
+      border-radius:999px;
+      background: rgba(255,255,255,.05);
+      font-size:11px;
+    }
+
+    /* App bar */
+    .appBar{
+      background: linear-gradient(180deg, rgba(17,26,47,.92), rgba(17,26,47,.76));
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid rgba(255,255,255,.10);
+      padding: 12px 12px 10px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+    }
+    .appTitle{
+      display:flex;flex-direction:column;gap:2px;
+    }
+    .appTitle h1{
+      margin:0;
+      font-size:16px;
+      letter-spacing:.2px;
+      font-weight: 900;
+    }
+    .subtitle{
+      font-size:12px;
+      color: var(--muted);
+    }
+    .iconBtn{
+      width: 38px;height:38px;
+      border-radius: 12px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.06);
+      display:flex;align-items:center;justify-content:center;
+      cursor:pointer;
+      user-select:none;
+    }
+    .iconBtn:hover{filter:brightness(1.08)}
+
+    /* Tabs (like MAUI Shell top tabs) */
+    .tabs{
+      display:flex;
+      gap:8px;
+      padding: 10px 12px;
+      background: rgba(17,26,47,.55);
+      border-bottom: 1px solid rgba(255,255,255,.08);
+      overflow:auto;
+    }
+    .tab{
+      padding: 8px 12px;
+      border-radius: 999px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.05);
+      color: rgba(233,238,252,.82);
+      font-weight: 800;
+      font-size: 12px;
+      cursor:pointer;
+      white-space:nowrap;
+    }
+    .tab.active{
+      background: rgba(96,165,250,.18);
+      border-color: rgba(96,165,250,.45);
+      color: #d7ebff;
+    }
+
+    /* Main content */
+    .content{
+      padding: 12px;
+      min-height: 640px;
+      background:
+        radial-gradient(900px 600px at 20% 0%, rgba(96,165,250,.10), transparent 55%),
+        rgba(0,0,0,.08);
+    }
+
+    .card{
+      background: var(--card);
+      border:1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+    .cardHeader{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      margin-bottom: 8px;
+    }
+    .cardHeader h2{
+      margin:0;
+      font-size: 13px;
+      font-weight: 900;
+      letter-spacing:.2px;
+    }
+    .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;}
+    .muted{color:var(--muted)}
+    .tiny{font-size:11px}
+
+    /* List rows like MAUI CollectionView */
+    .list{
+      display:flex;flex-direction:column;
+      gap:10px;
+    }
+    .row{
+      background: rgba(0,0,0,.18);
+      border:1px solid rgba(255,255,255,.10);
+      border-radius: 16px;
+      padding: 10px;
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      align-items:center;
+      cursor:pointer;
+    }
+    .row:hover{filter:brightness(1.06)}
+    .left{
+      display:flex;gap:10px;align-items:center;
+      min-width: 0;
+    }
+    .avatar{
+      width: 36px;height:36px;border-radius: 14px;
+      display:flex;align-items:center;justify-content:center;
+      border:1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.06);
+      font-weight: 900;
+      color: rgba(233,238,252,.85);
+      flex: 0 0 auto;
+    }
+    .titleBlock{
+      min-width:0;
+      display:flex;flex-direction:column;gap:2px;
+    }
+    .name{
+      font-weight: 900;
+      font-size: 13px;
+      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    }
+    .meta{
+      font-size: 11px;
+      color: var(--muted);
+      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    }
+    .right{
+      display:flex;gap:8px;align-items:center;flex:0 0 auto;
+    }
+
+    /* Chips */
+    .chip{
+      display:inline-flex;align-items:center;gap:8px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(0,0,0,.15);
+      font-size: 11px;
+      color: rgba(233,238,252,.82);
+      white-space:nowrap;
+    }
+    .dot{
+      width: 9px;height:9px;border-radius:50%;
+      background: var(--good);
+    }
+    .dot.warn{background: var(--warn)}
+    .dot.bad{background: var(--bad)}
+
+    /* Switch (MAUI ToggleSwitch mimic) */
+    .switchRow{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      padding: 10px 0 0;
+    }
+    .switchLabel{
+      display:flex;flex-direction:column;gap:2px;
+    }
+    .switchLabel b{font-size:12px}
+    .switchLabel span{font-size:11px;color:var(--muted)}
+
+    .toggle{
+      width: 50px;height: 28px;border-radius: 999px;
+      border:1px solid rgba(255,255,255,.16);
+      background: rgba(255,255,255,.08);
+      position:relative;
+      cursor:pointer;
+      flex:0 0 auto;
+    }
+    .knob{
+      width: 22px;height:22px;border-radius: 999px;
+      position:absolute;top:50%;left:4px;
+      transform: translateY(-50%);
+      background: rgba(255,255,255,.85);
+      box-shadow: 0 6px 14px rgba(0,0,0,.35);
+      transition: left .18s ease;
+    }
+    .toggle.on{
+      background: rgba(96,165,250,.25);
+      border-color: rgba(96,165,250,.55);
+    }
+    .toggle.on .knob{left: 24px}
+
+    /* Buttons */
+    .btnRow{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+    .btn{
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.08);
+      color: var(--text);
+      padding: 10px 12px;
+      border-radius: 14px;
+      font-weight: 900;
+      cursor:pointer;
+      font-size:12px;
+    }
+    .btn:hover{filter:brightness(1.08)}
+    .btnDanger{
+      border-color: rgba(251,113,133,.45);
+      background: rgba(251,113,133,.15);
+      color: #ffe6ea;
+    }
+
+    /* Toast */
+    .toast{
+      position: fixed;
+      left: 50%;
+      bottom: 92px;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,.55);
+      border: 1px solid rgba(255,255,255,.12);
+      color: rgba(233,238,252,.92);
+      padding: 10px 12px;
+      border-radius: 14px;
+      font-weight: 800;
+      font-size: 12px;
+      display:none;
+      max-width: 88%;
+      box-shadow: 0 10px 30px rgba(0,0,0,.35);
+    }
+
+    /* Bottom nav (Android) */
+    .bottomNav{
+      display:grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap:6px;
+      padding: 10px 12px 12px;
+      background: rgba(17,26,47,.78);
+      border-top: 1px solid rgba(255,255,255,.10);
+    }
+    .navItem{
+      border-radius: 16px;
+      padding: 10px 8px;
+      text-align:center;
+      color: rgba(233,238,252,.72);
+      border:1px solid transparent;
+      cursor:pointer;
+      user-select:none;
+      font-weight: 900;
+      font-size: 11px;
+    }
+    .navItem:hover{background: rgba(255,255,255,.04)}
+    .navItem.active{
+      background: rgba(96,165,250,.18);
+      border-color: rgba(96,165,250,.35);
+      color: #d7ebff;
+    }
+    .navIcon{font-size:16px;display:block;margin-bottom:2px}
+
+    .footer{
+      padding: 8px 12px;
+      text-align:center;
+      font-size: 11px;
+      color: rgba(233,238,252,.60);
+      border-top: 1px solid rgba(255,255,255,.06);
+      background: rgba(0,0,0,.12);
+    }
+  </style>
+</head>
+
+<body>
+  <div class="deviceWrap">
+    <div class="device">
+
+      <!-- Status bar -->
+      <div class="statusBar">
+        <span id="sbTime">12:34</span>
+        <div class="sbRight">
+          <span class="pillMini">5G</span>
+          <span class="pillMini">🔋 86%</span>
+        </div>
+      </div>
+
+      <!-- App bar -->
+      <div class="appBar">
+        <div class="appTitle">
+          <h1>UltraWatch</h1>
+          <div class="subtitle">Monitor • Alerts • Locations</div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center;">
+          <div class="iconBtn" id="btnBell" title="Test alert">🔔</div>
+          <div class="iconBtn" id="btnMenu" title="Menu">⋮</div>
+        </div>
+      </div>
+
+      <!-- Tabs -->
+      <div class="tabs" id="tabs">
+        <div class="tab active" data-tab="people">People</div>
+        <div class="tab" data-tab="timeline">Timeline</div>
+        <div class="tab" data-tab="map">Map</div>
+        <div class="tab" data-tab="settings">Settings</div>
+      </div>
+
+      <!-- Main content -->
+      <div class="content">
+
+        <!-- PEOPLE TAB -->
+        <div class="tabPanel" id="panel_people">
+          <div class="card">
+            <div class="cardHeader">
+              <h2>Live status</h2>
+              <span class="tiny muted mono">Build: DEMO-ANDROID-SHELL v0.1.0</span>
+            </div>
+
+            <div class="switchRow">
+              <div class="switchLabel">
+                <b>Live Monitoring</b>
+                <span>Turn on for faster alarms</span>
+              </div>
+              <div class="toggle" id="toggleLive"><div class="knob"></div></div>
+            </div>
+
+            <div class="switchRow">
+              <div class="switchLabel">
+                <b>Pool Mode</b>
+                <span>Alert if a child enters pool zone</span>
+              </div>
+              <div class="toggle on" id="togglePool"><div class="knob"></div></div>
+            </div>
+
+            <div class="btnRow">
+              <button class="btn" id="btnTestSOS">Test SOS</button>
+              <button class="btn btnDanger" id="btnClear">Clear Alerts</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="cardHeader">
+              <h2>People being monitored</h2>
+              <span class="tiny muted">Tap a person</span>
+            </div>
+
+            <div class="list" id="peopleList"></div>
+          </div>
+        </div>
+
+        <!-- TIMELINE TAB -->
+        <div class="tabPanel" id="panel_timeline" style="display:none;">
+          <div class="card">
+            <div class="cardHeader">
+              <h2>Today’s activity</h2>
+              <span class="tiny muted" id="timelineHint">Select a person</span>
+            </div>
+            <div id="timelineList" class="list"></div>
+          </div>
+        </div>
+
+        <!-- MAP TAB -->
+        <div class="tabPanel" id="panel_map" style="display:none;">
+          <div class="card">
+            <div class="cardHeader">
+              <h2>Map</h2>
+              <span class="tiny muted">Multi-person pins</span>
+            </div>
+            <div style="height:280px;border-radius:16px;border:1px solid rgba(255,255,255,.10);background:rgba(0,0,0,.18);position:relative;overflow:hidden;">
+              <div style="position:absolute;inset:0;background:
+                radial-gradient(600px 240px at 40% 30%, rgba(96,165,250,.18), transparent 60%),
+                radial-gradient(500px 240px at 80% 70%, rgba(74,222,128,.12), transparent 55%),
+                rgba(0,0,0,.10);"></div>
+
+              <!-- simple "zones" -->
+              <div style="position:absolute;left:10px;top:12px;padding:6px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.12);background:rgba(0,0,0,.20);font-size:11px;color:rgba(233,238,252,.75);">Property / School / Home</div>
+
+              <div id="mapPins"></div>
+            </div>
+            <div class="tiny muted" style="margin-top:8px;">In production this map can show GPS when a phone leaves the property.</div>
+          </div>
+        </div>
+
+        <!-- SETTINGS TAB -->
+        <div class="tabPanel" id="panel_settings" style="display:none;">
+          <div class="card">
+            <div class="cardHeader">
+              <h2>Settings</h2>
+              <span class="tiny muted">App-style preferences</span>
+            </div>
+
+            <div class="switchRow">
+              <div class="switchLabel">
+                <b>Notifications</b>
+                <span>Popups and sound</span>
+              </div>
+              <div class="toggle on" id="toggleNotif"><div class="knob"></div></div>
+            </div>
+
+            <div class="switchRow">
+              <div class="switchLabel">
+                <b>Vibration</b>
+                <span>Use device vibration for alerts</span>
+              </div>
+              <div class="toggle on" id="toggleVibe"><div class="knob"></div></div>
+            </div>
+
+            <div class="switchRow">
+              <div class="switchLabel">
+                <b>Dark Theme</b>
+                <span>Optimized for night viewing</span>
+              </div>
+              <div class="toggle on" id="toggleDark"><div class="knob"></div></div>
+            </div>
+
+            <div class="btnRow">
+              <button class="btn" id="btnExport">Export Log</button>
+              <button class="btn" id="btnSupport">Contact Support</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Bottom nav -->
+      <div class="bottomNav" id="bottomNav">
+        <div class="navItem active" data-tab="people"><span class="navIcon">👥</span>People</div>
+        <div class="navItem" data-tab="timeline"><span class="navIcon">🕒</span>Timeline</div>
+        <div class="navItem" data-tab="map"><span class="navIcon">🗺️</span>Map</div>
+        <div class="navItem" data-tab="settings"><span class="navIcon">⚙️</span>Settings</div>
+      </div>
+
+      <!-- Only place we say "Demo" -->
+      <div class="footer">Demo Version</div>
+
+    </div>
+  </div>
+
+  <div class="toast" id="toast">—</div>
+
+  <script>
+    // ----- Mock data that feels like your MAUI app screens -----
+    const people = [
+      { name:"Jack Erickson",  room:"Kitchen",     state:"ok",   dwell:"12:14", age:"2s" },
+      { name:"Christine Visalli", room:"Living Room", state:"warn", dwell:"04:02", age:"14s" },
+      { name:"Dail Skogstrom", room:"Backyard",   state:"ok",   dwell:"00:45", age:"1s" },
+      { name:"Amada Morales",  room:"Pool Area",  state:"bad",  dwell:"00:18", age:"1s" }
+    ];
+
+    const timeline = {
+      "Jack Erickson": [
+        { t:"11:58", msg:"Entered Kitchen" },
+        { t:"11:45", msg:"Left Living Room" },
+        { t:"11:20", msg:"Arrived at property" }
+      ],
+      "Christine Visalli": [
+        { t:"11:52", msg:"Signal weak (check sensor)" },
+        { t:"11:30", msg:"Entered Living Room" }
+      ],
+      "Dail Skogstrom": [
+        { t:"12:01", msg:"Entered Backyard" },
+        { t:"11:55", msg:"Left Kitchen" }
+      ],
+      "Amada Morales": [
+        { t:"12:02", msg:"POOL ALERT triggered" },
+        { t:"12:01", msg:"Entered Pool Area" }
+      ]
+    };
+
+    let selectedPerson = people[0].name;
+
+    // ----- UI helpers -----
+    function toast(msg){
+      const el = document.getElementById("toast");
+      el.textContent = msg;
+      el.style.display = "block";
+      clearTimeout(toast._t);
+      toast._t = setTimeout(()=> el.style.display="none", 1600);
+    }
+
+    function setToggle(el, on){
+      el.classList.toggle("on", !!on);
+    }
+
+    function dotClass(state){
+      if(state==="bad") return "dot bad";
+      if(state==="warn") return "dot warn";
+      return "dot";
+    }
+
+    function renderPeople(){
+      const list = document.getElementById("peopleList");
+      list.innerHTML = "";
+      people.forEach(p=>{
+        const initials = p.name.split(" ").slice(0,2).map(x=>x[0]).join("").toUpperCase();
+        const row = document.createElement("div");
+        row.className = "row";
+        row.innerHTML = `
+          <div class="left">
+            <div class="avatar">${initials}</div>
+            <div class="titleBlock">
+              <div class="name">${p.name}</div>
+              <div class="meta">${p.room} • Dwell ${p.dwell} • Age ${p.age}</div>
+            </div>
+          </div>
+          <div class="right">
+            <span class="chip"><span class="${dotClass(p.state)}"></span>${p.state==="bad" ? "ALERT" : p.state==="warn" ? "CHECK" : "OK"}</span>
+          </div>
+        `;
+        row.onclick = ()=>{
+          selectedPerson = p.name;
+          renderTimeline();
+          toast("Selected: " + p.name);
+        };
+        list.appendChild(row);
+      });
+    }
+
+    function renderTimeline(){
+      const list = document.getElementById("timelineList");
+      const hint = document.getElementById("timelineHint");
+      hint.textContent = selectedPerson;
+      list.innerHTML = "";
+
+      (timeline[selectedPerson] || []).forEach(e=>{
+        const row = document.createElement("div");
+        row.className = "row";
+        row.style.cursor = "default";
+        row.innerHTML = `
+          <div class="left">
+            <div class="avatar">🕒</div>
+            <div class="titleBlock">
+              <div class="name">${e.msg}</div>
+              <div class="meta">${e.t}</div>
+            </div>
+          </div>
+          <div class="right">
+            <span class="chip">${e.t}</span>
+          </div>
+        `;
+        list.appendChild(row);
+      });
+    }
+
+    function renderMap(){
+      const host = document.getElementById("mapPins");
+      host.innerHTML = "";
+      // Place 4 pins deterministically
+      const positions = [
+        {x:30,y:45},{x:55,y:35},{x:45,y:70},{x:78,y:52}
+      ];
+      people.forEach((p,i)=>{
+        const pin = document.createElement("div");
+        const s = p.state;
+        pin.style.position = "absolute";
+        pin.style.left = positions[i].x + "%";
+        pin.style.top  = positions[i].y + "%";
+        pin.style.transform = "translate(-50%,-50%)";
+        pin.style.width = "12px";
+        pin.style.height = "12px";
+        pin.style.borderRadius = "999px";
+        pin.style.border = "2px solid rgba(255,255,255,.75)";
+        pin.style.boxShadow = s==="bad" ? "0 0 0 7px rgba(251,113,133,.14)" :
+                         s==="warn"? "0 0 0 7px rgba(250,204,21,.12)" :
+                                   "0 0 0 7px rgba(74,222,128,.12)";
+        pin.style.background = s==="bad" ? "var(--bad)" : s==="warn" ? "var(--warn)" : "var(--good)";
+        pin.style.cursor = "pointer";
+        pin.title = p.name + " • " + p.room;
+
+        pin.onclick = ()=>{ selectedPerson = p.name; renderTimeline(); toast(p.name + " • " + p.room); };
+
+        const tag = document.createElement("div");
+        tag.style.position="absolute";
+        tag.style.left = positions[i].x + "%";
+        tag.style.top  = positions[i].y + "%";
+        tag.style.transform="translate(-50%,-170%)";
+        tag.style.padding="4px 8px";
+        tag.style.borderRadius="999px";
+        tag.style.border="1px solid rgba(255,255,255,.12)";
+        tag.style.background="rgba(0,0,0,.35)";
+        tag.style.color="rgba(233,238,252,.88)";
+        tag.style.fontSize="11px";
+        tag.textContent = p.name.split(" ")[0];
+
+        host.appendChild(pin);
+        host.appendChild(tag);
+      });
+    }
+
+    // ----- Tabs / Bottom nav routing -----
+    function showTab(tab){
+      document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active", t.dataset.tab===tab));
+      document.querySelectorAll(".navItem").forEach(n=>n.classList.toggle("active", n.dataset.tab===tab));
+
+      document.querySelectorAll(".tabPanel").forEach(p=>p.style.display="none");
+      document.getElementById("panel_" + tab).style.display = "block";
+
+      if(tab==="map") renderMap();
+      if(tab==="timeline") renderTimeline();
+    }
+
+    document.getElementById("tabs").addEventListener("click", (e)=>{
+      const t = e.target.closest(".tab");
+      if(!t) return;
+      showTab(t.dataset.tab);
+    });
+    document.getElementById("bottomNav").addEventListener("click", (e)=>{
+      const n = e.target.closest(".navItem");
+      if(!n) return;
+      showTab(n.dataset.tab);
+    });
+
+    // ----- Toggle behavior -----
+    function wireToggle(id){
+      const el = document.getElementById(id);
+      el.addEventListener("click", ()=> {
+        el.classList.toggle("on");
+        toast((id.replace("toggle","")) + ": " + (el.classList.contains("on") ? "On" : "Off"));
+      });
+    }
+    ["toggleLive","togglePool","toggleNotif","toggleVibe","toggleDark"].forEach(wireToggle);
+
+    // ----- Buttons -----
+    document.getElementById("btnBell").onclick = ()=> toast("Test alert");
+    document.getElementById("btnTestSOS").onclick = ()=> {
+      // randomize an SOS state in the mock list
+      const idx = Math.floor(Math.random()*people.length);
+      people[idx].state = "bad";
+      people[idx].room = "Pool Area";
+      people[idx].dwell = "00:08";
+      toast("SOS triggered: " + people[idx].name);
+      renderPeople(); renderMap();
+    };
+    document.getElementById("btnClear").onclick = ()=> {
+      people.forEach(p=> p.state = "ok");
+      toast("Alerts cleared");
+      renderPeople(); renderMap();
+    };
+    document.getElementById("btnExport").onclick = ()=> toast("Export queued");
+    document.getElementById("btnSupport").onclick = ()=> toast("Support: 407-555-0123");
+
+    // ----- Fake status bar clock -----
+    function tick(){
+      const d = new Date();
+      const hh = String(d.getHours()).padStart(2,"0");
+      const mm = String(d.getMinutes()).padStart(2,"0");
+      document.getElementById("sbTime").textContent = hh + ":" + mm;
+    }
+    setInterval(tick, 1000); tick();
+
+    // Init
+    renderPeople();
+    renderTimeline();
+    showTab("people");
+  </script>
+</body>
+</html>
