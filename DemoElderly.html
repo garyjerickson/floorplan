@@ -6,7 +6,7 @@
 
   <!--
     UltraWatch
-    Build: DEMO-ELDERLY v0.3.0
+    Build: DEMO-ELDERLY v0.4.0
     Last Updated: 2025-12-30
   -->
 
@@ -200,6 +200,33 @@
       white-space:nowrap;
     }
 
+    /* ===== View Tabs (Dashboard/Timeline) ===== */
+    .viewTabs{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      margin-top:12px;
+    }
+    .viewTab{
+      display:inline-flex;
+      gap:8px;
+      align-items:center;
+      padding:8px 12px;
+      border-radius:14px;
+      border:1px solid var(--line);
+      background:rgba(0,0,0,.15);
+      cursor:pointer;
+      font-size:12px;
+      color:var(--muted);
+      user-select:none;
+    }
+    .viewTab.active{
+      border-color:rgba(96,165,250,.55);
+      background:rgba(96,165,250,.16);
+      color:var(--text);
+      font-weight:800;
+    }
+
     /* ===== Floor / Map ===== */
     .floor,.mapWrap{
       height:380px;
@@ -239,14 +266,17 @@
       display:flex;gap:8px;flex-wrap:wrap;
       z-index:5;
     }
+    .mapControls{
+      position:absolute;right:12px;top:12px;
+      display:flex;gap:8px;flex-wrap:wrap;
+      z-index:5;
+    }
 
-    /* Leaflet container */
     #leafletMap{
       position:absolute;
       inset:0;
     }
 
-    /* Make Leaflet controls match dark UI a bit */
     .leaflet-control-zoom a{
       background:rgba(20,26,40,.85) !important;
       color:var(--text) !important;
@@ -259,6 +289,39 @@
       border:1px solid rgba(255,255,255,.12);
       padding:2px 6px;
     }
+
+    /* ===== Timeline ===== */
+    .timeline{
+      margin-top:12px;
+      border:1px solid var(--line);
+      border-radius:16px;
+      overflow:hidden;
+    }
+    .timelineHead{
+      display:flex;
+      justify-content:space-between;
+      gap:12px;
+      align-items:center;
+      padding:12px;
+      background:rgba(0,0,0,.15);
+      border-bottom:1px solid var(--line);
+    }
+    .timelineBody{
+      max-height:360px;
+      overflow:auto;
+      padding:0 12px;
+    }
+    .tlRow{
+      display:grid;
+      grid-template-columns:92px 1fr 120px;
+      gap:10px;
+      padding:10px 0;
+      border-bottom:1px solid var(--line);
+      align-items:start;
+    }
+    .tlTime{color:var(--muted);font-size:12px}
+    .tlMsg{font-weight:800}
+    .tlLoc{color:var(--muted);font-size:12px;text-align:right}
 
     /* ===== Activity ===== */
     .log{max-height:620px;overflow:auto}
@@ -304,7 +367,7 @@
 
   <!-- Build Banner (your internal reference) -->
   <div class="build">
-    <div><b>UltraWatch</b> — Build <b>DEMO-ELDERLY v0.3.0</b></div>
+    <div><b>UltraWatch</b> — Build <b>DEMO-ELDERLY v0.4.0</b></div>
     <div>Updated: <b>Dec 30, 2025</b></div>
   </div>
 
@@ -355,30 +418,66 @@
         </div>
       </div>
 
-      <!-- Floorplan -->
-      <div id="floor" class="floor">
-        <div class="room" style="left:18px;top:18px;width:42%;height:28%">Bedroom</div>
-        <div class="room" style="left:52%;top:18px;width:40%;height:28%">Bathroom</div>
-        <div class="room" style="left:18px;top:54%;width:42%;height:40%">Living Room</div>
-        <div class="room" style="left:52%;top:54%;width:40%;height:40%">Kitchen</div>
-        <div class="room" style="left:38%;top:46%;width:24%;height:8%;text-align:center">Front Door</div>
-        <div id="pin" class="pin" style="left:72%;top:76%"></div>
+      <!-- View Tabs -->
+      <div class="viewTabs">
+        <div id="vtDashboard" class="viewTab active" onclick="setMainView('dashboard')">Dashboard</div>
+        <div id="vtTimeline" class="viewTab" onclick="setMainView('timeline')">Timeline</div>
       </div>
 
-      <!-- Map View (Leaflet) -->
-      <div id="mapWrap" class="mapWrap" style="display:none">
-        <div class="mapTag">Map View</div>
-        <div class="mapMeta">
-          <span class="pill">GPS: <b id="gpsLatLng">—</b></span>
-          <span class="pill">Accuracy: <b id="gpsAcc">—</b></span>
-          <span class="pill">Updated: <b id="gpsUpdated">—</b></span>
+      <!-- DASHBOARD VIEW -->
+      <div id="mainDashboard">
+
+        <!-- Floorplan -->
+        <div id="floor" class="floor">
+          <div class="room" style="left:18px;top:18px;width:42%;height:28%">Bedroom</div>
+          <div class="room" style="left:52%;top:18px;width:40%;height:28%">Bathroom</div>
+          <div class="room" style="left:18px;top:54%;width:42%;height:40%">Living Room</div>
+          <div class="room" style="left:52%;top:54%;width:40%;height:40%">Kitchen</div>
+          <div class="room" style="left:38%;top:46%;width:24%;height:8%;text-align:center">Front Door</div>
+          <div id="pin" class="pin" style="left:72%;top:76%"></div>
         </div>
-        <div id="leafletMap"></div>
+
+        <!-- Map View (Leaflet) -->
+        <div id="mapWrap" class="mapWrap" style="display:none">
+          <div class="mapTag">Map View</div>
+
+          <div class="mapControls">
+            <button class="btn" onclick="centerSelectedOnMap()">Center</button>
+            <button class="btn" onclick="fitAwayOnMap()">Fit Away</button>
+          </div>
+
+          <div class="mapMeta">
+            <span class="pill">Selected: <b id="gpsSelectedName">—</b></span>
+            <span class="pill">GPS: <b id="gpsLatLng">—</b></span>
+            <span class="pill">Accuracy: <b id="gpsAcc">—</b></span>
+            <span class="pill">Updated: <b id="gpsUpdated">—</b></span>
+          </div>
+
+          <div id="leafletMap"></div>
+        </div>
+
+      </div>
+
+      <!-- TIMELINE VIEW -->
+      <div id="mainTimeline" style="display:none">
+        <div class="timeline">
+          <div class="timelineHead">
+            <div>
+              <div style="font-weight:900">Timeline</div>
+              <div class="sub">Recent activity for the selected person</div>
+            </div>
+            <div class="row">
+              <span class="pill">Range: <b>Last 24 Hours</b></span>
+              <button class="btn" onclick="refreshTimeline()">Refresh</button>
+            </div>
+          </div>
+          <div class="timelineBody" id="timelineBody"></div>
+        </div>
       </div>
 
     </div>
 
-    <!-- Activity -->
+    <!-- Activity (quick feed) -->
     <div class="card">
       <div class="row" style="justify-content:space-between;align-items:flex-end">
         <div>
@@ -429,7 +528,7 @@
   // Demo GPS baseline (Orlando-ish) for "away" mode
   const BASE_GPS = { lat: 28.538336, lng: -81.379234 };
 
-  // 20 monitored people (editable)
+  // 20 monitored people
   const people = [
     { id:"p1", name:"Jack Erickson", room:"Kitchen", lastSensor:"Kitchen", battery:82, status:"Home", state:"ok", lastSeenSec:2, timeInRoom:"00:12:43",
       gps:{ lat: BASE_GPS.lat+0.0021, lng: BASE_GPS.lng-0.0014, accM:18, updatedAt:Date.now() } },
@@ -440,7 +539,6 @@
     { id:"p4", name:"Amada Morales", room:"Bathroom", lastSensor:"Bathroom", battery:71, status:"Home", state:"ok", lastSeenSec:3, timeInRoom:"00:04:52",
       gps:{ lat: BASE_GPS.lat+0.0007, lng: BASE_GPS.lng-0.0011, accM:25, updatedAt:Date.now() } },
 
-    // Fill out more names (safe placeholders)
     ...[
       "Evelyn Carter","Harold Bennett","Rosa Delgado","Stanley Young","Martha Price",
       "Arthur Lee","Nina Kim","Frank Owens","Olivia Stone","Paul Rivera",
@@ -461,12 +559,18 @@
 
   let selectedId = "p1";
 
-  // Activity per person
+  // Activity per person (live feed)
   const activity = {};
   people.forEach(p => activity[p.id] = [
-    { msg:"System online", t:timeNow() },
-    { msg:`${p.name} detected — ${p.room}`, t:timeNow() }
+    { msg:"System online", t:timeNow(), room:p.room || "" }
   ]);
+
+  // Timeline per person (24h-style)
+  const timeline = {};
+  people.forEach(p => timeline[p.id] = generateDemoTimeline(p));
+
+  // Main view mode: 'dashboard' or 'timeline'
+  let mainView = "dashboard";
 
   // =========================
   // Alarm (audible)
@@ -515,36 +619,28 @@
   }
 
   // =========================
-  // Leaflet Map
+  // Leaflet Map (multi-person)
   // =========================
   let map = null;
-  let gpsDot = null;
-  let gpsAccuracy = null;
   let mapInitialized = false;
+  let awayLayer = null;
+  let selectedAccuracy = null;
 
   function initMapOnce(){
     if(mapInitialized) return;
     mapInitialized = true;
 
-    // Initialize
     map = L.map('leafletMap', { zoomControl:true }).setView([BASE_GPS.lat, BASE_GPS.lng], 13);
 
-    // Free tiles (OSM)
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
       attribution: '&copy; OpenStreetMap contributors'
     }).addTo(map);
 
-    // Dot + accuracy circle
-    gpsDot = L.circleMarker([BASE_GPS.lat, BASE_GPS.lng], {
-      radius: 8,
-      color: '#ffffff',
-      weight: 2,
-      fillColor: '#4ade80',
-      fillOpacity: 0.9
-    }).addTo(map);
+    awayLayer = L.layerGroup().addTo(map);
 
-    gpsAccuracy = L.circle([BASE_GPS.lat, BASE_GPS.lng], {
+    // Accuracy ring for selected person (always one)
+    selectedAccuracy = L.circle([BASE_GPS.lat, BASE_GPS.lng], {
       radius: 20,
       color: '#60a5fa',
       weight: 1,
@@ -553,44 +649,89 @@
     }).addTo(map);
   }
 
-  function setDotColorForState(state){
-    if(!gpsDot) return;
-    // Keep colors in CSS variables in spirit, but Leaflet needs explicit values
-    const fill = (state==="bad") ? "#fb7185" : (state==="warn") ? "#facc15" : "#4ade80";
-    gpsDot.setStyle({ fillColor: fill });
+  function stateColor(state){
+    return (state==="bad") ? "#fb7185" : (state==="warn") ? "#facc15" : "#4ade80";
   }
 
-  function updateMapForPerson(p, pan=false){
+  function updateAwayLayer(){
     initMapOnce();
-    if(!p.gps) return;
+    awayLayer.clearLayers();
+
+    const awayPeople = people.filter(p => p.status === "Left Home");
+    awayPeople.forEach(p => {
+      if(!p.gps) return;
+
+      const isSelected = (p.id === selectedId);
+      const radius = isSelected ? 10 : 7;
+      const weight = isSelected ? 3 : 2;
+
+      const marker = L.circleMarker([p.gps.lat, p.gps.lng], {
+        radius,
+        color: '#ffffff',
+        weight,
+        fillColor: stateColor(p.state),
+        fillOpacity: 0.95
+      }).addTo(awayLayer);
+
+      marker.bindTooltip(p.name, { direction:"top", opacity:0.9 });
+
+      marker.on('click', () => {
+        selectPerson(p.id);
+        setMainView('dashboard'); // clicking on a dot jumps to that person
+      });
+    });
+  }
+
+  function updateSelectedMapMeta(p, pan=false){
+    initMapOnce();
+
+    document.getElementById("gpsSelectedName").textContent = p.name;
+
+    if(!p.gps){
+      document.getElementById("gpsLatLng").textContent = "—";
+      document.getElementById("gpsAcc").textContent = "—";
+      document.getElementById("gpsUpdated").textContent = "—";
+      return;
+    }
 
     const lat = p.gps.lat;
     const lng = p.gps.lng;
     const acc = p.gps.accM ?? 20;
-
-    gpsDot.setLatLng([lat,lng]);
-    gpsAccuracy.setLatLng([lat,lng]);
-    gpsAccuracy.setRadius(acc);
-
-    setDotColorForState(p.state);
 
     document.getElementById("gpsLatLng").textContent = lat.toFixed(6) + ", " + lng.toFixed(6);
     document.getElementById("gpsAcc").textContent = acc + " m";
     const secs = Math.max(0, Math.round((Date.now() - p.gps.updatedAt) / 1000));
     document.getElementById("gpsUpdated").textContent = secs + "s ago";
 
+    selectedAccuracy.setLatLng([lat,lng]);
+    selectedAccuracy.setRadius(acc);
+
     if(pan){
       map.setView([lat,lng], Math.max(map.getZoom(), 15));
     }
 
-    // When container becomes visible, Leaflet needs a resize kick
-    setTimeout(() => { map.invalidateSize(); }, 50);
+    setTimeout(() => map.invalidateSize(), 50);
   }
 
-  // Small demo “movement” when away: random jitter
+  function centerSelectedOnMap(){
+    const p = getSelected();
+    if(!p.gps) return;
+    initMapOnce();
+    map.setView([p.gps.lat, p.gps.lng], Math.max(map.getZoom(), 15));
+  }
+
+  function fitAwayOnMap(){
+    initMapOnce();
+    const awayPeople = people.filter(p => p.status === "Left Home" && p.gps);
+    if(!awayPeople.length) return;
+
+    const bounds = L.latLngBounds(awayPeople.map(p => [p.gps.lat, p.gps.lng]));
+    map.fitBounds(bounds.pad(0.2));
+  }
+
+  // Demo “movement” when away: jitter GPS
   function jitterGps(p){
     if(!p.gps) p.gps = { lat: BASE_GPS.lat, lng: BASE_GPS.lng, accM: 20, updatedAt: Date.now() };
-    // roughly ~5–25 meters per tick
     const dLat = (Math.random() - 0.5) * 0.00018;
     const dLng = (Math.random() - 0.5) * 0.00018;
     p.gps.lat += dLat;
@@ -600,10 +741,27 @@
   }
 
   // =========================
-  // Rendering
+  // Rendering / Views
   // =========================
   function timeNow(){ return new Date().toLocaleTimeString(); }
   function getSelected(){ return people.find(p => p.id === selectedId); }
+
+  function setMainView(mode){
+    mainView = mode;
+
+    document.getElementById("vtDashboard").classList.toggle("active", mode==="dashboard");
+    document.getElementById("vtTimeline").classList.toggle("active", mode==="timeline");
+
+    document.getElementById("mainDashboard").style.display = (mode==="dashboard") ? "block" : "none";
+    document.getElementById("mainTimeline").style.display = (mode==="timeline") ? "block" : "none";
+
+    // Make sure timeline is current for selection
+    if(mode==="timeline"){
+      renderTimeline();
+    }else{
+      renderMain(); // refresh dashboard toggles
+    }
+  }
 
   function renderTabs(){
     const tabs = document.getElementById("tabs");
@@ -667,16 +825,22 @@
     pin.style.left = pos.l;
     pin.style.top = pos.t;
 
-    // View selection: if away or "left home" show map
+    // Show map if away/left home
     const showMap = (p.status === "Left Home") || (p.lastSeenSec >= 30 && p.lastSensor === "Front Door");
     document.getElementById("floor").style.display = showMap ? "none" : "block";
     document.getElementById("mapWrap").style.display = showMap ? "block" : "none";
 
     if(showMap){
-      updateMapForPerson(p, true);
+      updateAwayLayer();                 // multi-person dots
+      updateSelectedMapMeta(p, true);    // selected meta + accuracy ring
     }
 
     renderActivity();
+  }
+
+  function addEvent(pid, msg, room=""){
+    if(!activity[pid]) activity[pid] = [];
+    activity[pid].push({ msg, t: timeNow(), room });
   }
 
   function renderActivity(){
@@ -692,29 +856,95 @@
     log.scrollTop = log.scrollHeight;
   }
 
-  function addEvent(pid, msg){
-    if(!activity[pid]) activity[pid] = [];
-    activity[pid].push({ msg, t: timeNow() });
+  function clearActivity(){
+    const p = getSelected();
+    activity[p.id] = [];
+    addEvent(p.id, "Activity cleared", p.room || "");
+    renderActivity();
   }
 
   function selectPerson(pid){
     selectedId = pid;
     renderTabs();
     renderPeople();
-    renderMain();
-  }
 
-  function clearActivity(){
-    const p = getSelected();
-    activity[p.id] = [];
-    addEvent(p.id, "Activity cleared");
-    renderActivity();
+    if(mainView === "timeline"){
+      renderTimeline();
+    }else{
+      renderMain();
+    }
   }
 
   function escapeHtml(s){
     return String(s).replace(/[&<>"']/g, (c) => ({
       "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"
     }[c]));
+  }
+
+  // =========================
+  // Timeline
+  // =========================
+  function generateDemoTimeline(p){
+    // Build a believable last-24h pattern (pure demo)
+    const now = Date.now();
+    const entries = [];
+
+    function add(hoursAgo, msg, room){
+      const t = new Date(now - hoursAgo*3600*1000);
+      entries.push({
+        ts: t.getTime(),
+        time: t.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}),
+        msg, room
+      });
+    }
+
+    // A simple daily story:
+    add(23.5, "Overnight monitoring active", "Bedroom");
+    add(7.8,  "Room update — Bathroom", "Bathroom");
+    add(7.5,  "Room update — Kitchen", "Kitchen");
+    add(6.0,  "Routine check-in complete", "Kitchen");
+    add(4.2,  "Room update — Living Room", "Living Room");
+    add(3.7,  "Room update — Kitchen", "Kitchen");
+
+    // Inject current state near “now”
+    add(0.6,  "Room update — " + (p.room || "Kitchen"), p.room || "Kitchen");
+    add(0.1,  "Last seen update received", p.room || "");
+
+    // If away, add a leave-home event
+    if(p.status === "Left Home"){
+      add(1.2, "Front Door activity detected", "Front Door");
+      add(1.0, "Not detected after Front Door — marked as Left Home", "Front Door");
+      add(0.8, "GPS tracking active", "Away");
+    }
+
+    // Sort newest first for display
+    entries.sort((a,b)=>b.ts-a.ts);
+    return entries;
+  }
+
+  function renderTimeline(){
+    const p = getSelected();
+
+    // Ensure timeline exists and stays reasonable when state changes
+    timeline[p.id] = generateDemoTimeline(p);
+
+    const body = document.getElementById("timelineBody");
+    body.innerHTML = "";
+
+    timeline[p.id].forEach(e => {
+      const row = document.createElement("div");
+      row.className = "tlRow";
+      row.innerHTML = `
+        <div class="tlTime">${escapeHtml(e.time)}</div>
+        <div class="tlMsg">${escapeHtml(e.msg)}</div>
+        <div class="tlLoc">${escapeHtml(e.room || "")}</div>
+      `;
+      body.appendChild(row);
+    });
+  }
+
+  function refreshTimeline(){
+    renderTimeline();
   }
 
   // =========================
@@ -730,8 +960,10 @@
       p.room = "Front Door";
       p.timeInRoom = "00:00:02";
       p.state = "ok";
-      addEvent(p.id, "Returned home — Front Door");
-      renderTabs(); renderPeople(); renderMain();
+      addEvent(p.id, "Returned home — Front Door", "Front Door");
+      timeline[p.id] = generateDemoTimeline(p);
+      renderTabs(); renderPeople();
+      (mainView==="timeline") ? renderTimeline() : renderMain();
       return;
     }
 
@@ -742,17 +974,23 @@
     p.lastSeenSec = 2;
     p.timeInRoom = "00:00:05";
     p.state = "ok";
-    addEvent(p.id, "Room update — " + next);
-    renderTabs(); renderPeople(); renderMain();
+    addEvent(p.id, "Room update — " + next, next);
+    timeline[p.id] = generateDemoTimeline(p);
+
+    renderTabs(); renderPeople();
+    (mainView==="timeline") ? renderTimeline() : renderMain();
   }
 
   function simulateLinger(){
     const p = getSelected();
     p.state = "warn";
-    addEvent(p.id, "Linger alert triggered");
+    addEvent(p.id, "Linger alert triggered", p.room || "");
     showAlert("Linger Alert", `${p.name} has remained in ${p.room} longer than expected.`);
     startAlarm();
-    renderTabs(); renderPeople(); renderMain();
+    timeline[p.id] = generateDemoTimeline(p);
+
+    renderTabs(); renderPeople();
+    (mainView==="timeline") ? renderTimeline() : renderMain();
   }
 
   function simulateSOS(){
@@ -767,23 +1005,30 @@
     if(p.lastSensor === "Front Door"){
       p.status = "Left Home";
       p.room = "";
-      // kick GPS a bit when leaving (looks natural)
       jitterGps(p);
-      addEvent(p.id, "Not detected after Front Door — marked as Left Home");
+      addEvent(p.id, "Not detected after Front Door — marked as Left Home", "Front Door");
     }else{
       p.state = "warn";
-      addEvent(p.id, "Beacon not detected — switching to map view");
+      addEvent(p.id, "Beacon not detected — switching to map view", p.room || "");
     }
 
-    renderTabs(); renderPeople(); renderMain();
+    timeline[p.id] = generateDemoTimeline(p);
+
+    renderTabs(); renderPeople();
+    (mainView==="timeline") ? renderTimeline() : renderMain();
   }
 
   function triggerSOSFor(pid){
     const p = people.find(x => x.id === pid);
     p.state = "bad";
-    addEvent(pid, "Emergency alert — SOS triggered");
+    addEvent(pid, "Emergency alert — SOS triggered", p.room || "");
     selectedId = pid;
-    renderTabs(); renderPeople(); renderMain();
+
+    timeline[p.id] = generateDemoTimeline(p);
+
+    renderTabs(); renderPeople();
+    (mainView==="timeline") ? renderTimeline() : renderMain();
+
     showAlert("Emergency Alert", `SOS triggered for ${p.name}. Caregiver notified.`);
     startAlarm();
   }
@@ -814,22 +1059,38 @@
     people.forEach(p => {
       p.lastSeenSec = Math.min(999, p.lastSeenSec + 1);
 
-      // If away, keep GPS moving a bit for realism
       if(p.status === "Left Home"){
         jitterGps(p);
       }
     });
 
-    // render visible parts
+    // If map visible, keep dots moving
+    const p = getSelected();
+    const showMap = (p.status === "Left Home") || (p.lastSeenSec >= 30 && p.lastSensor === "Front Door");
+    if(showMap){
+      updateAwayLayer();
+      updateSelectedMapMeta(p, false);
+    }
+
+    // Keep the list feeling alive
     renderTabs();
     renderPeople();
-    renderMain();
+
+    // Update main area depending on view
+    if(mainView === "timeline"){
+      // timeline is "snapshotty" — refresh lightly
+      renderTimeline();
+    }else{
+      renderMain();
+    }
+
   }, 3000);
 
   // Initial render
   renderTabs();
   renderPeople();
   renderMain();
+  setMainView("dashboard");
 </script>
 
 </body>
