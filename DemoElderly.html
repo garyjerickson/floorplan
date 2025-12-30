@@ -1,0 +1,381 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+
+  <!--
+    UltraWatch
+    Build: DEMO-ELDERLY v0.1.1
+    Last Updated: 2025-12-29
+  -->
+
+  <title>UltraWatch — Elderly Care</title>
+
+  <style>
+    :root{
+      --bg:#0b1220;
+      --panel:rgba(255,255,255,.07);
+      --panel2:rgba(255,255,255,.10);
+      --text:#e9eefc;
+      --muted:rgba(233,238,252,.72);
+      --line:rgba(255,255,255,.12);
+      --good:#4ade80;
+      --warn:#facc15;
+      --bad:#fb7185;
+      --accent:#60a5fa;
+      --radius:18px;
+    }
+
+    *{box-sizing:border-box}
+
+    body{
+      margin:0;
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;
+      background:var(--bg);
+      color:var(--text);
+    }
+
+    .wrap{
+      max-width:980px;
+      margin:0 auto;
+      padding:16px;
+    }
+
+    /* ===== Build Banner ===== */
+    .build{
+      background:rgba(96,165,250,.15);
+      border:1px solid rgba(96,165,250,.35);
+      color:#cfe3ff;
+      padding:8px 12px;
+      border-radius:12px;
+      font-size:12px;
+      margin-bottom:12px;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:12px;
+    }
+
+    .build b{font-weight:800}
+
+    /* ===== Header ===== */
+    .header{
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-end;
+      gap:12px;
+      margin-bottom:12px;
+    }
+
+    h1{
+      margin:0;
+      font-size:20px;
+      letter-spacing:.2px;
+    }
+
+    .sub{
+      color:var(--muted);
+      font-size:12px;
+      margin-top:4px;
+    }
+
+    .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+
+    .btn{
+      border:1px solid var(--line);
+      background:var(--panel2);
+      color:var(--text);
+      padding:9px 12px;
+      border-radius:14px;
+      font-weight:700;
+      cursor:pointer;
+      text-decoration:none;
+    }
+
+    .btn:hover{filter:brightness(1.08)}
+
+    /* ===== Layout ===== */
+    .grid{
+      display:grid;
+      gap:12px;
+      grid-template-columns:1fr;
+    }
+
+    @media(min-width:900px){
+      .grid{grid-template-columns:1.2fr .8fr}
+    }
+
+    .card{
+      background:var(--panel);
+      border:1px solid var(--line);
+      border-radius:var(--radius);
+      padding:14px;
+    }
+
+    /* ===== Status ===== */
+    .status{
+      display:flex;
+      justify-content:space-between;
+      gap:12px;
+      align-items:center;
+      padding:12px;
+      border-radius:16px;
+      border:1px solid var(--line);
+      background:rgba(0,0,0,.15);
+    }
+
+    .pill{
+      display:inline-flex;
+      gap:8px;
+      align-items:center;
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid var(--line);
+      font-size:12px;
+      color:var(--muted);
+    }
+
+    .dot{
+      width:9px;
+      height:9px;
+      border-radius:50%;
+      background:var(--good);
+    }
+    .dot.warn{background:var(--warn)}
+    .dot.bad{background:var(--bad)}
+
+    /* ===== Floor / Map ===== */
+    .floor,.map{
+      height:340px;
+      border-radius:16px;
+      border:1px solid var(--line);
+      background:rgba(0,0,0,.18);
+      position:relative;
+      overflow:hidden;
+    }
+
+    .room{
+      position:absolute;
+      border:1px dashed rgba(255,255,255,.25);
+      border-radius:14px;
+      padding:8px 10px;
+      font-size:12px;
+      color:var(--muted);
+    }
+
+    .pin{
+      position:absolute;
+      width:14px;
+      height:14px;
+      border-radius:50%;
+      background:var(--good);
+      box-shadow:0 0 0 6px rgba(74,222,128,.18);
+    }
+    .pin.warn{
+      background:var(--warn);
+      box-shadow:0 0 0 6px rgba(250,204,21,.18);
+    }
+    .pin.bad{
+      background:var(--bad);
+      box-shadow:0 0 0 6px rgba(251,113,133,.20);
+    }
+
+    /* ===== Log ===== */
+    .log{max-height:260px;overflow:auto}
+    .evt{
+      display:flex;
+      justify-content:space-between;
+      gap:12px;
+      padding:9px 0;
+      border-bottom:1px solid var(--line);
+    }
+    .evt .t{font-size:12px;color:var(--muted)}
+
+    /* ===== Alert ===== */
+    .alert{
+      display:none;
+      position:fixed;
+      inset:0;
+      background:rgba(0,0,0,.7);
+      padding:16px;
+    }
+
+    .alertBox{
+      max-width:520px;
+      margin:80px auto;
+      background:rgba(20,26,40,.98);
+      border:1px solid var(--line);
+      border-radius:22px;
+      padding:16px;
+    }
+
+    footer{
+      margin-top:16px;
+      font-size:12px;
+      color:var(--muted);
+      display:flex;
+      justify-content:space-between;
+    }
+  </style>
+</head>
+
+<body>
+<div class="wrap">
+
+  <!-- Build Banner -->
+  <div class="build">
+    <div><b>UltraWatch</b> — Build <b>DEMO-ELDERLY v0.1.1</b></div>
+    <div>Updated: <b>Dec 29, 2025</b></div>
+  </div>
+
+  <!-- Header -->
+  <div class="header">
+    <div>
+      <h1>Elderly Care Dashboard</h1>
+      <div class="sub">In-home awareness, safety alerts, and peace of mind</div>
+    </div>
+    <div class="row">
+      <a class="btn" href="DemoIndex.html">← Back</a>
+      <button class="btn" onclick="simulateMove()">Move Room</button>
+      <button class="btn" onclick="simulateLinger()">Linger</button>
+      <button class="btn" onclick="simulateSOS()">SOS</button>
+      <button class="btn" onclick="simulateNotSeen()">Not Seen</button>
+    </div>
+  </div>
+
+  <div class="grid">
+
+    <!-- Main -->
+    <div class="card">
+
+      <div class="status">
+        <div>
+          <div style="font-weight:900">GRANDPA</div>
+          <div class="sub">Battery 82% • Last update <span id="lastSeen">2s ago</span></div>
+        </div>
+        <div class="row">
+          <span class="pill"><span id="stateDot" class="dot"></span><span id="stateText">OK</span></span>
+          <span class="pill">Room: <b id="room">Kitchen</b></span>
+          <span class="pill">Time: <b id="time">00:12:43</b></span>
+        </div>
+      </div>
+
+      <div style="height:12px"></div>
+
+      <div id="floor" class="floor">
+        <div class="room" style="left:18px;top:18px;width:42%;height:28%">Bedroom</div>
+        <div class="room" style="left:52%;top:18px;width:40%;height:28%">Bathroom</div>
+        <div class="room" style="left:18px;top:52px;width:42%;height:40%">Living Room</div>
+        <div class="room" style="left:52%;top:52px;width:40%;height:40%">Kitchen</div>
+        <div id="pin" class="pin" style="left:72%;top:72%"></div>
+      </div>
+
+      <div id="map" class="map" style="display:none">
+        <div id="gpsPin" class="pin" style="left:64%;top:56%"></div>
+      </div>
+
+    </div>
+
+    <!-- Log -->
+    <div class="card">
+      <div style="font-weight:900;margin-bottom:6px">Activity</div>
+      <div class="log" id="log"></div>
+    </div>
+
+  </div>
+
+  <footer>
+    <div>UltraWatch © 2025</div>
+    <div>Demo Version</div>
+  </footer>
+
+</div>
+
+<!-- Alert -->
+<div id="alert" class="alert" onclick="hideAlert()">
+  <div class="alertBox" onclick="event.stopPropagation()">
+    <h2 id="alertTitle"></h2>
+    <p id="alertBody" class="sub"></p>
+    <div style="height:12px"></div>
+    <button class="btn" onclick="hideAlert()">Dismiss</button>
+  </div>
+</div>
+
+<script>
+  const rooms=["Kitchen","Living Room","Bathroom","Bedroom"];
+  let idx=0;
+  const logEl=document.getElementById("log");
+
+  function log(msg){
+    const r=document.createElement("div");
+    r.className="evt";
+    r.innerHTML=`<div><b>${msg}</b></div><div class="t">${new Date().toLocaleTimeString()}</div>`;
+    logEl.prepend(r);
+  }
+
+  log("System online");
+  log("GRANDPA detected — Kitchen");
+
+  function setState(type){
+    const d=document.getElementById("stateDot");
+    d.className="dot";
+    if(type==="warn")d.classList.add("warn");
+    if(type==="bad")d.classList.add("bad");
+    document.getElementById("stateText").textContent=
+      type==="ok"?"OK":type==="warn"?"LINGER":"ALERT";
+  }
+
+  function movePin(room){
+    const p={
+      "Bedroom":{l:"28%",t:"24%"},
+      "Bathroom":{l:"72%",t:"24%"},
+      "Living Room":{l:"28%",t:"72%"},
+      "Kitchen":{l:"72%",t:"72%"},
+    }[room];
+    pin.style.left=p.l; pin.style.top=p.t;
+    document.getElementById("room").textContent=room;
+    document.getElementById("time").textContent="00:00:05";
+  }
+
+  function simulateMove(){
+    idx=(idx+1)%rooms.length;
+    setState("ok");
+    movePin(rooms[idx]);
+    log("Room update — "+rooms[idx]);
+  }
+
+  function simulateLinger(){
+    setState("warn");
+    showAlert("Linger Alert","GRANDPA has remained in the bathroom longer than expected.");
+    log("Linger alert triggered");
+  }
+
+  function simulateSOS(){
+    setState("bad");
+    showAlert("Emergency Alert","SOS button pressed. Caregiver notified.");
+    log("SOS button pressed");
+  }
+
+  function simulateNotSeen(){
+    setState("warn");
+    document.getElementById("lastSeen").textContent="45s ago";
+    floor.style.display="none";
+    map.style.display="block";
+    log("Beacon not detected — switching to map view");
+  }
+
+  function showAlert(t,b){
+    alertTitle.textContent=t;
+    alertBody.textContent=b;
+    alert.style.display="block";
+  }
+
+  function hideAlert(){
+    alert.style.display="none";
+    setState("ok");
+  }
+</script>
+
+</body>
+</html>
