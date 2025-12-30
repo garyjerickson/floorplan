@@ -6,11 +6,15 @@
 
   <!--
     UltraWatch
-    Build: DEMO-ELDERLY v0.2.0
+    Build: DEMO-ELDERLY v0.3.0
     Last Updated: 2025-12-30
   -->
 
   <title>UltraWatch — Elderly Care</title>
+
+  <!-- Leaflet (free) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
   <style>
     :root{
@@ -79,7 +83,6 @@
       user-select:none;
     }
     .btn:hover{filter:brightness(1.08)}
-
     .btn.danger{
       border-color:rgba(251,113,133,.45);
       background:rgba(251,113,133,.12);
@@ -103,7 +106,7 @@
       overflow:hidden;
     }
 
-    /* ===== Tabs (quick people) ===== */
+    /* ===== Tabs ===== */
     .tabs{
       display:flex;
       gap:8px;
@@ -198,8 +201,8 @@
     }
 
     /* ===== Floor / Map ===== */
-    .floor,.map{
-      height:360px;
+    .floor,.mapWrap{
+      height:380px;
       border-radius:16px;
       border:1px solid var(--line);
       background:rgba(0,0,0,.18);
@@ -223,11 +226,38 @@
     }
     .pin.warn{background:var(--warn);box-shadow:0 0 0 6px rgba(250,204,21,.18)}
     .pin.bad{background:var(--bad);box-shadow:0 0 0 6px rgba(251,113,133,.20)}
+
     .mapTag{
       position:absolute;left:12px;top:12px;
       display:inline-flex;gap:8px;align-items:center;
       padding:6px 10px;border-radius:999px;border:1px solid var(--line);
-      font-size:12px;color:var(--muted);background:rgba(0,0,0,.18);
+      font-size:12px;color:var(--muted);background:rgba(0,0,0,.35);
+      z-index:5;
+    }
+    .mapMeta{
+      position:absolute;left:12px;bottom:12px;
+      display:flex;gap:8px;flex-wrap:wrap;
+      z-index:5;
+    }
+
+    /* Leaflet container */
+    #leafletMap{
+      position:absolute;
+      inset:0;
+    }
+
+    /* Make Leaflet controls match dark UI a bit */
+    .leaflet-control-zoom a{
+      background:rgba(20,26,40,.85) !important;
+      color:var(--text) !important;
+      border:1px solid rgba(255,255,255,.12) !important;
+    }
+    .leaflet-control-attribution{
+      background:rgba(20,26,40,.65) !important;
+      color:rgba(233,238,252,.72) !important;
+      border-radius:10px;
+      border:1px solid rgba(255,255,255,.12);
+      padding:2px 6px;
     }
 
     /* ===== Activity ===== */
@@ -274,7 +304,7 @@
 
   <!-- Build Banner (your internal reference) -->
   <div class="build">
-    <div><b>UltraWatch</b> — Build <b>DEMO-ELDERLY v0.2.0</b></div>
+    <div><b>UltraWatch</b> — Build <b>DEMO-ELDERLY v0.3.0</b></div>
     <div>Updated: <b>Dec 30, 2025</b></div>
   </div>
 
@@ -283,8 +313,6 @@
     <div>
       <h1>Elderly Care Dashboard</h1>
       <div class="sub">In-home awareness, safety alerts, and caregiver confidence</div>
-
-      <!-- Quick tabs -->
       <div class="tabs" id="tabs"></div>
     </div>
 
@@ -327,6 +355,7 @@
         </div>
       </div>
 
+      <!-- Floorplan -->
       <div id="floor" class="floor">
         <div class="room" style="left:18px;top:18px;width:42%;height:28%">Bedroom</div>
         <div class="room" style="left:52%;top:18px;width:40%;height:28%">Bathroom</div>
@@ -336,9 +365,15 @@
         <div id="pin" class="pin" style="left:72%;top:76%"></div>
       </div>
 
-      <div id="map" class="map" style="display:none">
+      <!-- Map View (Leaflet) -->
+      <div id="mapWrap" class="mapWrap" style="display:none">
         <div class="mapTag">Map View</div>
-        <div id="gpsPin" class="pin" style="left:64%;top:56%"></div>
+        <div class="mapMeta">
+          <span class="pill">GPS: <b id="gpsLatLng">—</b></span>
+          <span class="pill">Accuracy: <b id="gpsAcc">—</b></span>
+          <span class="pill">Updated: <b id="gpsUpdated">—</b></span>
+        </div>
+        <div id="leafletMap"></div>
       </div>
 
     </div>
@@ -391,32 +426,39 @@
     "": {l:"50%",t:"49%"}
   };
 
+  // Demo GPS baseline (Orlando-ish) for "away" mode
+  const BASE_GPS = { lat: 28.538336, lng: -81.379234 };
+
   // 20 monitored people (editable)
   const people = [
-    { id:"p1", name:"Jack Erickson", room:"Kitchen", lastSensor:"Kitchen", battery:82, status:"Home", state:"ok", lastSeenSec:2, timeInRoom:"00:12:43" },
-    { id:"p2", name:"Christine Visalli", room:"Living Room", lastSensor:"Living Room", battery:76, status:"Home", state:"ok", lastSeenSec:4, timeInRoom:"00:08:19" },
-    { id:"p3", name:"Dail Skogstrom", room:"Bedroom", lastSensor:"Bedroom", battery:64, status:"Home", state:"ok", lastSeenSec:7, timeInRoom:"01:02:11" },
-    { id:"p4", name:"Amada Morales", room:"Bathroom", lastSensor:"Bathroom", battery:71, status:"Home", state:"ok", lastSeenSec:3, timeInRoom:"00:04:52" },
+    { id:"p1", name:"Jack Erickson", room:"Kitchen", lastSensor:"Kitchen", battery:82, status:"Home", state:"ok", lastSeenSec:2, timeInRoom:"00:12:43",
+      gps:{ lat: BASE_GPS.lat+0.0021, lng: BASE_GPS.lng-0.0014, accM:18, updatedAt:Date.now() } },
+    { id:"p2", name:"Christine Visalli", room:"Living Room", lastSensor:"Living Room", battery:76, status:"Home", state:"ok", lastSeenSec:4, timeInRoom:"00:08:19",
+      gps:{ lat: BASE_GPS.lat+0.0012, lng: BASE_GPS.lng-0.0006, accM:22, updatedAt:Date.now() } },
+    { id:"p3", name:"Dail Skogstrom", room:"Bedroom", lastSensor:"Bedroom", battery:64, status:"Home", state:"ok", lastSeenSec:7, timeInRoom:"01:02:11",
+      gps:{ lat: BASE_GPS.lat+0.0033, lng: BASE_GPS.lng-0.0020, accM:15, updatedAt:Date.now() } },
+    { id:"p4", name:"Amada Morales", room:"Bathroom", lastSensor:"Bathroom", battery:71, status:"Home", state:"ok", lastSeenSec:3, timeInRoom:"00:04:52",
+      gps:{ lat: BASE_GPS.lat+0.0007, lng: BASE_GPS.lng-0.0011, accM:25, updatedAt:Date.now() } },
 
-    { id:"p5", name:"Evelyn Carter", room:"Kitchen", lastSensor:"Kitchen", battery:89, status:"Home", state:"ok", lastSeenSec:5, timeInRoom:"00:20:06" },
-    { id:"p6", name:"Harold Bennett", room:"Living Room", lastSensor:"Living Room", battery:58, status:"Home", state:"ok", lastSeenSec:8, timeInRoom:"00:31:44" },
-    { id:"p7", name:"Rosa Delgado", room:"Bedroom", lastSensor:"Bedroom", battery:80, status:"Home", state:"ok", lastSeenSec:6, timeInRoom:"02:10:03" },
-    { id:"p8", name:"Stanley Young", room:"Kitchen", lastSensor:"Kitchen", battery:67, status:"Home", state:"ok", lastSeenSec:9, timeInRoom:"00:14:28" },
-    { id:"p9", name:"Martha Price", room:"Living Room", lastSensor:"Living Room", battery:73, status:"Home", state:"ok", lastSeenSec:3, timeInRoom:"00:45:10" },
-    { id:"p10", name:"Arthur Lee", room:"Bedroom", lastSensor:"Bedroom", battery:61, status:"Home", state:"ok", lastSeenSec:12, timeInRoom:"00:22:18" },
-    { id:"p11", name:"Nina Kim", room:"Kitchen", lastSensor:"Kitchen", battery:86, status:"Home", state:"ok", lastSeenSec:4, timeInRoom:"00:07:53" },
-    { id:"p12", name:"Frank Owens", room:"Living Room", lastSensor:"Living Room", battery:69, status:"Home", state:"ok", lastSeenSec:10, timeInRoom:"00:11:02" },
-    { id:"p13", name:"Olivia Stone", room:"Bathroom", lastSensor:"Bathroom", battery:78, status:"Home", state:"ok", lastSeenSec:6, timeInRoom:"00:03:37" },
-    { id:"p14", name:"Paul Rivera", room:"Kitchen", lastSensor:"Kitchen", battery:55, status:"Home", state:"ok", lastSeenSec:14, timeInRoom:"00:05:49" },
-    { id:"p15", name:"Linda Chavez", room:"Bedroom", lastSensor:"Bedroom", battery:83, status:"Home", state:"ok", lastSeenSec:7, timeInRoom:"01:18:00" },
-    { id:"p16", name:"George Miles", room:"Living Room", lastSensor:"Living Room", battery:62, status:"Home", state:"ok", lastSeenSec:5, timeInRoom:"00:09:14" },
-    { id:"p17", name:"Patricia Hall", room:"Kitchen", lastSensor:"Kitchen", battery:90, status:"Home", state:"ok", lastSeenSec:2, timeInRoom:"00:16:31" },
-    { id:"p18", name:"Victor Nguyen", room:"Bathroom", lastSensor:"Bathroom", battery:74, status:"Home", state:"ok", lastSeenSec:6, timeInRoom:"00:02:22" },
-    { id:"p19", name:"Teresa Brooks", room:"Living Room", lastSensor:"Living Room", battery:68, status:"Home", state:"ok", lastSeenSec:11, timeInRoom:"00:40:05" },
-    { id:"p20", name:"Samuel Wright", room:"Kitchen", lastSensor:"Kitchen", battery:77, status:"Home", state:"ok", lastSeenSec:9, timeInRoom:"00:13:09" },
+    // Fill out more names (safe placeholders)
+    ...[
+      "Evelyn Carter","Harold Bennett","Rosa Delgado","Stanley Young","Martha Price",
+      "Arthur Lee","Nina Kim","Frank Owens","Olivia Stone","Paul Rivera",
+      "Linda Chavez","George Miles","Patricia Hall","Victor Nguyen","Teresa Brooks","Samuel Wright"
+    ].map((n,i)=>({
+      id:"p"+(i+5),
+      name:n,
+      room: (i%4===0)?"Kitchen":(i%4===1)?"Living Room":(i%4===2)?"Bedroom":"Bathroom",
+      lastSensor: (i%4===0)?"Kitchen":(i%4===1)?"Living Room":(i%4===2)?"Bedroom":"Bathroom",
+      battery: 55 + (i*2 % 40),
+      status:"Home",
+      state:"ok",
+      lastSeenSec: 3 + (i%10),
+      timeInRoom: "00:" + String(5+i).padStart(2,"0") + ":" + String(10+i*3%60).padStart(2,"0"),
+      gps:{ lat: BASE_GPS.lat + 0.001 + (i*0.00035), lng: BASE_GPS.lng - 0.001 + (i*0.00025), accM: 14 + (i%18), updatedAt: Date.now() }
+    }))
   ];
 
-  // Selected person
   let selectedId = "p1";
 
   // Activity per person
@@ -429,7 +471,6 @@
   // =========================
   // Alarm (audible)
   // =========================
-  // Uses Web Audio API; sound will play after a user gesture (button click), which our buttons provide.
   let audioCtx = null;
   let osc = null;
   let gain = null;
@@ -439,8 +480,6 @@
     try{
       if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       if(audioCtx.state === "suspended") audioCtx.resume();
-
-      // If already running, do nothing
       if(alarmTimer) return;
 
       gain = audioCtx.createGain();
@@ -453,7 +492,6 @@
       osc.connect(gain);
       osc.start();
 
-      // Pulse the gain to create beeps
       alarmTimer = setInterval(() => {
         const now = audioCtx.currentTime;
         gain.gain.cancelScheduledValues(now);
@@ -477,20 +515,99 @@
   }
 
   // =========================
-  // Rendering
+  // Leaflet Map
   // =========================
-  function timeNow(){
-    return new Date().toLocaleTimeString();
+  let map = null;
+  let gpsDot = null;
+  let gpsAccuracy = null;
+  let mapInitialized = false;
+
+  function initMapOnce(){
+    if(mapInitialized) return;
+    mapInitialized = true;
+
+    // Initialize
+    map = L.map('leafletMap', { zoomControl:true }).setView([BASE_GPS.lat, BASE_GPS.lng], 13);
+
+    // Free tiles (OSM)
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    // Dot + accuracy circle
+    gpsDot = L.circleMarker([BASE_GPS.lat, BASE_GPS.lng], {
+      radius: 8,
+      color: '#ffffff',
+      weight: 2,
+      fillColor: '#4ade80',
+      fillOpacity: 0.9
+    }).addTo(map);
+
+    gpsAccuracy = L.circle([BASE_GPS.lat, BASE_GPS.lng], {
+      radius: 20,
+      color: '#60a5fa',
+      weight: 1,
+      fillColor: '#60a5fa',
+      fillOpacity: 0.12
+    }).addTo(map);
   }
 
-  function getSelected(){
-    return people.find(p => p.id === selectedId);
+  function setDotColorForState(state){
+    if(!gpsDot) return;
+    // Keep colors in CSS variables in spirit, but Leaflet needs explicit values
+    const fill = (state==="bad") ? "#fb7185" : (state==="warn") ? "#facc15" : "#4ade80";
+    gpsDot.setStyle({ fillColor: fill });
   }
+
+  function updateMapForPerson(p, pan=false){
+    initMapOnce();
+    if(!p.gps) return;
+
+    const lat = p.gps.lat;
+    const lng = p.gps.lng;
+    const acc = p.gps.accM ?? 20;
+
+    gpsDot.setLatLng([lat,lng]);
+    gpsAccuracy.setLatLng([lat,lng]);
+    gpsAccuracy.setRadius(acc);
+
+    setDotColorForState(p.state);
+
+    document.getElementById("gpsLatLng").textContent = lat.toFixed(6) + ", " + lng.toFixed(6);
+    document.getElementById("gpsAcc").textContent = acc + " m";
+    const secs = Math.max(0, Math.round((Date.now() - p.gps.updatedAt) / 1000));
+    document.getElementById("gpsUpdated").textContent = secs + "s ago";
+
+    if(pan){
+      map.setView([lat,lng], Math.max(map.getZoom(), 15));
+    }
+
+    // When container becomes visible, Leaflet needs a resize kick
+    setTimeout(() => { map.invalidateSize(); }, 50);
+  }
+
+  // Small demo “movement” when away: random jitter
+  function jitterGps(p){
+    if(!p.gps) p.gps = { lat: BASE_GPS.lat, lng: BASE_GPS.lng, accM: 20, updatedAt: Date.now() };
+    // roughly ~5–25 meters per tick
+    const dLat = (Math.random() - 0.5) * 0.00018;
+    const dLng = (Math.random() - 0.5) * 0.00018;
+    p.gps.lat += dLat;
+    p.gps.lng += dLng;
+    p.gps.accM = 12 + Math.floor(Math.random() * 25);
+    p.gps.updatedAt = Date.now();
+  }
+
+  // =========================
+  // Rendering
+  // =========================
+  function timeNow(){ return new Date().toLocaleTimeString(); }
+  function getSelected(){ return people.find(p => p.id === selectedId); }
 
   function renderTabs(){
     const tabs = document.getElementById("tabs");
     tabs.innerHTML = "";
-    // Show first 6 as quick tabs (you can change this)
     const quick = people.slice(0, 6);
     quick.forEach(p => {
       const el = document.createElement("div");
@@ -538,28 +655,26 @@
     document.getElementById("time").textContent = p.timeInRoom || "—";
     document.getElementById("statusText").textContent = p.status;
 
-    // state dot
     const sd = document.getElementById("stateDot");
     sd.className = "dot" + (p.state==="warn" ? " warn" : p.state==="bad" ? " bad" : "");
     document.getElementById("stateText").textContent =
       p.state==="ok" ? "OK" : p.state==="warn" ? "LINGER" : "ALERT";
 
-    // pin + view
+    // Floor pin
     const pin = document.getElementById("pin");
     pin.className = "pin" + (p.state==="warn" ? " warn" : p.state==="bad" ? " bad" : "");
-
-    if(p.status === "Left Home" || (p.lastSeenSec >= 30 && p.lastSensor === "Front Door")){
-      // show map for left home (or timeout + front door rule)
-      document.getElementById("floor").style.display = "none";
-      document.getElementById("map").style.display = "block";
-    }else{
-      document.getElementById("floor").style.display = "block";
-      document.getElementById("map").style.display = "none";
-    }
-
     const pos = ROOM_POS[p.room || ""] || ROOM_POS[""];
     pin.style.left = pos.l;
     pin.style.top = pos.t;
+
+    // View selection: if away or "left home" show map
+    const showMap = (p.status === "Left Home") || (p.lastSeenSec >= 30 && p.lastSensor === "Front Door");
+    document.getElementById("floor").style.display = showMap ? "none" : "block";
+    document.getElementById("mapWrap").style.display = showMap ? "block" : "none";
+
+    if(showMap){
+      updateMapForPerson(p, true);
+    }
 
     renderActivity();
   }
@@ -574,7 +689,6 @@
       row.innerHTML = `<div><b>${escapeHtml(e.msg)}</b></div><div class="t">${escapeHtml(e.t)}</div>`;
       log.appendChild(row);
     });
-    // scroll to bottom (latest at bottom)
     log.scrollTop = log.scrollHeight;
   }
 
@@ -609,18 +723,18 @@
   function simulateMove(){
     const p = getSelected();
     if(p.status === "Left Home"){
-      // bring them back home
+      // bring back home via front door
       p.status = "Home";
       p.lastSeenSec = 2;
       p.lastSensor = "Front Door";
       p.room = "Front Door";
       p.timeInRoom = "00:00:02";
+      p.state = "ok";
       addEvent(p.id, "Returned home — Front Door");
       renderTabs(); renderPeople(); renderMain();
       return;
     }
 
-    // move to next room
     const i = Math.max(0, ROOMS.indexOf(p.room));
     const next = ROOMS[(i + 1) % ROOMS.length];
     p.room = next;
@@ -646,15 +760,15 @@
     triggerSOSFor(p.id);
   }
 
-  // Not Seen: increments "last seen", applies "Left Home" rule if last sensor was Front Door
   function simulateNotSeen(){
     const p = getSelected();
-    // simulate a timeout event
     p.lastSeenSec = 45;
 
     if(p.lastSensor === "Front Door"){
       p.status = "Left Home";
       p.room = "";
+      // kick GPS a bit when leaving (looks natural)
+      jitterGps(p);
       addEvent(p.id, "Not detected after Front Door — marked as Left Home");
     }else{
       p.state = "warn";
@@ -667,16 +781,13 @@
   function triggerSOSFor(pid){
     const p = people.find(x => x.id === pid);
     p.state = "bad";
-    p.status = (p.status === "Left Home") ? "Left Home" : "Home";
     addEvent(pid, "Emergency alert — SOS triggered");
-    // Switch to that person
     selectedId = pid;
     renderTabs(); renderPeople(); renderMain();
     showAlert("Emergency Alert", `SOS triggered for ${p.name}. Caregiver notified.`);
     startAlarm();
   }
 
-  // Random SOS for any person
   function testSOS(){
     const idx = Math.floor(Math.random() * people.length);
     triggerSOSFor(people[idx].id);
@@ -697,19 +808,19 @@
   }
 
   // =========================
-  // Lightweight "live" feel: tick lastSeen counters
+  // Lightweight “live” feel
   // =========================
   setInterval(() => {
     people.forEach(p => {
-      // If not in active alert, we gently tick
       p.lastSeenSec = Math.min(999, p.lastSeenSec + 1);
-      // Keep Left Home as stable
+
+      // If away, keep GPS moving a bit for realism
       if(p.status === "Left Home"){
-        p.room = "";
+        jitterGps(p);
       }
     });
 
-    // render only the visible parts (fast enough for demo)
+    // render visible parts
     renderTabs();
     renderPeople();
     renderMain();
