@@ -6,11 +6,15 @@
 
   <!--
     UltraWatch (Android Shell Mimic)
-    Build: DEMO-ANDROID-SHELL v0.1.0
+    Build: DEMO-ANDROID-SHELL-MAP v0.2.0
     Last Updated: 2025-12-30
   -->
 
   <title>UltraWatch</title>
+
+  <!-- Leaflet (free) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
 
   <style>
     :root{
@@ -21,7 +25,7 @@
       --line:rgba(255,255,255,.12);
       --text:#e9eefc;
       --muted:rgba(233,238,252,.70);
-      --accent:#60a5fa;    /* MAUI-ish blue */
+      --accent:#60a5fa;
       --good:#4ade80;
       --warn:#facc15;
       --bad:#fb7185;
@@ -40,12 +44,7 @@
       font-family:var(--font);
     }
 
-    /* "Device" frame (optional). Looks like an Android app screen. */
-    .deviceWrap{
-      max-width: 420px;
-      margin: 18px auto;
-      padding: 0 12px 18px;
-    }
+    .deviceWrap{max-width: 420px; margin: 18px auto; padding: 0 12px 18px;}
     .device{
       background: rgba(0,0,0,.20);
       border: 1px solid rgba(255,255,255,.10);
@@ -54,7 +53,6 @@
       overflow:hidden;
     }
 
-    /* Status bar */
     .statusBar{
       height: 26px;
       display:flex;
@@ -75,7 +73,6 @@
       font-size:11px;
     }
 
-    /* App bar */
     .appBar{
       background: linear-gradient(180deg, rgba(17,26,47,.92), rgba(17,26,47,.76));
       backdrop-filter: blur(10px);
@@ -86,35 +83,20 @@
       justify-content:space-between;
       gap:12px;
     }
-    .appTitle{
-      display:flex;flex-direction:column;gap:2px;
-    }
-    .appTitle h1{
-      margin:0;
-      font-size:16px;
-      letter-spacing:.2px;
-      font-weight: 900;
-    }
-    .subtitle{
-      font-size:12px;
-      color: var(--muted);
-    }
+    .appTitle{display:flex;flex-direction:column;gap:2px;}
+    .appTitle h1{margin:0;font-size:16px;letter-spacing:.2px;font-weight:900;}
+    .subtitle{font-size:12px;color:var(--muted);}
     .iconBtn{
-      width: 38px;height:38px;
-      border-radius: 12px;
+      width: 38px;height:38px;border-radius: 12px;
       border:1px solid rgba(255,255,255,.12);
       background: rgba(255,255,255,.06);
       display:flex;align-items:center;justify-content:center;
-      cursor:pointer;
-      user-select:none;
+      cursor:pointer;user-select:none;
     }
     .iconBtn:hover{filter:brightness(1.08)}
 
-    /* Tabs (like MAUI Shell top tabs) */
     .tabs{
-      display:flex;
-      gap:8px;
-      padding: 10px 12px;
+      display:flex; gap:8px; padding: 10px 12px;
       background: rgba(17,26,47,.55);
       border-bottom: 1px solid rgba(255,255,255,.08);
       overflow:auto;
@@ -136,7 +118,6 @@
       color: #d7ebff;
     }
 
-    /* Main content */
     .content{
       padding: 12px;
       min-height: 640px;
@@ -153,27 +134,15 @@
       margin-bottom: 12px;
     }
     .cardHeader{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:10px;
-      margin-bottom: 8px;
+      display:flex; align-items:center; justify-content:space-between;
+      gap:10px; margin-bottom: 8px;
     }
-    .cardHeader h2{
-      margin:0;
-      font-size: 13px;
-      font-weight: 900;
-      letter-spacing:.2px;
-    }
+    .cardHeader h2{margin:0;font-size:13px;font-weight:900;letter-spacing:.2px;}
     .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;}
     .muted{color:var(--muted)}
     .tiny{font-size:11px}
 
-    /* List rows like MAUI CollectionView */
-    .list{
-      display:flex;flex-direction:column;
-      gap:10px;
-    }
+    .list{display:flex;flex-direction:column; gap:10px;}
     .row{
       background: rgba(0,0,0,.18);
       border:1px solid rgba(255,255,255,.10);
@@ -186,10 +155,7 @@
       cursor:pointer;
     }
     .row:hover{filter:brightness(1.06)}
-    .left{
-      display:flex;gap:10px;align-items:center;
-      min-width: 0;
-    }
+    .left{display:flex;gap:10px;align-items:center; min-width: 0;}
     .avatar{
       width: 36px;height:36px;border-radius: 14px;
       display:flex;align-items:center;justify-content:center;
@@ -199,25 +165,11 @@
       color: rgba(233,238,252,.85);
       flex: 0 0 auto;
     }
-    .titleBlock{
-      min-width:0;
-      display:flex;flex-direction:column;gap:2px;
-    }
-    .name{
-      font-weight: 900;
-      font-size: 13px;
-      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-    }
-    .meta{
-      font-size: 11px;
-      color: var(--muted);
-      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
-    }
-    .right{
-      display:flex;gap:8px;align-items:center;flex:0 0 auto;
-    }
+    .titleBlock{min-width:0; display:flex;flex-direction:column;gap:2px;}
+    .name{font-weight:900;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .meta{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .right{display:flex;gap:8px;align-items:center;flex:0 0 auto;}
 
-    /* Chips */
     .chip{
       display:inline-flex;align-items:center;gap:8px;
       padding: 6px 10px;
@@ -228,24 +180,15 @@
       color: rgba(233,238,252,.82);
       white-space:nowrap;
     }
-    .dot{
-      width: 9px;height:9px;border-radius:50%;
-      background: var(--good);
-    }
+    .dot{width: 9px;height:9px;border-radius:50%;background: var(--good);}
     .dot.warn{background: var(--warn)}
     .dot.bad{background: var(--bad)}
 
-    /* Switch (MAUI ToggleSwitch mimic) */
     .switchRow{
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:10px;
-      padding: 10px 0 0;
+      display:flex; align-items:center; justify-content:space-between;
+      gap:10px; padding: 10px 0 0;
     }
-    .switchLabel{
-      display:flex;flex-direction:column;gap:2px;
-    }
+    .switchLabel{display:flex;flex-direction:column;gap:2px;}
     .switchLabel b{font-size:12px}
     .switchLabel span{font-size:11px;color:var(--muted)}
 
@@ -253,9 +196,7 @@
       width: 50px;height: 28px;border-radius: 999px;
       border:1px solid rgba(255,255,255,.16);
       background: rgba(255,255,255,.08);
-      position:relative;
-      cursor:pointer;
-      flex:0 0 auto;
+      position:relative; cursor:pointer; flex:0 0 auto;
     }
     .knob{
       width: 22px;height:22px;border-radius: 999px;
@@ -271,7 +212,6 @@
     }
     .toggle.on .knob{left: 24px}
 
-    /* Buttons */
     .btnRow{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
     .btn{
       border:1px solid rgba(255,255,255,.12);
@@ -290,7 +230,6 @@
       color: #ffe6ea;
     }
 
-    /* Toast */
     .toast{
       position: fixed;
       left: 50%;
@@ -306,14 +245,12 @@
       display:none;
       max-width: 88%;
       box-shadow: 0 10px 30px rgba(0,0,0,.35);
+      z-index: 9999;
     }
 
-    /* Bottom nav (Android) */
     .bottomNav{
-      display:grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap:6px;
-      padding: 10px 12px 12px;
+      display:grid; grid-template-columns: repeat(4, 1fr);
+      gap:6px; padding: 10px 12px 12px;
       background: rgba(17,26,47,.78);
       border-top: 1px solid rgba(255,255,255,.10);
     }
@@ -344,6 +281,28 @@
       border-top: 1px solid rgba(255,255,255,.06);
       background: rgba(0,0,0,.12);
     }
+
+    /* Leaflet container inside the phone screen */
+    #leafletMap{
+      height: 320px;
+      border-radius: 16px;
+      overflow:hidden;
+      border: 1px solid rgba(255,255,255,.10);
+      background: rgba(0,0,0,.18);
+    }
+
+    /* Nice-looking marker labels */
+    .uwLabel{
+      background: rgba(0,0,0,.60);
+      border: 1px solid rgba(255,255,255,.16);
+      color: rgba(233,238,252,.92);
+      padding: 4px 8px;
+      border-radius: 999px;
+      font-weight: 900;
+      font-size: 11px;
+      backdrop-filter: blur(6px);
+      box-shadow: 0 10px 22px rgba(0,0,0,.25);
+    }
   </style>
 </head>
 
@@ -351,7 +310,6 @@
   <div class="deviceWrap">
     <div class="device">
 
-      <!-- Status bar -->
       <div class="statusBar">
         <span id="sbTime">12:34</span>
         <div class="sbRight">
@@ -360,7 +318,6 @@
         </div>
       </div>
 
-      <!-- App bar -->
       <div class="appBar">
         <div class="appTitle">
           <h1>UltraWatch</h1>
@@ -372,7 +329,6 @@
         </div>
       </div>
 
-      <!-- Tabs -->
       <div class="tabs" id="tabs">
         <div class="tab active" data-tab="people">People</div>
         <div class="tab" data-tab="timeline">Timeline</div>
@@ -380,7 +336,6 @@
         <div class="tab" data-tab="settings">Settings</div>
       </div>
 
-      <!-- Main content -->
       <div class="content">
 
         <!-- PEOPLE TAB -->
@@ -388,7 +343,7 @@
           <div class="card">
             <div class="cardHeader">
               <h2>Live status</h2>
-              <span class="tiny muted mono">Build: DEMO-ANDROID-SHELL v0.1.0</span>
+              <span class="tiny muted mono">Build: DEMO-ANDROID-SHELL-MAP v0.2.0</span>
             </div>
 
             <div class="switchRow">
@@ -434,25 +389,25 @@
           </div>
         </div>
 
-        <!-- MAP TAB -->
+        <!-- MAP TAB (Leaflet GPS map) -->
         <div class="tabPanel" id="panel_map" style="display:none;">
           <div class="card">
             <div class="cardHeader">
-              <h2>Map</h2>
-              <span class="tiny muted">Multi-person pins</span>
+              <h2>GPS Map</h2>
+              <span class="tiny muted">Live pins (demo data)</span>
             </div>
-            <div style="height:280px;border-radius:16px;border:1px solid rgba(255,255,255,.10);background:rgba(0,0,0,.18);position:relative;overflow:hidden;">
-              <div style="position:absolute;inset:0;background:
-                radial-gradient(600px 240px at 40% 30%, rgba(96,165,250,.18), transparent 60%),
-                radial-gradient(500px 240px at 80% 70%, rgba(74,222,128,.12), transparent 55%),
-                rgba(0,0,0,.10);"></div>
 
-              <!-- simple "zones" -->
-              <div style="position:absolute;left:10px;top:12px;padding:6px 10px;border-radius:999px;border:1px solid rgba(255,255,255,.12);background:rgba(0,0,0,.20);font-size:11px;color:rgba(233,238,252,.75);">Property / School / Home</div>
+            <div id="leafletMap"></div>
 
-              <div id="mapPins"></div>
+            <div class="btnRow">
+              <button class="btn" id="btnCenterSelected">Center on selected</button>
+              <button class="btn" id="btnCenterAll">Fit all</button>
+              <button class="btn" id="btnSimWalk">Simulate movement</button>
             </div>
-            <div class="tiny muted" style="margin-top:8px;">In production this map can show GPS when a phone leaves the property.</div>
+
+            <div class="tiny muted" style="margin-top:8px;">
+              In production, the UltraWatch phone app can update Firebase with GPS while outside the home/property.
+            </div>
           </div>
         </div>
 
@@ -497,7 +452,6 @@
 
       </div>
 
-      <!-- Bottom nav -->
       <div class="bottomNav" id="bottomNav">
         <div class="navItem active" data-tab="people"><span class="navIcon">👥</span>People</div>
         <div class="navItem" data-tab="timeline"><span class="navIcon">🕒</span>Timeline</div>
@@ -513,13 +467,17 @@
 
   <div class="toast" id="toast">—</div>
 
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+          integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
   <script>
-    // ----- Mock data that feels like your MAUI app screens -----
+    // ----- Mock data (with GPS coords) -----
+    // Centered near Central Florida by default (Orlando-ish).
     const people = [
-      { name:"Jack Erickson",  room:"Kitchen",     state:"ok",   dwell:"12:14", age:"2s" },
-      { name:"Christine Visalli", room:"Living Room", state:"warn", dwell:"04:02", age:"14s" },
-      { name:"Dail Skogstrom", room:"Backyard",   state:"ok",   dwell:"00:45", age:"1s" },
-      { name:"Amada Morales",  room:"Pool Area",  state:"bad",  dwell:"00:18", age:"1s" }
+      { name:"Jack Erickson",      room:"Kitchen",     state:"ok",   dwell:"12:14", age:"2s",  gps:{lat:28.5383, lng:-81.3792} },
+      { name:"Christine Visalli",  room:"Living Room", state:"warn", dwell:"04:02", age:"14s", gps:{lat:28.5402, lng:-81.3768} },
+      { name:"Dail Skogstrom",     room:"Backyard",    state:"ok",   dwell:"00:45", age:"1s",  gps:{lat:28.5371, lng:-81.3821} },
+      { name:"Amada Morales",      room:"Pool Area",   state:"bad",  dwell:"00:18", age:"1s",  gps:{lat:28.5391, lng:-81.3810} }
     ];
 
     const timeline = {
@@ -544,7 +502,7 @@
 
     let selectedPerson = people[0].name;
 
-    // ----- UI helpers -----
+    // ----- Toast -----
     function toast(msg){
       const el = document.getElementById("toast");
       el.textContent = msg;
@@ -553,16 +511,13 @@
       toast._t = setTimeout(()=> el.style.display="none", 1600);
     }
 
-    function setToggle(el, on){
-      el.classList.toggle("on", !!on);
-    }
-
     function dotClass(state){
       if(state==="bad") return "dot bad";
       if(state==="warn") return "dot warn";
       return "dot";
     }
 
+    // ----- People list -----
     function renderPeople(){
       const list = document.getElementById("peopleList");
       list.innerHTML = "";
@@ -585,12 +540,14 @@
         row.onclick = ()=>{
           selectedPerson = p.name;
           renderTimeline();
+          refreshMapMarkers(true);
           toast("Selected: " + p.name);
         };
         list.appendChild(row);
       });
     }
 
+    // ----- Timeline -----
     function renderTimeline(){
       const list = document.getElementById("timelineList");
       const hint = document.getElementById("timelineHint");
@@ -609,60 +566,13 @@
               <div class="meta">${e.t}</div>
             </div>
           </div>
-          <div class="right">
-            <span class="chip">${e.t}</span>
-          </div>
+          <div class="right"><span class="chip">${e.t}</span></div>
         `;
         list.appendChild(row);
       });
     }
 
-    function renderMap(){
-      const host = document.getElementById("mapPins");
-      host.innerHTML = "";
-      // Place 4 pins deterministically
-      const positions = [
-        {x:30,y:45},{x:55,y:35},{x:45,y:70},{x:78,y:52}
-      ];
-      people.forEach((p,i)=>{
-        const pin = document.createElement("div");
-        const s = p.state;
-        pin.style.position = "absolute";
-        pin.style.left = positions[i].x + "%";
-        pin.style.top  = positions[i].y + "%";
-        pin.style.transform = "translate(-50%,-50%)";
-        pin.style.width = "12px";
-        pin.style.height = "12px";
-        pin.style.borderRadius = "999px";
-        pin.style.border = "2px solid rgba(255,255,255,.75)";
-        pin.style.boxShadow = s==="bad" ? "0 0 0 7px rgba(251,113,133,.14)" :
-                         s==="warn"? "0 0 0 7px rgba(250,204,21,.12)" :
-                                   "0 0 0 7px rgba(74,222,128,.12)";
-        pin.style.background = s==="bad" ? "var(--bad)" : s==="warn" ? "var(--warn)" : "var(--good)";
-        pin.style.cursor = "pointer";
-        pin.title = p.name + " • " + p.room;
-
-        pin.onclick = ()=>{ selectedPerson = p.name; renderTimeline(); toast(p.name + " • " + p.room); };
-
-        const tag = document.createElement("div");
-        tag.style.position="absolute";
-        tag.style.left = positions[i].x + "%";
-        tag.style.top  = positions[i].y + "%";
-        tag.style.transform="translate(-50%,-170%)";
-        tag.style.padding="4px 8px";
-        tag.style.borderRadius="999px";
-        tag.style.border="1px solid rgba(255,255,255,.12)";
-        tag.style.background="rgba(0,0,0,.35)";
-        tag.style.color="rgba(233,238,252,.88)";
-        tag.style.fontSize="11px";
-        tag.textContent = p.name.split(" ")[0];
-
-        host.appendChild(pin);
-        host.appendChild(tag);
-      });
-    }
-
-    // ----- Tabs / Bottom nav routing -----
+    // ----- Tabs / Bottom nav -----
     function showTab(tab){
       document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active", t.dataset.tab===tab));
       document.querySelectorAll(".navItem").forEach(n=>n.classList.toggle("active", n.dataset.tab===tab));
@@ -670,8 +580,11 @@
       document.querySelectorAll(".tabPanel").forEach(p=>p.style.display="none");
       document.getElementById("panel_" + tab).style.display = "block";
 
-      if(tab==="map") renderMap();
-      if(tab==="timeline") renderTimeline();
+      if(tab==="map"){
+        // Leaflet needs a resize invalidation after showing a hidden div
+        setTimeout(()=>{ if(map) map.invalidateSize(); }, 60);
+        refreshMapMarkers(false);
+      }
     }
 
     document.getElementById("tabs").addEventListener("click", (e)=>{
@@ -685,12 +598,12 @@
       showTab(n.dataset.tab);
     });
 
-    // ----- Toggle behavior -----
+    // ----- Toggles -----
     function wireToggle(id){
       const el = document.getElementById(id);
       el.addEventListener("click", ()=> {
         el.classList.toggle("on");
-        toast((id.replace("toggle","")) + ": " + (el.classList.contains("on") ? "On" : "Off"));
+        toast(id.replace("toggle","") + ": " + (el.classList.contains("on") ? "On" : "Off"));
       });
     }
     ["toggleLive","togglePool","toggleNotif","toggleVibe","toggleDark"].forEach(wireToggle);
@@ -698,30 +611,186 @@
     // ----- Buttons -----
     document.getElementById("btnBell").onclick = ()=> toast("Test alert");
     document.getElementById("btnTestSOS").onclick = ()=> {
-      // randomize an SOS state in the mock list
       const idx = Math.floor(Math.random()*people.length);
       people[idx].state = "bad";
       people[idx].room = "Pool Area";
       people[idx].dwell = "00:08";
       toast("SOS triggered: " + people[idx].name);
-      renderPeople(); renderMap();
+      renderPeople();
+      refreshMapMarkers(false);
     };
     document.getElementById("btnClear").onclick = ()=> {
       people.forEach(p=> p.state = "ok");
       toast("Alerts cleared");
-      renderPeople(); renderMap();
+      renderPeople();
+      refreshMapMarkers(false);
     };
     document.getElementById("btnExport").onclick = ()=> toast("Export queued");
     document.getElementById("btnSupport").onclick = ()=> toast("Support: 407-555-0123");
 
     // ----- Fake status bar clock -----
-    function tick(){
+    function tickClock(){
       const d = new Date();
       const hh = String(d.getHours()).padStart(2,"0");
       const mm = String(d.getMinutes()).padStart(2,"0");
       document.getElementById("sbTime").textContent = hh + ":" + mm;
     }
-    setInterval(tick, 1000); tick();
+    setInterval(tickClock, 1000); tickClock();
+
+    // ===== Leaflet GPS Map =====
+    let map = null;
+    const markers = new Map(); // name -> marker
+    const labelMarkers = new Map(); // name -> marker
+
+    function markerColor(state){
+      if(state==="bad") return getCss("--bad");
+      if(state==="warn") return getCss("--warn");
+      return getCss("--good");
+    }
+    function getCss(varName){
+      return getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+    }
+
+    // Simple circle-marker icon using DivIcon so we can color it per person
+    function makePinIcon(color, selected){
+      const size = selected ? 18 : 14;
+      const ring = selected ? "0 0 0 8px rgba(96,165,250,.18)" : "0 0 0 7px rgba(0,0,0,.15)";
+      const html = `
+        <div style="
+          width:${size}px;height:${size}px;border-radius:999px;
+          background:${color};
+          border:2px solid rgba(255,255,255,.85);
+          box-shadow:${ring};
+        "></div>`;
+      return L.divIcon({
+        html,
+        className: "",
+        iconSize: [size, size],
+        iconAnchor: [size/2, size/2]
+      });
+    }
+
+    function makeLabelIcon(text){
+      return L.divIcon({
+        html: `<div class="uwLabel">${escapeHtml(text)}</div>`,
+        className: "",
+        iconSize: [1,1],
+        iconAnchor: [0, 28]
+      });
+    }
+
+    function escapeHtml(s){
+      return String(s).replace(/[&<>"']/g, (c)=>({
+        "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"
+      }[c]));
+    }
+
+    function initMap(){
+      if(map) return;
+
+      // Default center: near first person
+      const c = people[0].gps || {lat:28.5383, lng:-81.3792};
+      map = L.map("leafletMap", { zoomControl: false }).setView([c.lat, c.lng], 14);
+
+      // OSM tiles (free)
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 19,
+        attribution: "&copy; OpenStreetMap"
+      }).addTo(map);
+
+      // Small zoom buttons like mobile apps
+      L.control.zoom({ position:"bottomright" }).addTo(map);
+
+      refreshMapMarkers(false);
+      fitAll();
+    }
+
+    function selectedObj(){
+      return people.find(p=>p.name===selectedPerson) || people[0];
+    }
+
+    function fitAll(){
+      const pts = people.map(p=>p.gps).filter(Boolean);
+      if(!pts.length) return;
+      const bounds = L.latLngBounds(pts.map(g=>[g.lat, g.lng]));
+      map.fitBounds(bounds.pad(0.22));
+    }
+
+    function centerSelected(){
+      const p = selectedObj();
+      if(!p || !p.gps) return;
+      map.setView([p.gps.lat, p.gps.lng], 16, { animate:true });
+    }
+
+    function refreshMapMarkers(centerOnSelected){
+      initMap(); // safe
+
+      // Update markers
+      people.forEach(p=>{
+        if(!p.gps) return;
+
+        const isSel = (p.name === selectedPerson);
+        const col = markerColor(p.state);
+
+        const icon = makePinIcon(col, isSel);
+        const labelIcon = makeLabelIcon(p.name.split(" ")[0]);
+
+        if(!markers.has(p.name)){
+          const m = L.marker([p.gps.lat, p.gps.lng], { icon }).addTo(map);
+          m.on("click", ()=>{
+            selectedPerson = p.name;
+            renderTimeline();
+            renderPeople();
+            refreshMapMarkers(false);
+            toast(p.name + " • " + (p.room || "—"));
+          });
+          markers.set(p.name, m);
+        }else{
+          const m = markers.get(p.name);
+          m.setLatLng([p.gps.lat, p.gps.lng]);
+          m.setIcon(icon);
+        }
+
+        if(!labelMarkers.has(p.name)){
+          const lm = L.marker([p.gps.lat, p.gps.lng], { icon: labelIcon, interactive:false }).addTo(map);
+          labelMarkers.set(p.name, lm);
+        }else{
+          const lm = labelMarkers.get(p.name);
+          lm.setLatLng([p.gps.lat, p.gps.lng]);
+          lm.setIcon(labelIcon);
+        }
+      });
+
+      // Optional pan
+      if(centerOnSelected) centerSelected();
+    }
+
+    document.getElementById("btnCenterSelected").addEventListener("click", ()=> {
+      initMap();
+      centerSelected();
+      toast("Centered on selected");
+    });
+
+    document.getElementById("btnCenterAll").addEventListener("click", ()=> {
+      initMap();
+      fitAll();
+      toast("Fitting all");
+    });
+
+    // Simple GPS movement simulation
+    function jitter(){
+      // ~0.00025 lat/lng is roughly ~25m-ish (varies), good for demo motion
+      return (Math.random() - 0.5) * 0.00025;
+    }
+    document.getElementById("btnSimWalk").addEventListener("click", ()=> {
+      people.forEach(p=>{
+        if(!p.gps) return;
+        p.gps.lat += jitter();
+        p.gps.lng += jitter();
+      });
+      refreshMapMarkers(false);
+      toast("GPS updated");
+    });
 
     // Init
     renderPeople();
