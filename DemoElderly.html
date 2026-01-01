@@ -6,8 +6,17 @@
 
   <!--
     UltraWatch
-    Build: DEMO-ELDERLY v0.4.0
-    Last Updated: 2025-12-30
+    Build: DEMO-ELDERLY v0.5.0
+    Last Updated: 2026-01-01
+    Notes:
+      - Only Jack Erickson is LIVE via Firebase (firebaseKey: GRANDPA)
+      - Others remain demo.
+      - Live reads:
+          /beacons/GRANDPA  -> room, entered_at, last_seen, last_sensor (optional)
+          /alerts/GRANDPA   -> sos, pool, timestamp
+          /gps/GRANDPA      -> lat, lng, accM, updatedAt (optional)
+          /logs/GRANDPA     -> room intervals (timeline)
+          /profiles/GRANDPA/caregiverPhone (optional)
   -->
 
   <title>UltraWatch — Elderly Care</title>
@@ -15,6 +24,10 @@
   <!-- Leaflet (free) -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- Firebase compat (matches your clients page style) -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
   <style>
     :root{
@@ -30,19 +43,15 @@
       --accent:#60a5fa;
       --radius:18px;
     }
-
     *{box-sizing:border-box}
-
     body{
       margin:0;
       font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;
       background:var(--bg);
       color:var(--text);
     }
-
     .wrap{max-width:1200px;margin:0 auto;padding:16px}
 
-    /* ===== Build Banner (internal) ===== */
     .build{
       background:rgba(96,165,250,.15);
       border:1px solid rgba(96,165,250,.35);
@@ -58,7 +67,6 @@
     }
     .build b{font-weight:800}
 
-    /* ===== Header ===== */
     .header{
       display:flex;
       justify-content:space-between;
@@ -68,7 +76,6 @@
     }
     h1{margin:0;font-size:20px;letter-spacing:.2px}
     .sub{color:var(--muted);font-size:12px;margin-top:4px}
-
     .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 
     .btn{
@@ -88,6 +95,33 @@
       background:rgba(251,113,133,.12);
     }
 
+    /* ===== Top Tabs (People / Timeline / Map / Settings) ===== */
+    .topTabs{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      margin-top:8px;
+    }
+    .topTab{
+      display:inline-flex;
+      gap:8px;
+      align-items:center;
+      padding:8px 12px;
+      border-radius:999px;
+      border:1px solid var(--line);
+      background:rgba(0,0,0,.15);
+      cursor:pointer;
+      font-size:12px;
+      color:var(--muted);
+      user-select:none;
+      font-weight:800;
+    }
+    .topTab.active{
+      border-color:rgba(96,165,250,.55);
+      background:rgba(96,165,250,.16);
+      color:var(--text);
+    }
+
     /* ===== Layout ===== */
     .grid{
       display:grid;
@@ -97,7 +131,6 @@
     @media(min-width:980px){
       .grid{grid-template-columns:320px 1.25fr .75fr}
     }
-
     .card{
       background:var(--panel);
       border:1px solid var(--line);
@@ -106,7 +139,7 @@
       overflow:hidden;
     }
 
-    /* ===== Tabs ===== */
+    /* ===== People quick tabs (mini) ===== */
     .tabs{
       display:flex;
       gap:8px;
@@ -200,33 +233,6 @@
       white-space:nowrap;
     }
 
-    /* ===== View Tabs (Dashboard/Timeline) ===== */
-    .viewTabs{
-      display:flex;
-      gap:8px;
-      flex-wrap:wrap;
-      margin-top:12px;
-    }
-    .viewTab{
-      display:inline-flex;
-      gap:8px;
-      align-items:center;
-      padding:8px 12px;
-      border-radius:14px;
-      border:1px solid var(--line);
-      background:rgba(0,0,0,.15);
-      cursor:pointer;
-      font-size:12px;
-      color:var(--muted);
-      user-select:none;
-    }
-    .viewTab.active{
-      border-color:rgba(96,165,250,.55);
-      background:rgba(96,165,250,.16);
-      color:var(--text);
-      font-weight:800;
-    }
-
     /* ===== Floor / Map ===== */
     .floor,.mapWrap{
       height:380px;
@@ -271,12 +277,10 @@
       display:flex;gap:8px;flex-wrap:wrap;
       z-index:5;
     }
-
-    #leafletMap{
+    #leafletMap, #leafletMapAll{
       position:absolute;
       inset:0;
     }
-
     .leaflet-control-zoom a{
       background:rgba(20,26,40,.85) !important;
       color:var(--text) !important;
@@ -307,13 +311,13 @@
       border-bottom:1px solid var(--line);
     }
     .timelineBody{
-      max-height:360px;
+      max-height:560px;
       overflow:auto;
       padding:0 12px;
     }
     .tlRow{
       display:grid;
-      grid-template-columns:92px 1fr 120px;
+      grid-template-columns:92px 1fr 140px;
       gap:10px;
       padding:10px 0;
       border-bottom:1px solid var(--line);
@@ -350,6 +354,38 @@
     .alertBox h2{margin:0 0 6px 0}
     .alertBox .sub{margin:0}
 
+    /* ===== Settings ===== */
+    .setRow{
+      display:flex;
+      justify-content:space-between;
+      gap:12px;
+      align-items:center;
+      padding:12px;
+      border-radius:16px;
+      border:1px solid var(--line);
+      background:rgba(0,0,0,.15);
+      margin-top:10px;
+    }
+    .toggle{
+      width:52px;height:30px;border-radius:999px;
+      border:1px solid rgba(255,255,255,.16);
+      background: rgba(255,255,255,.08);
+      position:relative;cursor:pointer;flex:0 0 auto;
+    }
+    .knob{
+      width:22px;height:22px;border-radius:999px;
+      position:absolute;top:50%;left:4px;
+      transform:translateY(-50%);
+      background:rgba(255,255,255,.85);
+      transition:left .18s ease;
+      box-shadow:0 6px 14px rgba(0,0,0,.35);
+    }
+    .toggle.on{
+      background: rgba(96,165,250,.25);
+      border-color: rgba(96,165,250,.55);
+    }
+    .toggle.on .knob{left:26px}
+
     footer{
       margin-top:16px;
       font-size:12px;
@@ -365,17 +401,25 @@
 <body>
 <div class="wrap">
 
-  <!-- Build Banner (your internal reference) -->
   <div class="build">
-    <div><b>UltraWatch</b> — Build <b>DEMO-ELDERLY v0.4.0</b></div>
-    <div>Updated: <b>Dec 30, 2025</b></div>
+    <div><b>UltraWatch</b> — Build <b>DEMO-ELDERLY v0.5.0</b></div>
+    <div>Updated: <b>Jan 1, 2026</b></div>
   </div>
 
-  <!-- Header -->
   <div class="header">
     <div>
       <h1>Elderly Care Dashboard</h1>
       <div class="sub">In-home awareness, safety alerts, and caregiver confidence</div>
+
+      <!-- Top Tabs -->
+      <div class="topTabs" id="topTabs">
+        <div class="topTab active" data-top="people">👥 People</div>
+        <div class="topTab" data-top="timeline">🕒 Timeline</div>
+        <div class="topTab" data-top="map">🗺️ Map</div>
+        <div class="topTab" data-top="settings">⚙️ Settings</div>
+      </div>
+
+      <!-- Quick person chips -->
       <div class="tabs" id="tabs"></div>
     </div>
 
@@ -389,43 +433,39 @@
     </div>
   </div>
 
-  <div class="grid">
+  <!-- ===========================
+       TOP PANEL: PEOPLE
+  ============================ -->
+  <div id="panel_people">
 
-    <!-- People List -->
-    <div class="card">
-      <div class="search">
-        <input id="search" placeholder="Search people…" oninput="renderPeople()" />
+    <div class="grid">
+
+      <!-- People List -->
+      <div class="card">
+        <div class="search">
+          <input id="search" placeholder="Search people…" oninput="renderPeople()" />
+        </div>
+        <div class="sub" style="margin-bottom:10px">Monitored People</div>
+        <div class="list" id="peopleList"></div>
       </div>
-      <div class="sub" style="margin-bottom:10px">Monitored People</div>
-      <div class="list" id="peopleList"></div>
-    </div>
 
-    <!-- Main View -->
-    <div class="card">
+      <!-- Main View -->
+      <div class="card">
 
-      <div class="status">
-        <div>
-          <div id="name" style="font-weight:900;font-size:16px">—</div>
-          <div class="sub">
-            Battery <span id="battery">—</span> • Last update <span id="lastSeen">—</span> • Last sensor <span id="lastSensor">—</span>
+        <div class="status">
+          <div>
+            <div id="name" style="font-weight:900;font-size:16px">—</div>
+            <div class="sub">
+              Battery <span id="battery">—</span> • Last update <span id="lastSeen">—</span> • Last sensor <span id="lastSensor">—</span>
+            </div>
+          </div>
+          <div class="row">
+            <span class="pill"><span id="stateDot" class="dot"></span><span id="stateText">OK</span></span>
+            <span class="pill">Status: <b id="statusText">Home</b></span>
+            <span class="pill">Room: <b id="room">—</b></span>
+            <span class="pill">Time: <b id="time">—</b></span>
           </div>
         </div>
-        <div class="row">
-          <span class="pill"><span id="stateDot" class="dot"></span><span id="stateText">OK</span></span>
-          <span class="pill">Status: <b id="statusText">Home</b></span>
-          <span class="pill">Room: <b id="room">—</b></span>
-          <span class="pill">Time: <b id="time">—</b></span>
-        </div>
-      </div>
-
-      <!-- View Tabs -->
-      <div class="viewTabs">
-        <div id="vtDashboard" class="viewTab active" onclick="setMainView('dashboard')">Dashboard</div>
-        <div id="vtTimeline" class="viewTab" onclick="setMainView('timeline')">Timeline</div>
-      </div>
-
-      <!-- DASHBOARD VIEW -->
-      <div id="mainDashboard">
 
         <!-- Floorplan -->
         <div id="floor" class="floor">
@@ -437,13 +477,12 @@
           <div id="pin" class="pin" style="left:72%;top:76%"></div>
         </div>
 
-        <!-- Map View (Leaflet) -->
+        <!-- Map View (selected person GPS only, shown when away or forced) -->
         <div id="mapWrap" class="mapWrap" style="display:none">
-          <div class="mapTag">Map View</div>
+          <div class="mapTag">Selected GPS</div>
 
           <div class="mapControls">
             <button class="btn" onclick="centerSelectedOnMap()">Center</button>
-            <button class="btn" onclick="fitAwayOnMap()">Fit Away</button>
           </div>
 
           <div class="mapMeta">
@@ -458,43 +497,117 @@
 
       </div>
 
-      <!-- TIMELINE VIEW -->
-      <div id="mainTimeline" style="display:none">
-        <div class="timeline">
-          <div class="timelineHead">
-            <div>
-              <div style="font-weight:900">Timeline</div>
-              <div class="sub">Recent activity for the selected person</div>
-            </div>
-            <div class="row">
-              <span class="pill">Range: <b>Last 24 Hours</b></span>
-              <button class="btn" onclick="refreshTimeline()">Refresh</button>
-            </div>
+      <!-- Activity (quick feed) -->
+      <div class="card">
+        <div class="row" style="justify-content:space-between;align-items:flex-end">
+          <div>
+            <div style="font-weight:900">Activity</div>
+            <div class="sub">Recent events for the selected person</div>
           </div>
-          <div class="timelineBody" id="timelineBody"></div>
+          <button class="btn" onclick="clearActivity()">Clear</button>
         </div>
+        <div style="height:10px"></div>
+        <div class="log" id="log"></div>
       </div>
 
     </div>
+  </div>
 
-    <!-- Activity (quick feed) -->
+  <!-- ===========================
+       TOP PANEL: TIMELINE
+  ============================ -->
+  <div id="panel_timeline" style="display:none">
     <div class="card">
-      <div class="row" style="justify-content:space-between;align-items:flex-end">
-        <div>
-          <div style="font-weight:900">Activity</div>
-          <div class="sub">Recent events for the selected person</div>
+      <div class="timeline">
+        <div class="timelineHead">
+          <div>
+            <div style="font-weight:900">Timeline</div>
+            <div class="sub">Recent activity for the selected person</div>
+          </div>
+          <div class="row">
+            <span class="pill">Range: <b id="timelineRange">Last 24 Hours</b></span>
+            <button class="btn" onclick="refreshTimeline()">Refresh</button>
+          </div>
         </div>
-        <button class="btn" onclick="clearActivity()">Clear</button>
+        <div class="timelineBody" id="timelineBody"></div>
       </div>
-      <div style="height:10px"></div>
-      <div class="log" id="log"></div>
     </div>
+  </div>
 
+  <!-- ===========================
+       TOP PANEL: MAP (all demo pins + Jack if GPS exists)
+  ============================ -->
+  <div id="panel_map" style="display:none">
+    <div class="card">
+      <div style="font-weight:900">GPS Map</div>
+      <div class="sub">Demo pins for everyone; Jack becomes live if /gps/GRANDPA exists</div>
+
+      <div class="mapWrap" style="height:520px;margin-top:12px;">
+        <div class="mapTag">All People GPS</div>
+        <div class="mapControls">
+          <button class="btn" onclick="fitAllOnMap()">Fit All</button>
+          <button class="btn" onclick="centerSelectedOnMapAll()">Center Selected</button>
+        </div>
+        <div id="leafletMapAll"></div>
+      </div>
+
+      <div class="sub" style="margin-top:10px;">
+        Tip: if your phone app writes GPS to <span style="opacity:.95">/gps/GRANDPA</span>, Jack’s pin will follow live.
+      </div>
+    </div>
+  </div>
+
+  <!-- ===========================
+       TOP PANEL: SETTINGS
+  ============================ -->
+  <div id="panel_settings" style="display:none">
+    <div class="card">
+      <div style="font-weight:900">Settings</div>
+      <div class="sub">Demo toggles + live caregiver fields (optional)</div>
+
+      <div class="setRow">
+        <div>
+          <div style="font-weight:900">Alarm sound</div>
+          <div class="sub">Play audible alarm on SOS</div>
+        </div>
+        <div class="toggle on" id="toggleSound"><div class="knob"></div></div>
+      </div>
+
+      <div class="setRow">
+        <div>
+          <div style="font-weight:900">Auto-switch to map</div>
+          <div class="sub">Show GPS view when marked “Left Home”</div>
+        </div>
+        <div class="toggle on" id="toggleAutoMap"><div class="knob"></div></div>
+      </div>
+
+      <div class="setRow">
+        <div>
+          <div style="font-weight:900">Jack caregiver phone</div>
+          <div class="sub">From Firebase: <span style="opacity:.95">/profiles/GRANDPA/caregiverPhone</span></div>
+        </div>
+        <div class="pill"><b id="caregiverPhone">—</b></div>
+      </div>
+
+      <div class="setRow">
+        <div>
+          <div style="font-weight:900">Firebase Status</div>
+          <div class="sub">Realtime updates from your Python + app</div>
+        </div>
+        <div class="pill"><b id="fbStatus">Connecting…</b></div>
+      </div>
+
+      <div style="height:10px"></div>
+      <div class="row">
+        <button class="btn" onclick="toast('Export: demo')">Export Log</button>
+        <button class="btn" onclick="toast('Support: demo')">Contact Support</button>
+      </div>
+    </div>
   </div>
 
   <footer>
-    <div>UltraWatch © 2025</div>
-    <div>Demo Version</div>
+    <div>UltraWatch © 2026</div>
+    <div>Demo + Live Hybrid (Jack only)</div>
   </footer>
 
 </div>
@@ -513,7 +626,7 @@
 
 <script>
   // =========================
-  // Demo Data
+  // Demo Data + Live Mapping
   // =========================
   const ROOMS = ["Kitchen","Living Room","Bathroom","Bedroom","Front Door"];
   const ROOM_POS = {
@@ -525,17 +638,27 @@
     "": {l:"50%",t:"49%"}
   };
 
-  // Demo GPS baseline (Orlando-ish) for "away" mode
+  // Orlando baseline for demo GPS
   const BASE_GPS = { lat: 28.538336, lng: -81.379234 };
 
-  // 20 monitored people
+  // LIVE mapping: Jack Erickson uses firebaseKey GRANDPA
+  const LIVE = {
+    enabled: true,
+    firebaseKey: "GRANDPA",
+    personId: "p1"
+  };
+
+  // people list (Jack is p1)
   const people = [
     { id:"p1", name:"Jack Erickson", room:"Kitchen", lastSensor:"Kitchen", battery:82, status:"Home", state:"ok", lastSeenSec:2, timeInRoom:"00:12:43",
       gps:{ lat: BASE_GPS.lat+0.0021, lng: BASE_GPS.lng-0.0014, accM:18, updatedAt:Date.now() } },
+
     { id:"p2", name:"Christine Visalli", room:"Living Room", lastSensor:"Living Room", battery:76, status:"Home", state:"ok", lastSeenSec:4, timeInRoom:"00:08:19",
       gps:{ lat: BASE_GPS.lat+0.0012, lng: BASE_GPS.lng-0.0006, accM:22, updatedAt:Date.now() } },
+
     { id:"p3", name:"Dail Skogstrom", room:"Bedroom", lastSensor:"Bedroom", battery:64, status:"Home", state:"ok", lastSeenSec:7, timeInRoom:"01:02:11",
       gps:{ lat: BASE_GPS.lat+0.0033, lng: BASE_GPS.lng-0.0020, accM:15, updatedAt:Date.now() } },
+
     { id:"p4", name:"Amada Morales", room:"Bathroom", lastSensor:"Bathroom", battery:71, status:"Home", state:"ok", lastSeenSec:3, timeInRoom:"00:04:52",
       gps:{ lat: BASE_GPS.lat+0.0007, lng: BASE_GPS.lng-0.0011, accM:25, updatedAt:Date.now() } },
 
@@ -543,11 +666,11 @@
       "Evelyn Carter","Harold Bennett","Rosa Delgado","Stanley Young","Martha Price",
       "Arthur Lee","Nina Kim","Frank Owens","Olivia Stone","Paul Rivera",
       "Linda Chavez","George Miles","Patricia Hall","Victor Nguyen","Teresa Brooks","Samuel Wright"
-    ].map((n,i)=>({
+    ].map((n,i)=>( {
       id:"p"+(i+5),
       name:n,
       room: (i%4===0)?"Kitchen":(i%4===1)?"Living Room":(i%4===2)?"Bedroom":"Bathroom",
-      lastSensor: (i%4===0)?"Kitchen":(i%4===1)?"Living Room":(i%4===2)?"Bedroom":"Bathroom",
+      lastSensor:(i%4===0)?"Kitchen":(i%4===1)?"Living Room":(i%4===2)?"Bedroom":"Bathroom",
       battery: 55 + (i*2 % 40),
       status:"Home",
       state:"ok",
@@ -559,28 +682,42 @@
 
   let selectedId = "p1";
 
-  // Activity per person (live feed)
+  // Activity per person
   const activity = {};
   people.forEach(p => activity[p.id] = [
     { msg:"System online", t:timeNow(), room:p.room || "" }
   ]);
 
-  // Timeline per person (24h-style)
+  // Timeline per person
   const timeline = {};
   people.forEach(p => timeline[p.id] = generateDemoTimeline(p));
 
-  // Main view mode: 'dashboard' or 'timeline'
-  let mainView = "dashboard";
+  // =========================
+  // UI helpers
+  // =========================
+  function timeNow(){ return new Date().toLocaleTimeString(); }
+  function getSelected(){ return people.find(p => p.id === selectedId); }
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, (c) => ({
+      "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"
+    }[c]));
+  }
+
+  // Toast (simple)
+  let toastTimer = null;
+  function toast(msg){
+    // reuse alert modal lightly as a toast if you want, but keep minimal:
+    console.log("TOAST:", msg);
+  }
 
   // =========================
-  // Alarm (audible)
+  // Alarm (audible) - simple
   // =========================
-  let audioCtx = null;
-  let osc = null;
-  let gain = null;
-  let alarmTimer = null;
+  let audioCtx = null, osc = null, gain = null, alarmTimer = null;
+  function soundEnabled(){ return document.getElementById("toggleSound").classList.contains("on"); }
 
   function startAlarm(){
+    if(!soundEnabled()) return;
     try{
       if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       if(audioCtx.state === "suspended") audioCtx.resume();
@@ -603,166 +740,51 @@
         gain.gain.linearRampToValueAtTime(0.12, now + 0.01);
         gain.gain.linearRampToValueAtTime(0.0001, now + 0.25);
       }, 350);
-    }catch(e){
-      console.log("Alarm audio error:", e);
-    }
+    }catch(e){ console.log("Alarm audio error:", e); }
   }
-
   function stopAlarm(){
     try{
       if(alarmTimer){ clearInterval(alarmTimer); alarmTimer = null; }
       if(osc){ osc.stop(); osc.disconnect(); osc = null; }
       if(gain){ gain.disconnect(); gain = null; }
-    }catch(e){
-      console.log("Stop alarm error:", e);
+    }catch(e){ console.log("Stop alarm error:", e); }
+  }
+
+  // =========================
+  // Top Tabs switching
+  // =========================
+  function showTop(tab){
+    document.querySelectorAll(".topTab").forEach(t=>t.classList.toggle("active", t.dataset.top===tab));
+    document.getElementById("panel_people").style.display   = (tab==="people")   ? "block" : "none";
+    document.getElementById("panel_timeline").style.display = (tab==="timeline") ? "block" : "none";
+    document.getElementById("panel_map").style.display      = (tab==="map")      ? "block" : "none";
+    document.getElementById("panel_settings").style.display = (tab==="settings") ? "block" : "none";
+
+    if(tab==="timeline") renderTimeline();
+    if(tab==="map"){
+      setTimeout(()=>{ if(mapAll) mapAll.invalidateSize(); }, 50);
+      updateAllMapMarkers(true);
     }
   }
+  document.getElementById("topTabs").addEventListener("click", (e)=>{
+    const t = e.target.closest(".topTab");
+    if(!t) return;
+    showTop(t.dataset.top);
+  });
 
-  // =========================
-  // Leaflet Map (multi-person)
-  // =========================
-  let map = null;
-  let mapInitialized = false;
-  let awayLayer = null;
-  let selectedAccuracy = null;
-
-  function initMapOnce(){
-    if(mapInitialized) return;
-    mapInitialized = true;
-
-    map = L.map('leafletMap', { zoomControl:true }).setView([BASE_GPS.lat, BASE_GPS.lng], 13);
-
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      maxZoom: 19,
-      attribution: '&copy; OpenStreetMap contributors'
-    }).addTo(map);
-
-    awayLayer = L.layerGroup().addTo(map);
-
-    // Accuracy ring for selected person (always one)
-    selectedAccuracy = L.circle([BASE_GPS.lat, BASE_GPS.lng], {
-      radius: 20,
-      color: '#60a5fa',
-      weight: 1,
-      fillColor: '#60a5fa',
-      fillOpacity: 0.12
-    }).addTo(map);
-  }
-
-  function stateColor(state){
-    return (state==="bad") ? "#fb7185" : (state==="warn") ? "#facc15" : "#4ade80";
-  }
-
-  function updateAwayLayer(){
-    initMapOnce();
-    awayLayer.clearLayers();
-
-    const awayPeople = people.filter(p => p.status === "Left Home");
-    awayPeople.forEach(p => {
-      if(!p.gps) return;
-
-      const isSelected = (p.id === selectedId);
-      const radius = isSelected ? 10 : 7;
-      const weight = isSelected ? 3 : 2;
-
-      const marker = L.circleMarker([p.gps.lat, p.gps.lng], {
-        radius,
-        color: '#ffffff',
-        weight,
-        fillColor: stateColor(p.state),
-        fillOpacity: 0.95
-      }).addTo(awayLayer);
-
-      marker.bindTooltip(p.name, { direction:"top", opacity:0.9 });
-
-      marker.on('click', () => {
-        selectPerson(p.id);
-        setMainView('dashboard'); // clicking on a dot jumps to that person
-      });
+  // Settings toggles
+  function wireToggle(id){
+    const el = document.getElementById(id);
+    el.addEventListener("click", ()=>{
+      el.classList.toggle("on");
     });
   }
-
-  function updateSelectedMapMeta(p, pan=false){
-    initMapOnce();
-
-    document.getElementById("gpsSelectedName").textContent = p.name;
-
-    if(!p.gps){
-      document.getElementById("gpsLatLng").textContent = "—";
-      document.getElementById("gpsAcc").textContent = "—";
-      document.getElementById("gpsUpdated").textContent = "—";
-      return;
-    }
-
-    const lat = p.gps.lat;
-    const lng = p.gps.lng;
-    const acc = p.gps.accM ?? 20;
-
-    document.getElementById("gpsLatLng").textContent = lat.toFixed(6) + ", " + lng.toFixed(6);
-    document.getElementById("gpsAcc").textContent = acc + " m";
-    const secs = Math.max(0, Math.round((Date.now() - p.gps.updatedAt) / 1000));
-    document.getElementById("gpsUpdated").textContent = secs + "s ago";
-
-    selectedAccuracy.setLatLng([lat,lng]);
-    selectedAccuracy.setRadius(acc);
-
-    if(pan){
-      map.setView([lat,lng], Math.max(map.getZoom(), 15));
-    }
-
-    setTimeout(() => map.invalidateSize(), 50);
-  }
-
-  function centerSelectedOnMap(){
-    const p = getSelected();
-    if(!p.gps) return;
-    initMapOnce();
-    map.setView([p.gps.lat, p.gps.lng], Math.max(map.getZoom(), 15));
-  }
-
-  function fitAwayOnMap(){
-    initMapOnce();
-    const awayPeople = people.filter(p => p.status === "Left Home" && p.gps);
-    if(!awayPeople.length) return;
-
-    const bounds = L.latLngBounds(awayPeople.map(p => [p.gps.lat, p.gps.lng]));
-    map.fitBounds(bounds.pad(0.2));
-  }
-
-  // Demo “movement” when away: jitter GPS
-  function jitterGps(p){
-    if(!p.gps) p.gps = { lat: BASE_GPS.lat, lng: BASE_GPS.lng, accM: 20, updatedAt: Date.now() };
-    const dLat = (Math.random() - 0.5) * 0.00018;
-    const dLng = (Math.random() - 0.5) * 0.00018;
-    p.gps.lat += dLat;
-    p.gps.lng += dLng;
-    p.gps.accM = 12 + Math.floor(Math.random() * 25);
-    p.gps.updatedAt = Date.now();
-  }
+  wireToggle("toggleSound");
+  wireToggle("toggleAutoMap");
 
   // =========================
   // Rendering / Views
   // =========================
-  function timeNow(){ return new Date().toLocaleTimeString(); }
-  function getSelected(){ return people.find(p => p.id === selectedId); }
-
-  function setMainView(mode){
-    mainView = mode;
-
-    document.getElementById("vtDashboard").classList.toggle("active", mode==="dashboard");
-    document.getElementById("vtTimeline").classList.toggle("active", mode==="timeline");
-
-    document.getElementById("mainDashboard").style.display = (mode==="dashboard") ? "block" : "none";
-    document.getElementById("mainTimeline").style.display = (mode==="timeline") ? "block" : "none";
-
-    // Make sure timeline is current for selection
-    if(mode==="timeline"){
-      renderTimeline();
-    }else{
-      renderMain(); // refresh dashboard toggles
-    }
-  }
-
   function renderTabs(){
     const tabs = document.getElementById("tabs");
     tabs.innerHTML = "";
@@ -791,10 +813,12 @@
           ? `<span class="badge"><span class="dot ${stateDot}"></span>Left Home</span>`
           : `<span class="badge"><span class="dot ${stateDot}"></span>${escapeHtml(p.room || "—")}</span>`;
 
+        const liveTag = (p.id === LIVE.personId) ? "Live" : "Demo";
+
         el.innerHTML = `
           <div>
             <div class="pname">${escapeHtml(p.name)}</div>
-            <div class="pmeta">Battery ${p.battery}% • Last ${p.lastSeenSec}s • Sensor ${escapeHtml(p.lastSensor || "—")}</div>
+            <div class="pmeta">${liveTag} • Battery ${p.battery}% • Last ${p.lastSeenSec}s • Sensor ${escapeHtml(p.lastSensor || "—")}</div>
           </div>
           ${right}
         `;
@@ -825,14 +849,14 @@
     pin.style.left = pos.l;
     pin.style.top = pos.t;
 
-    // Show map if away/left home
-    const showMap = (p.status === "Left Home") || (p.lastSeenSec >= 30 && p.lastSensor === "Front Door");
+    // Auto map if away
+    const autoMap = document.getElementById("toggleAutoMap").classList.contains("on");
+    const showMap = autoMap && (p.status === "Left Home");
     document.getElementById("floor").style.display = showMap ? "none" : "block";
     document.getElementById("mapWrap").style.display = showMap ? "block" : "none";
 
     if(showMap){
-      updateAwayLayer();                 // multi-person dots
-      updateSelectedMapMeta(p, true);    // selected meta + accuracy ring
+      updateSelectedMapMeta(p, true);
     }
 
     renderActivity();
@@ -867,76 +891,73 @@
     selectedId = pid;
     renderTabs();
     renderPeople();
+    renderMain();
 
-    if(mainView === "timeline"){
-      renderTimeline();
-    }else{
-      renderMain();
-    }
-  }
-
-  function escapeHtml(s){
-    return String(s).replace(/[&<>"']/g, (c) => ({
-      "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"
-    }[c]));
+    // If user is on timeline/map panel, keep them updated
+    const activeTop = document.querySelector(".topTab.active")?.dataset.top || "people";
+    if(activeTop==="timeline") renderTimeline();
+    if(activeTop==="map") updateAllMapMarkers(true);
   }
 
   // =========================
   // Timeline
   // =========================
+  function formatDuration(seconds) {
+    const s = Math.max(0, Math.floor(seconds || 0));
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const sec = s % 60;
+    if (h > 0) return `${h}:${String(m).padStart(2,"0")}:${String(sec).padStart(2,"0")}`;
+    return `${m}:${String(sec).padStart(2,"0")}`;
+  }
+  function formatTime(tsSec){
+    if(!tsSec) return "--:--";
+    const d = new Date(tsSec*1000);
+    return d.toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"});
+  }
+
   function generateDemoTimeline(p){
-    // Build a believable last-24h pattern (pure demo)
     const now = Date.now();
     const entries = [];
-
     function add(hoursAgo, msg, room){
       const t = new Date(now - hoursAgo*3600*1000);
-      entries.push({
-        ts: t.getTime(),
-        time: t.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}),
-        msg, room
-      });
+      entries.push({ ts:t.getTime(), time:t.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'}), msg, room });
     }
-
-    // A simple daily story:
     add(23.5, "Overnight monitoring active", "Bedroom");
     add(7.8,  "Room update — Bathroom", "Bathroom");
     add(7.5,  "Room update — Kitchen", "Kitchen");
     add(6.0,  "Routine check-in complete", "Kitchen");
     add(4.2,  "Room update — Living Room", "Living Room");
     add(3.7,  "Room update — Kitchen", "Kitchen");
-
-    // Inject current state near “now”
     add(0.6,  "Room update — " + (p.room || "Kitchen"), p.room || "Kitchen");
     add(0.1,  "Last seen update received", p.room || "");
-
-    // If away, add a leave-home event
-    if(p.status === "Left Home"){
-      add(1.2, "Front Door activity detected", "Front Door");
-      add(1.0, "Not detected after Front Door — marked as Left Home", "Front Door");
-      add(0.8, "GPS tracking active", "Away");
-    }
-
-    // Sort newest first for display
     entries.sort((a,b)=>b.ts-a.ts);
     return entries;
   }
 
+  // Live timeline cache for Jack (from /logs/GRANDPA)
+  let liveJackTimeline = []; // [{time,msg,room,ts}]
+
   function renderTimeline(){
     const p = getSelected();
-
-    // Ensure timeline exists and stays reasonable when state changes
-    timeline[p.id] = generateDemoTimeline(p);
-
     const body = document.getElementById("timelineBody");
     body.innerHTML = "";
 
-    timeline[p.id].forEach(e => {
+    // Jack uses live timeline if available, otherwise demo timeline
+    let rows = [];
+    if(p.id === LIVE.personId && liveJackTimeline.length){
+      rows = liveJackTimeline;
+    }else{
+      timeline[p.id] = generateDemoTimeline(p);
+      rows = timeline[p.id].map(x=>({ time:x.time, msg:x.msg, room:x.room, ts:x.ts }));
+    }
+
+    rows.forEach(e => {
       const row = document.createElement("div");
       row.className = "tlRow";
       row.innerHTML = `
-        <div class="tlTime">${escapeHtml(e.time)}</div>
-        <div class="tlMsg">${escapeHtml(e.msg)}</div>
+        <div class="tlTime">${escapeHtml(e.time || "--:--")}</div>
+        <div class="tlMsg">${escapeHtml(e.msg || "")}</div>
         <div class="tlLoc">${escapeHtml(e.room || "")}</div>
       `;
       body.appendChild(row);
@@ -944,98 +965,153 @@
   }
 
   function refreshTimeline(){
-    renderTimeline();
+    // For Jack, we re-query logs (if Firebase is connected)
+    if(firebaseReady && db){
+      loadJackHistoryIntoTimeline();
+    }else{
+      renderTimeline();
+    }
   }
 
   // =========================
-  // Simulations
+  // Leaflet: Selected Map (People tab)
   // =========================
-  function simulateMove(){
-    const p = getSelected();
-    if(p.status === "Left Home"){
-      // bring back home via front door
-      p.status = "Home";
-      p.lastSeenSec = 2;
-      p.lastSensor = "Front Door";
-      p.room = "Front Door";
-      p.timeInRoom = "00:00:02";
-      p.state = "ok";
-      addEvent(p.id, "Returned home — Front Door", "Front Door");
-      timeline[p.id] = generateDemoTimeline(p);
-      renderTabs(); renderPeople();
-      (mainView==="timeline") ? renderTimeline() : renderMain();
+  let map = null;
+  let mapInitialized = false;
+  let selectedAccuracy = null;
+
+  function initMapOnce(){
+    if(mapInitialized) return;
+    mapInitialized = true;
+
+    map = L.map('leafletMap', { zoomControl:true }).setView([BASE_GPS.lat, BASE_GPS.lng], 13);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    selectedAccuracy = L.circle([BASE_GPS.lat, BASE_GPS.lng], {
+      radius: 20,
+      color: '#60a5fa',
+      weight: 1,
+      fillColor: '#60a5fa',
+      fillOpacity: 0.12
+    }).addTo(map);
+  }
+
+  function updateSelectedMapMeta(p, pan=false){
+    initMapOnce();
+
+    document.getElementById("gpsSelectedName").textContent = p.name;
+
+    if(!p.gps){
+      document.getElementById("gpsLatLng").textContent = "—";
+      document.getElementById("gpsAcc").textContent = "—";
+      document.getElementById("gpsUpdated").textContent = "—";
       return;
     }
 
-    const i = Math.max(0, ROOMS.indexOf(p.room));
-    const next = ROOMS[(i + 1) % ROOMS.length];
-    p.room = next;
-    p.lastSensor = next;
-    p.lastSeenSec = 2;
-    p.timeInRoom = "00:00:05";
-    p.state = "ok";
-    addEvent(p.id, "Room update — " + next, next);
-    timeline[p.id] = generateDemoTimeline(p);
+    const lat = p.gps.lat;
+    const lng = p.gps.lng;
+    const acc = p.gps.accM ?? 20;
 
-    renderTabs(); renderPeople();
-    (mainView==="timeline") ? renderTimeline() : renderMain();
-  }
+    document.getElementById("gpsLatLng").textContent = lat.toFixed(6) + ", " + lng.toFixed(6);
+    document.getElementById("gpsAcc").textContent = acc + " m";
+    const secs = Math.max(0, Math.round((Date.now() - (p.gps.updatedAt||Date.now())) / 1000));
+    document.getElementById("gpsUpdated").textContent = secs + "s ago";
 
-  function simulateLinger(){
-    const p = getSelected();
-    p.state = "warn";
-    addEvent(p.id, "Linger alert triggered", p.room || "");
-    showAlert("Linger Alert", `${p.name} has remained in ${p.room} longer than expected.`);
-    startAlarm();
-    timeline[p.id] = generateDemoTimeline(p);
+    selectedAccuracy.setLatLng([lat,lng]);
+    selectedAccuracy.setRadius(acc);
 
-    renderTabs(); renderPeople();
-    (mainView==="timeline") ? renderTimeline() : renderMain();
-  }
-
-  function simulateSOS(){
-    const p = getSelected();
-    triggerSOSFor(p.id);
-  }
-
-  function simulateNotSeen(){
-    const p = getSelected();
-    p.lastSeenSec = 45;
-
-    if(p.lastSensor === "Front Door"){
-      p.status = "Left Home";
-      p.room = "";
-      jitterGps(p);
-      addEvent(p.id, "Not detected after Front Door — marked as Left Home", "Front Door");
-    }else{
-      p.state = "warn";
-      addEvent(p.id, "Beacon not detected — switching to map view", p.room || "");
+    if(pan){
+      map.setView([lat,lng], Math.max(map.getZoom(), 15));
     }
 
-    timeline[p.id] = generateDemoTimeline(p);
-
-    renderTabs(); renderPeople();
-    (mainView==="timeline") ? renderTimeline() : renderMain();
+    setTimeout(() => map.invalidateSize(), 50);
   }
 
-  function triggerSOSFor(pid){
-    const p = people.find(x => x.id === pid);
-    p.state = "bad";
-    addEvent(pid, "Emergency alert — SOS triggered", p.room || "");
-    selectedId = pid;
-
-    timeline[p.id] = generateDemoTimeline(p);
-
-    renderTabs(); renderPeople();
-    (mainView==="timeline") ? renderTimeline() : renderMain();
-
-    showAlert("Emergency Alert", `SOS triggered for ${p.name}. Caregiver notified.`);
-    startAlarm();
+  function centerSelectedOnMap(){
+    const p = getSelected();
+    if(!p.gps) return;
+    initMapOnce();
+    map.setView([p.gps.lat, p.gps.lng], Math.max(map.getZoom(), 15));
   }
 
-  function testSOS(){
-    const idx = Math.floor(Math.random() * people.length);
-    triggerSOSFor(people[idx].id);
+  // =========================
+  // Leaflet: All People Map (Map tab)
+  // =========================
+  let mapAll = null;
+  let mapAllReady = false;
+  const mapAllMarkers = new Map(); // id -> marker
+  function initMapAll(){
+    if(mapAllReady) return;
+    mapAllReady = true;
+
+    mapAll = L.map('leafletMapAll', { zoomControl:true }).setView([BASE_GPS.lat, BASE_GPS.lng], 12);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(mapAll);
+  }
+
+  function stateColor(state){
+    return (state==="bad") ? "#fb7185" : (state==="warn") ? "#facc15" : "#4ade80";
+  }
+
+  function updateAllMapMarkers(panToSelected){
+    initMapAll();
+
+    people.forEach(p=>{
+      if(!p.gps) return;
+
+      const isSel = (p.id === selectedId);
+      const marker = mapAllMarkers.get(p.id);
+
+      const mOpts = {
+        radius: isSel ? 10 : 7,
+        color: '#ffffff',
+        weight: isSel ? 3 : 2,
+        fillColor: stateColor(p.state),
+        fillOpacity: 0.95
+      };
+
+      if(!marker){
+        const cm = L.circleMarker([p.gps.lat, p.gps.lng], mOpts).addTo(mapAll);
+        cm.bindTooltip(p.name, { direction:"top", opacity:0.9 });
+        cm.on("click", ()=>{
+          selectPerson(p.id);
+          showTop("people");
+        });
+        mapAllMarkers.set(p.id, cm);
+      }else{
+        marker.setLatLng([p.gps.lat, p.gps.lng]);
+        marker.setStyle(mOpts);
+      }
+    });
+
+    if(panToSelected){
+      const p = getSelected();
+      if(p.gps){
+        mapAll.setView([p.gps.lat, p.gps.lng], Math.max(mapAll.getZoom(), 14));
+      }
+    }
+    setTimeout(()=>mapAll.invalidateSize(), 50);
+  }
+
+  function fitAllOnMap(){
+    initMapAll();
+    const pts = people.map(p=>p.gps).filter(Boolean);
+    if(!pts.length) return;
+    const bounds = L.latLngBounds(pts.map(g=>[g.lat, g.lng]));
+    mapAll.fitBounds(bounds.pad(0.2));
+  }
+
+  function centerSelectedOnMapAll(){
+    initMapAll();
+    const p = getSelected();
+    if(!p.gps) return;
+    mapAll.setView([p.gps.lat, p.gps.lng], Math.max(mapAll.getZoom(), 15));
   }
 
   // =========================
@@ -1046,42 +1122,298 @@
     document.getElementById("alertBody").textContent = body;
     document.getElementById("alert").style.display = "block";
   }
-
   function dismissAlert(){
     document.getElementById("alert").style.display = "none";
     stopAlarm();
   }
 
   // =========================
-  // Lightweight “live” feel
+  // Simulations (demo only; Jack will still update from live right after)
+  // =========================
+  function jitterGps(p){
+    if(!p.gps) p.gps = { lat: BASE_GPS.lat, lng: BASE_GPS.lng, accM: 20, updatedAt: Date.now() };
+    const dLat = (Math.random() - 0.5) * 0.00018;
+    const dLng = (Math.random() - 0.5) * 0.00018;
+    p.gps.lat += dLat;
+    p.gps.lng += dLng;
+    p.gps.accM = 12 + Math.floor(Math.random() * 25);
+    p.gps.updatedAt = Date.now();
+  }
+
+  function simulateMove(){
+    const p = getSelected();
+    const i = Math.max(0, ROOMS.indexOf(p.room));
+    const next = ROOMS[(i + 1) % ROOMS.length];
+    p.room = next;
+    p.lastSensor = next;
+    p.lastSeenSec = 2;
+    p.timeInRoom = "00:00:05";
+    p.state = "ok";
+    addEvent(p.id, "Room update — " + next, next);
+    renderTabs(); renderPeople(); renderMain();
+    updateAllMapMarkers(false);
+  }
+  function simulateLinger(){
+    const p = getSelected();
+    p.state = "warn";
+    addEvent(p.id, "Linger alert triggered", p.room || "");
+    showAlert("Linger Alert", `${p.name} has remained in ${p.room} longer than expected.`);
+    startAlarm();
+    renderTabs(); renderPeople(); renderMain();
+    updateAllMapMarkers(false);
+  }
+  function simulateSOS(){
+    const p = getSelected();
+    p.state = "bad";
+    addEvent(p.id, "Emergency alert — SOS triggered", p.room || "");
+    showAlert("Emergency Alert", `SOS triggered for ${p.name}. Caregiver notified.`);
+    startAlarm();
+    renderTabs(); renderPeople(); renderMain();
+    updateAllMapMarkers(false);
+  }
+  function simulateNotSeen(){
+    const p = getSelected();
+    p.lastSeenSec = 45;
+    p.status = "Left Home";
+    p.room = "";
+    jitterGps(p);
+    addEvent(p.id, "Not detected — marked as Left Home", "Front Door");
+    renderTabs(); renderPeople(); renderMain();
+    updateAllMapMarkers(false);
+  }
+  function testSOS(){
+    const idx = Math.floor(Math.random() * people.length);
+    selectedId = people[idx].id;
+    simulateSOS();
+  }
+
+  // =========================
+  // Firebase LIVE wiring (Jack only)
+  // =========================
+  const firebaseConfig = { databaseURL: "https://ultrawatch-home-default-rtdb.firebaseio.com/" };
+  let db = null;
+  let firebaseReady = false;
+
+  function setFbStatus(txt){ document.getElementById("fbStatus").textContent = txt; }
+
+  function jackObj(){ return people.find(p=>p.id===LIVE.personId); }
+
+  function updateJackDerivedTimes(){
+    const p = jackObj();
+    // convert last_seen epoch -> lastSeenSec
+    if(p._last_seen){
+      const nowSec = Math.floor(Date.now()/1000);
+      p.lastSeenSec = Math.max(0, nowSec - p._last_seen);
+    }
+    // convert entered_at -> timeInRoom
+    if(p._entered_at){
+      const nowSec = Math.floor(Date.now()/1000);
+      const dwell = Math.max(0, nowSec - p._entered_at);
+      p.timeInRoom = formatDuration(dwell);
+    }
+  }
+
+  function applyJackStateFromAlerts(){
+    const p = jackObj();
+    const a = p._alerts || {};
+    if(a.sos === true || a.pool === true){
+      if(p.state !== "bad"){
+        addEvent(p.id, "LIVE: Emergency alert", p.room || "");
+        showAlert("Emergency Alert", `LIVE SOS/Alarm for ${p.name}.`);
+        startAlarm();
+      }
+      p.state = "bad";
+      return;
+    }
+    // If no emergency, fall back to ok (or warn if you later compute linger)
+    if(p.state === "bad"){
+      // cleared
+      stopAlarm();
+      addEvent(p.id, "LIVE: Alert cleared", p.room || "");
+    }
+    p.state = "ok";
+  }
+
+  function computeJackAway(){
+    const p = jackObj();
+    // If beacon is offline and last room was Front Door -> away
+    const nowSec = Math.floor(Date.now()/1000);
+    const lastSeen = p._last_seen || 0;
+    const offline = !lastSeen || ((nowSec - lastSeen) > 12); // same as clients page default
+    if(offline && (p.room === "Front Door" || p.lastSensor === "Front Door")){
+      p.status = "Left Home";
+      p.room = ""; // no room when away
+    }else{
+      p.status = "Home";
+    }
+  }
+
+  function loadJackHistoryIntoTimeline(){
+    if(!db) return;
+
+    // Pull last 25 by exited_at (same approach as your clients page)
+    db.ref("/logs/" + LIVE.firebaseKey)
+      .orderByChild("exited_at")
+      .limitToLast(25)
+      .once("value")
+      .then((snap)=>{
+        const obj = snap.val() || {};
+        const rows = Object.values(obj).filter(Boolean);
+
+        rows.sort((a,b)=>{
+          const at = (a.exited_at || a.entered_at || a.timestamp || 0);
+          const bt = (b.exited_at || b.entered_at || b.timestamp || 0);
+          return bt - at;
+        });
+
+        // Convert to timeline rows
+        liveJackTimeline = rows.map(x=>{
+          const t = (x.exited_at || x.entered_at || x.timestamp || 0);
+          const room = x.room || "";
+          const dur = x.duration_sec ? formatDuration(x.duration_sec) : "";
+          const msg = x.duration_sec
+            ? `Room interval • ${dur}`
+            : `Event`;
+
+          return {
+            ts: (t||0)*1000,
+            time: formatTime(t),
+            msg,
+            room
+          };
+        });
+
+        // Add current alerts line at top if SOS
+        const p = jackObj();
+        const a = p._alerts || {};
+        if(a.sos===true || a.pool===true){
+          liveJackTimeline.unshift({
+            ts: Date.now(),
+            time: new Date().toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"}),
+            msg: (a.pool===true) ? "LIVE: POOL ALARM" : "LIVE: SOS",
+            room: p.room || ""
+          });
+        }
+
+        // If timeline panel open, refresh it
+        const activeTop = document.querySelector(".topTab.active")?.dataset.top || "people";
+        if(activeTop==="timeline") renderTimeline();
+      })
+      .catch((e)=>{
+        console.log("Jack timeline load error:", e);
+      });
+  }
+
+  function wireFirebase(){
+    try{
+      firebase.initializeApp(firebaseConfig);
+      db = firebase.database();
+      firebaseReady = true;
+      setFbStatus("Connected");
+
+      // Optional caregiver phone
+      db.ref("/profiles/" + LIVE.firebaseKey + "/caregiverPhone").on("value", (snap)=>{
+        document.getElementById("caregiverPhone").textContent = snap.val() || "—";
+      });
+
+      // Live beacons for Jack
+      db.ref("/beacons/" + LIVE.firebaseKey).on("value", (snap)=>{
+        const val = snap.val() || {};
+        const p = jackObj();
+
+        // Typical keys from your python script:
+        // room, entered_at, last_seen, last_sensor (optional)
+        if(val.room !== undefined) p.room = val.room || "";
+        if(val.last_sensor !== undefined) p.lastSensor = val.last_sensor || (val.room || p.lastSensor || "");
+        else p.lastSensor = p.lastSensor || val.room || "";
+
+        if(val.entered_at !== undefined) p._entered_at = val.entered_at || null;
+        if(val.last_seen !== undefined) p._last_seen = val.last_seen || 0;
+
+        // You can optionally wire battery if you later store it
+        if(val.battery !== undefined) p.battery = val.battery;
+
+        updateJackDerivedTimes();
+        computeJackAway();
+        applyJackStateFromAlerts();
+
+        // keep UI updated
+        renderTabs(); renderPeople(); renderMain();
+        updateAllMapMarkers(false);
+      });
+
+      // Live alerts for Jack
+      db.ref("/alerts/" + LIVE.firebaseKey).on("value", (snap)=>{
+        const val = snap.val() || {};
+        const p = jackObj();
+        p._alerts = val;
+        applyJackStateFromAlerts();
+
+        renderTabs(); renderPeople(); renderMain();
+        updateAllMapMarkers(false);
+      });
+
+      // Live GPS for Jack (optional)
+      db.ref("/gps/" + LIVE.firebaseKey).on("value", (snap)=>{
+        const val = snap.val();
+        const p = jackObj();
+        if(!val) return;
+
+        // Accept flexible field names
+        const lat = val.lat ?? val.latitude;
+        const lng = val.lng ?? val.longitude;
+        if(lat === undefined || lng === undefined) return;
+
+        p.gps = p.gps || {};
+        p.gps.lat = Number(lat);
+        p.gps.lng = Number(lng);
+        p.gps.accM = Number(val.accM ?? val.accuracy ?? 20);
+        p.gps.updatedAt = (val.updatedAt ? Number(val.updatedAt) : Date.now());
+
+        // keep selected-map meta fresh if Jack selected and in map view
+        if(selectedId === p.id){
+          updateSelectedMapMeta(p, false);
+        }
+        updateAllMapMarkers(false);
+      });
+
+      // Load initial Jack history for timeline
+      loadJackHistoryIntoTimeline();
+
+    }catch(e){
+      console.log("Firebase init error:", e);
+      firebaseReady = false;
+      setFbStatus("Error");
+    }
+  }
+
+  // =========================
+  // Lightweight “live” feel for demos + jack timers
   // =========================
   setInterval(() => {
     people.forEach(p => {
-      p.lastSeenSec = Math.min(999, p.lastSeenSec + 1);
-
-      if(p.status === "Left Home"){
-        jitterGps(p);
+      // Demo increments
+      if(p.id !== LIVE.personId){
+        p.lastSeenSec = Math.min(999, p.lastSeenSec + 1);
+        if(p.status === "Left Home"){
+          jitterGps(p);
+        }
       }
     });
 
-    // If map visible, keep dots moving
-    const p = getSelected();
-    const showMap = (p.status === "Left Home") || (p.lastSeenSec >= 30 && p.lastSensor === "Front Door");
-    if(showMap){
-      updateAwayLayer();
-      updateSelectedMapMeta(p, false);
-    }
+    // Jack time fields keep ticking based on epoch times
+    const pj = jackObj();
+    updateJackDerivedTimes();
 
-    // Keep the list feeling alive
+    // Refresh UI
     renderTabs();
     renderPeople();
+    renderMain();
 
-    // Update main area depending on view
-    if(mainView === "timeline"){
-      // timeline is "snapshotty" — refresh lightly
-      renderTimeline();
-    }else{
-      renderMain();
+    // If map panel open, keep it refreshed
+    const activeTop = document.querySelector(".topTab.active")?.dataset.top || "people";
+    if(activeTop==="map"){
+      updateAllMapMarkers(false);
     }
 
   }, 3000);
@@ -1090,7 +1422,10 @@
   renderTabs();
   renderPeople();
   renderMain();
-  setMainView("dashboard");
+  showTop("people");
+
+  // Start Firebase
+  wireFirebase();
 </script>
 
 </body>
