@@ -1353,29 +1353,51 @@
         updateAllMapMarkers(false);
       });
 
-      // Live GPS for Jack (optional)
-      db.ref("/gps/" + LIVE.firebaseKey).on("value", (snap)=>{
-        const val = snap.val();
-        const p = jackObj();
-        if(!val) return;
+// Live GPS for Jack (supports your Firebase fields: lat, lon, accuracyM, timestamp)
+db.ref("/gps/" + LIVE.firebaseKey).on("value", (snap)=>{
+  const val = snap.val();
+  const p = jackObj();
+  if(!val) return;
 
-        // Accept flexible field names
-        const lat = val.lat ?? val.latitude;
-        const lng = val.lng ?? val.longitude;
-        if(lat === undefined || lng === undefined) return;
+  // Accept flexible field names (your DB uses lon + accuracyM + timestamp)
+  const lat = val.lat ?? val.latitude;
+  const lng = val.lng ?? val.lon ?? val.longitude ?? val.long;
+  if(lat === undefined || lng === undefined) return;
 
-        p.gps = p.gps || {};
-        p.gps.lat = Number(lat);
-        p.gps.lng = Number(lng);
-        p.gps.accM = Number(val.accM ?? val.accuracy ?? 20);
-        p.gps.updatedAt = (val.updatedAt ? Number(val.updatedAt) : Date.now());
+  // Accuracy field variants
+  const acc =
+    val.accM ??
+    val.accuracyM ??
+    val.accuracy ??
+    20;
 
-        // keep selected-map meta fresh if Jack selected and in map view
-        if(selectedId === p.id){
-          updateSelectedMapMeta(p, false);
-        }
-        updateAllMapMarkers(false);
-      });
+  // Timestamp variants (your DB uses timestamp in ms)
+  // If it's in seconds, convert to ms.
+  let updatedMs =
+    (val.updatedAt ?? val.timestamp ?? val.time ?? null);
+
+  if(updatedMs !== null) {
+    updatedMs = Number(updatedMs);
+    if (updatedMs < 1e12) updatedMs = updatedMs * 1000; // seconds -> ms
+  } else {
+    updatedMs = Date.now();
+  }
+
+  p.gps = p.gps || {};
+  p.gps.lat = Number(lat);
+  p.gps.lng = Number(lng);
+  p.gps.accM = Number(acc);
+  p.gps.updatedAt = updatedMs;
+
+  // If Jack is selected, refresh the "Selected GPS" meta (People tab)
+  if(selectedId === p.id){
+    updateSelectedMapMeta(p, false);
+  }
+
+  // Refresh Map tab markers too
+  updateAllMapMarkers(false);
+});
+
 
       // Load initial Jack history for timeline
       loadJackHistoryIntoTimeline();
