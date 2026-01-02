@@ -6,7 +6,7 @@
 
   <!--
     UltraWatch
-    Build: DEMO-ELDERLY v0.5.0
+    Build: DEMO-ELDERLY v0.6.0
     Last Updated: 2026-01-01
     Notes:
       - Only Jack Erickson is LIVE via Firebase (firebaseKey: GRANDPA)
@@ -402,7 +402,7 @@
 <div class="wrap">
 
   <div class="build">
-    <div><b>UltraWatch</b> — Build <b>DEMO-ELDERLY v0.5.0</b></div>
+    <div><b>UltraWatch</b> — Build <b>DEMO-ELDERLY v0.6.0</b></div>
     <div>Updated: <b>Jan 1, 2026</b></div>
   </div>
 
@@ -509,6 +509,12 @@
         <div style="height:10px"></div>
         <div class="log" id="log"></div>
       </div>
+
+   <div style="height:14px"></div>
+<div style="font-weight:900">Messages from phone</div>
+<div class="sub">Quick buttons pressed on the elderly app</div>
+<div style="height:10px"></div>
+<div class="log" id="msgLog" style="max-height:220px;"></div>
 
     </div>
   </div>
@@ -681,6 +687,9 @@
   ];
 
   let selectedId = "p1";
+
+  // Live messages cache for Jack (from /messages/GRANDPA)
+let liveJackMessages = []; // [{text,timestamp,lat,lon,accuracyM,source}]
 
   // Activity per person
   const activity = {};
@@ -860,6 +869,8 @@
     }
 
     renderActivity();
+    renderMessages();
+
   }
 
   function addEvent(pid, msg, room=""){
@@ -879,6 +890,36 @@
     });
     log.scrollTop = log.scrollHeight;
   }
+
+  function renderMessages(){
+  const box = document.getElementById("msgLog");
+  if(!box) return;
+
+  const p = getSelected();
+
+  // Only Jack is live; all others show demo placeholder
+  if(p.id !== LIVE.personId){
+    box.innerHTML = `<div class="evt"><div><b>Demo</b></div><div class="t">—</div></div>`;
+    return;
+  }
+
+  if(!liveJackMessages.length){
+    box.innerHTML = `<div class="evt"><div><b>No messages yet</b></div><div class="t">—</div></div>`;
+    return;
+  }
+
+  box.innerHTML = "";
+  liveJackMessages.slice().reverse().forEach(m => {
+    const row = document.createElement("div");
+    row.className = "evt";
+    const when = m.timestamp ? new Date(m.timestamp).toLocaleString() : "—";
+    row.innerHTML = `<div><b>${escapeHtml(m.text || "")}</b></div><div class="t">${escapeHtml(when)}</div>`;
+    box.appendChild(row);
+  });
+
+  box.scrollTop = box.scrollHeight;
+}
+
 
   function clearActivity(){
     const p = getSelected();
@@ -1352,6 +1393,23 @@
         renderTabs(); renderPeople(); renderMain();
         updateAllMapMarkers(false);
       });
+
+      // Live messages for Jack (from /messages/GRANDPA)
+db.ref("/messages/" + LIVE.firebaseKey)
+  .orderByChild("timestamp")
+  .limitToLast(20)
+  .on("value", (snap)=>{
+    const obj = snap.val() || {};
+    liveJackMessages = Object.values(obj)
+      .filter(Boolean)
+      .sort((a,b)=> (a.timestamp || 0) - (b.timestamp || 0));
+
+    // If Jack is selected, refresh the messages box immediately
+    if(selectedId === LIVE.personId){
+      renderMessages();
+    }
+  });
+
 
 // Live GPS for Jack (supports your Firebase fields: lat, lon, accuracyM, timestamp)
 db.ref("/gps/" + LIVE.firebaseKey).on("value", (snap)=>{
