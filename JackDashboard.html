@@ -51,14 +51,13 @@
       padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
     }
 
-    /* Phone-first: a single column with the map always visible at bottom */
     .app{
       height:100%;
       display:flex;
       flex-direction:column;
       gap:10px;
       padding:12px;
-      max-width:520px;   /* nice on phones; still ok on desktop */
+      max-width:520px;
       margin:0 auto;
     }
 
@@ -77,40 +76,17 @@
       gap:10px;
     }
 
-    .title{
-      display:flex;
-      flex-direction:column;
-      gap:4px;
-    }
-    .title h1{
-      margin:0;
-      font-size:18px;
-      letter-spacing:.2px;
-      line-height:1.15;
-    }
-    .sub{
-      color:var(--muted);
-      font-size:12px;
-      line-height:1.3;
-    }
+    .title{display:flex;flex-direction:column;gap:4px;}
+    .title h1{margin:0;font-size:18px;letter-spacing:.2px;line-height:1.15;}
+    .sub{color:var(--muted);font-size:12px;line-height:1.3;}
 
-    .pills{
-      display:flex;
-      gap:8px;
-      flex-wrap:wrap;
-      margin-top:10px;
-    }
+    .pills{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;}
     .pill{
-      display:inline-flex;
-      gap:8px;
-      align-items:center;
-      padding:6px 10px;
-      border-radius:999px;
+      display:inline-flex;gap:8px;align-items:center;
+      padding:6px 10px;border-radius:999px;
       border:1px solid var(--line);
-      font-size:12px;
-      color:var(--muted);
-      white-space:nowrap;
-      background:rgba(0,0,0,.10);
+      font-size:12px;color:var(--muted);
+      white-space:nowrap;background:rgba(0,0,0,.10);
     }
     .pill b{color:var(--text)}
     .dot{width:9px;height:9px;border-radius:50%;background:var(--good)}
@@ -118,11 +94,7 @@
     .dot.bad{background:var(--bad)}
 
     .actions{
-      display:flex;
-      gap:8px;
-      align-items:center;
-      flex-wrap:wrap;
-      justify-content:flex-end;
+      display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end;
     }
     .btn{
       border:1px solid var(--line);
@@ -142,7 +114,6 @@
       background:rgba(251,113,133,.12);
     }
 
-    /* Main status emphasis */
     .bigStatus{
       margin-top:10px;
       display:grid;
@@ -159,34 +130,15 @@
       gap:10px;
       align-items:center;
     }
-    .heroLeft{
-      display:flex;
-      flex-direction:column;
-      gap:3px;
-      min-width:0;
-    }
+    .heroLeft{display:flex;flex-direction:column;gap:3px;min-width:0;}
     .heroLabel{color:var(--muted);font-size:12px}
     .heroValue{
-      font-size:26px;
-      font-weight:950;
-      line-height:1.05;
-      white-space:nowrap;
-      overflow:hidden;
-      text-overflow:ellipsis;
+      font-size:26px;font-weight:950;line-height:1.05;
+      white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
     }
-    .heroRight{
-      display:flex;
-      flex-direction:column;
-      align-items:flex-end;
-      gap:4px;
-      text-align:right;
-    }
-    .heroRight .mini{
-      font-size:12px;
-      color:var(--muted);
-    }
+    .heroRight{display:flex;flex-direction:column;align-items:flex-end;gap:4px;text-align:right;}
+    .heroRight .mini{font-size:12px;color:var(--muted);}
 
-    /* Messages (optional, small) */
     .msgList{
       max-height:140px;
       overflow:auto;
@@ -205,39 +157,24 @@
     .evt:last-child{border-bottom:none}
     .evt .t{font-size:12px;color:var(--muted);white-space:nowrap}
 
-    /* Map pinned at bottom */
-    .mapCard{
-      padding:10px;
-    }
+    .mapCard{padding:10px;}
     .mapTop{
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      gap:10px;
-      margin-bottom:8px;
+      display:flex;justify-content:space-between;align-items:center;
+      gap:10px;margin-bottom:8px;
     }
-    .mapMeta{
-      display:flex;
-      gap:8px;
-      flex-wrap:wrap;
-      align-items:center;
-    }
+    .mapMeta{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
     .mapWrap{
       border:1px solid var(--line);
       border-radius:16px;
       overflow:hidden;
       background:rgba(0,0,0,.18);
       position:relative;
-      height:34vh;          /* phone-friendly */
-      min-height:220px;     /* never too small */
-      max-height:360px;     /* keeps room for top content */
+      height:34vh;
+      min-height:220px;
+      max-height:360px;
     }
-    #leafletMap{
-      position:absolute;
-      inset:0;
-    }
+    #leafletMap{position:absolute;inset:0;}
 
-    /* Leaflet controls styling */
     .leaflet-control-zoom a{
       background:rgba(20,26,40,.85) !important;
       color:var(--text) !important;
@@ -251,7 +188,6 @@
       padding:2px 6px;
     }
 
-    /* Alert Modal */
     .alert{
       display:none;
       position:fixed;inset:0;
@@ -270,15 +206,9 @@
     .alertBox h2{margin:0 0 6px 0}
     .alertBox .sub{margin:0}
 
-    /* Tiny footer status */
     .foot{
-      display:flex;
-      justify-content:space-between;
-      gap:10px;
-      align-items:center;
-      color:var(--muted);
-      font-size:12px;
-      padding:0 2px;
+      display:flex;justify-content:space-between;gap:10px;
+      align-items:center;color:var(--muted);font-size:12px;padding:0 2px;
     }
   </style>
 </head>
@@ -286,7 +216,6 @@
 <body>
   <div class="app">
 
-    <!-- Top summary -->
     <div class="card">
       <div class="topRow">
         <div class="title">
@@ -322,21 +251,20 @@
 
       <div style="height:10px"></div>
       <div style="display:flex;justify-content:space-between;align-items:center">
-  <div>
-    <div style="font-weight:950">Messages from phone</div>
-    <div class="sub">Recent quick-button messages from Jack’s app</div>
-  </div>
-  <button class="btn" onclick="clearMessages()">Clear</button>
-</div>
+        <div>
+          <div style="font-weight:950">Messages from phone</div>
+          <div class="sub">Recent quick-button messages from Jack’s app</div>
+        </div>
+        <button class="btn" onclick="clearMessages()">Clear</button>
+      </div>
 
-<div style="height:8px"></div>
-<div class="msgList" id="msgLog">
-
+      <div style="height:8px"></div>
+      <div class="msgList" id="msgLog">
         <div class="evt"><div><b>No messages yet</b></div><div class="t">—</div></div>
       </div>
     </div>
 
-    <!-- Map (always visible at bottom) -->
+    <!-- Map (bottom) -->
     <div class="card mapCard">
       <div class="mapTop">
         <div class="mapMeta">
@@ -346,8 +274,14 @@
         </div>
       </div>
 
-      <div class="mapWrap">
+      <!-- Hidden until valid GPS arrives -->
+      <div class="mapWrap" id="mapWrap" style="display:none">
         <div id="leafletMap"></div>
+      </div>
+
+      <div class="sub" id="gpsWaiting"
+           style="text-align:center;padding:12px;border:1px solid var(--line);border-radius:16px;background:rgba(0,0,0,.10)">
+        Waiting for GPS…
       </div>
     </div>
 
@@ -371,13 +305,13 @@
 
 <script>
   // =========================
-  // Constants (same Firebase values / keys as your original)
+  // Constants
   // =========================
   const PERSON_NAME = "Jack Erickson";
   const FIREBASE_KEY = "GRANDPA";
   const firebaseConfig = { databaseURL: "https://ultrawatch-home-default-rtdb.firebaseio.com/" };
 
-  // Baseline view if no GPS yet (Orlando)
+  // Baseline view (ONLY used internally; map won't show until GPS is valid)
   const BASE_GPS = { lat: 28.538336, lng: -81.379234 };
 
   // =========================
@@ -389,40 +323,53 @@
     lastSensor: "",
     battery: null,
     status: "—",
-    state: "ok",          // ok | warn | bad (warn reserved for future linger logic)
+    state: "ok",
     lastSeenSec: null,
     timeInRoom: "—",
-    _entered_at: null,    // epoch seconds
-    _last_seen: 0,        // epoch seconds
-    _alerts: {},          // {sos,pool,...}
-    gps: null             // {lat,lng,accM,updatedAt(ms)}
+    _entered_at: null,
+    _last_seen: 0,
+    _alerts: {},
+    gps: null
   };
 
   let liveJackMessages = []; // [{text,timestamp,...}]
- 
+  let db = null;
+
   // =========================
   // Helpers
   // =========================
   function setFbStatus(txt){ document.getElementById("fbStatus").textContent = txt; }
 
-function clearMessages(){
-  if(!db) return;
+  function isValidGps(lat, lng){
+    if(!isFinite(lat) || !isFinite(lng)) return false;
+    if(Math.abs(lat) < 0.000001 && Math.abs(lng) < 0.000001) return false;
+    if(lat < -90 || lat > 90) return false;
+    if(lng < -180 || lng > 180) return false;
+    return true;
+  }
 
-  if(!confirm("Clear all messages from Jack’s phone?")) return;
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, (c) => ({
+      "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"
+    }[c]));
+  }
 
-  db.ref("/messages/" + FIREBASE_KEY)
-    .remove()
-    .then(()=>{
-      liveJackMessages = [];
-      renderMessages();
-    })
-    .catch(err=>{
-      console.log("Clear messages error:", err);
-      alert("Failed to clear messages.");
-    });
-}
+  function clearMessages(){
+    if(!db) return;
+    if(!confirm("Clear all messages from Jack’s phone?")) return;
 
-  
+    db.ref("/messages/" + FIREBASE_KEY)
+      .remove()
+      .then(()=>{
+        liveJackMessages = [];
+        renderMessages();
+      })
+      .catch(err=>{
+        console.log("Clear messages error:", err);
+        alert("Failed to clear messages.");
+      });
+  }
+
   function formatDuration(seconds) {
     const s = Math.max(0, Math.floor(seconds || 0));
     const h = Math.floor(s / 3600);
@@ -452,18 +399,17 @@ function clearMessages(){
   function computeAway(){
     const nowSec = Math.floor(Date.now()/1000);
     const lastSeen = jack._last_seen || 0;
-    const offline = !lastSeen || ((nowSec - lastSeen) > 12); // same as original
-    // Keep your original logic idea: if offline + last known at Front Door -> away
+    const offline = !lastSeen || ((nowSec - lastSeen) > 12);
     if(offline && (jack.room === "Front Door" || jack.lastSensor === "Front Door")){
       jack.status = "Left Home";
-      jack.room = ""; // no room when away
+      jack.room = "";
     }else{
       jack.status = "Home";
     }
   }
 
   // =========================
-  // Alarm sound (same behavior style, just simplified toggle)
+  // Alarm sound
   // =========================
   let soundOn = true;
   let audioCtx = null, osc = null, gain = null, alarmTimer = null;
@@ -529,17 +475,17 @@ function clearMessages(){
     if(jack.state === "bad"){
       stopAlarm();
     }
-    jack.state = "ok"; // warn reserved for future linger logic
+    jack.state = "ok";
   }
 
   // =========================
   // Rendering
   // =========================
   function render(){
-    // Status pills
     const sd = document.getElementById("stateDot");
     sd.className = "dot" + (jack.state==="warn" ? " warn" : jack.state==="bad" ? " bad" : "");
-    document.getElementById("stateText").textContent = (jack.state==="ok") ? "OK" : (jack.state==="warn") ? "LINGER" : "ALERT";
+    document.getElementById("stateText").textContent =
+      (jack.state==="ok") ? "OK" : (jack.state==="warn") ? "LINGER" : "ALERT";
 
     document.getElementById("statusText").textContent = jack.status || "—";
     document.getElementById("room").textContent = jack.room || (jack.status==="Left Home" ? "Away" : "—");
@@ -568,7 +514,11 @@ function clearMessages(){
     }
 
     renderMessages();
-    updateMap(false);
+
+    // Only update the map if it is actually shown (i.e., we have valid GPS)
+    if(mapShown){
+      updateMap(false);
+    }
   }
 
   function renderMessages(){
@@ -591,39 +541,25 @@ function clearMessages(){
     box.scrollTop = box.scrollHeight;
   }
 
-  function escapeHtml(s){
-    return String(s).replace(/[&<>"']/g, (c) => ({
-      "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"
-    }[c]));
-  }
-
   // =========================
-  // Leaflet Map (always shown)
+  // Leaflet Map (hidden until GPS is valid)
   // =========================
   let map = null;
   let marker = null;
   let accuracyCircle = null;
   let mapReady = false;
-  let hasCenteredOnGps = false;
-  let firstGpsCentered = false;
+  let mapShown = false;
+  let centeredOnce = false;
 
-  function centerMapOnceOnFirstGps(lat, lng){
-  initMap(); // ensures map exists
-
-  if(firstGpsCentered) return;
-  firstGpsCentered = true;
-
-  // Leaflet-safe: wait until map is actually ready, then center
-  map.whenReady(() => {
-    map.setView([lat, lng], Math.max(map.getZoom(), 15));
-    setTimeout(() => map.invalidateSize(), 50);
-  });
-}
+  function stateFillColor(){
+    return (jack.state==="bad") ? "#fb7185" : (jack.state==="warn") ? "#facc15" : "#4ade80";
+  }
 
   function initMap(){
     if(mapReady) return;
     mapReady = true;
 
+    // Initialize with BASE (not visible yet); once visible we will setView to real GPS
     map = L.map('leafletMap', { zoomControl:true }).setView([BASE_GPS.lat, BASE_GPS.lng], 13);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -646,43 +582,67 @@ function clearMessages(){
       fillColor: "#60a5fa",
       fillOpacity: 0.12
     }).addTo(map);
+  }
+
+  function showMapUI(){
+    if(mapShown) return;
+    mapShown = true;
+
+    document.getElementById("gpsWaiting").style.display = "none";
+    document.getElementById("mapWrap").style.display = "block";
+
+    // Now that the container is visible, init map and let Leaflet measure it
+    initMap();
+    setTimeout(() => map.invalidateSize(), 80);
+  }
+
+  function updateMap(pan){
+    if(!mapShown) return; // hard stop until GPS is valid & map is shown
+    initMap();
+
+    const hasGps = !!(jack.gps && isFinite(jack.gps.lat) && isFinite(jack.gps.lng));
+    if(!hasGps) return;
+
+    const lat = jack.gps.lat;
+    const lng = jack.gps.lng;
+    const acc = (jack.gps.accM ?? 20);
+
+    marker.setLatLng([lat,lng]);
+    marker.setStyle({
+      fillColor: stateFillColor(),
+      radius: (jack.state==="bad") ? 11 : 9,
+      weight: (jack.state==="bad") ? 3 : 2
+    });
+
+    accuracyCircle.setLatLng([lat,lng]);
+    accuracyCircle.setRadius(acc);
+
+    if(pan){
+      map.setView([lat,lng], Math.max(map.getZoom(), 15));
+    }
 
     setTimeout(() => map.invalidateSize(), 50);
   }
 
-  function stateFillColor(){
-    return (jack.state==="bad") ? "#fb7185" : (jack.state==="warn") ? "#facc15" : "#4ade80";
+  function centerMapNow(){
+    if(!jack.gps || !mapShown) return;
+    updateMap(true);
   }
-
-function updateMap(pan){
-  initMap();
-
-  const hasGps = !!(jack.gps && isFinite(jack.gps.lat) && isFinite(jack.gps.lng));
-  const lat = hasGps ? jack.gps.lat : BASE_GPS.lat;
-  const lng = hasGps ? jack.gps.lng : BASE_GPS.lng;
-  const acc = hasGps ? (jack.gps.accM ?? 20) : 20;
-
-  marker.setLatLng([lat,lng]);
-  marker.setStyle({
-    fillColor: stateFillColor(),
-    radius: (jack.state==="bad") ? 11 : 9,
-    weight: (jack.state==="bad") ? 3 : 2
-  });
-
-  accuracyCircle.setLatLng([lat,lng]);
-  accuracyCircle.setRadius(acc);
-
-  if(pan){
-    map.setView([lat,lng], Math.max(map.getZoom(), 15));
-  }
-
-  setTimeout(() => map.invalidateSize(), 50);
-}
-
-
 
   // Buttons
-  document.getElementById("btnCenter").addEventListener("click", ()=> updateMap(true));
+  document.getElementById("btnCenter").addEventListener("click", ()=>{
+    if(!jack.gps){
+      alert("Waiting for GPS…");
+      return;
+    }
+    if(!mapShown){
+      showMapUI();
+      setTimeout(centerMapNow, 100);
+      return;
+    }
+    centerMapNow();
+  });
+
   document.getElementById("btnMute").addEventListener("click", (e)=>{
     soundOn = !soundOn;
     e.target.textContent = "Sound: " + (soundOn ? "ON" : "OFF");
@@ -690,17 +650,14 @@ function updateMap(pan){
   });
 
   // =========================
-  // Firebase wiring (Jack only, same paths/fields)
+  // Firebase wiring
   // =========================
-  let db = null;
-
   function wireFirebase(){
     try{
       firebase.initializeApp(firebaseConfig);
       db = firebase.database();
       setFbStatus("Connected");
 
-      // Live beacons
       db.ref("/beacons/" + FIREBASE_KEY).on("value", (snap)=>{
         const val = snap.val() || {};
 
@@ -710,7 +667,6 @@ function updateMap(pan){
 
         if(val.entered_at !== undefined) jack._entered_at = val.entered_at || null;
         if(val.last_seen !== undefined) jack._last_seen = val.last_seen || 0;
-
         if(val.battery !== undefined) jack.battery = val.battery;
 
         updateDerivedTimes();
@@ -719,53 +675,56 @@ function updateMap(pan){
         render();
       });
 
-      // Live alerts
       db.ref("/alerts/" + FIREBASE_KEY).on("value", (snap)=>{
         jack._alerts = snap.val() || {};
         applyStateFromAlerts();
         render();
       });
 
-      // Live GPS (supports your flexible field names)
+      // GPS: only accept and show map when valid GPS arrives
       db.ref("/gps/" + FIREBASE_KEY).on("value", (snap)=>{
         const val = snap.val();
         if(!val) return;
 
-        const lat = val.lat ?? val.latitude;
-        const lng = val.lng ?? val.lon ?? val.longitude ?? val.long;
-        if(lat === undefined || lng === undefined) return;
+        const latRaw = val.lat ?? val.latitude;
+        const lngRaw = val.lng ?? val.lon ?? val.longitude ?? val.long;
+        if(latRaw === undefined || lngRaw === undefined) return;
 
-        const acc = val.accM ?? val.accuracyM ?? val.accuracy ?? 20;
+        const lat = Number(latRaw);
+        const lng = Number(lngRaw);
+        if(!isValidGps(lat, lng)) return;
+
+        const acc = Number(val.accM ?? val.accuracyM ?? val.accuracy ?? 20);
 
         let updatedMs = (val.updatedAt ?? val.timestamp ?? val.time ?? null);
         if(updatedMs !== null) {
           updatedMs = Number(updatedMs);
-          if (updatedMs < 1e12) updatedMs = updatedMs * 1000; // seconds -> ms
+          if (updatedMs < 1e12) updatedMs = updatedMs * 1000;
         } else {
           updatedMs = Date.now();
         }
 
         jack.gps = jack.gps || {};
-        jack.gps.lat = Number(lat);
-        jack.gps.lng = Number(lng);
-        jack.gps.accM = Number(acc);
+        jack.gps.lat = lat;
+        jack.gps.lng = lng;
+        jack.gps.accM = acc;
         jack.gps.updatedAt = updatedMs;
 
-        centerMapOnceOnFirstGps(jack.gps.lat, jack.gps.lng);
+        // Show map UI only now
+        showMapUI();
 
-        // ✅ Center the map ONE TIME when the first real GPS arrives
-if(!firstGpsCentered){
-  firstGpsCentered = true;
-  updateMap(true);   // center once
-} else {
-  updateMap(false);  // keep updating marker without jumping
-}
+        // Center once on the first valid GPS
+        if(!centeredOnce){
+          centeredOnce = true;
+          // Wait a beat to ensure Leaflet has measured the now-visible container
+          setTimeout(()=> updateMap(true), 120);
+        }else{
+          updateMap(false);
+        }
 
-render();
-
+        render();
       });
 
-      // Live messages (last 20)
       db.ref("/messages/" + FIREBASE_KEY)
         .orderByChild("timestamp")
         .limitToLast(20)
@@ -777,7 +736,6 @@ render();
           renderMessages();
         });
 
-      // Optional caregiver phone (not displayed yet, but kept live-ready)
       db.ref("/profiles/" + FIREBASE_KEY + "/caregiverPhone").on("value", ()=>{ /* reserved */ });
 
     }catch(e){
@@ -786,22 +744,17 @@ render();
     }
   }
 
-  // =========================
-  // Tick: keep “last seen” + “time in room” counting even between updates
-  // =========================
+  // Tick: keep “last seen” + “time in room” counting
   setInterval(()=>{
     updateDerivedTimes();
     computeAway();
     render();
   }, 3000);
 
-  // Init UI
-initMap();
-updateDerivedTimes();
-computeAway();
-updateMap(true);   // center using freshest derived state
-render();
-
+  // Init UI (IMPORTANT: DO NOT init the map here anymore)
+  updateDerivedTimes();
+  computeAway();
+  render();
 
   // Start Firebase
   wireFirebase();
