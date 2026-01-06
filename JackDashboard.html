@@ -604,6 +604,8 @@ function clearMessages(){
   let marker = null;
   let accuracyCircle = null;
   let mapReady = false;
+  let hasCenteredOnGps = false;
+
 
   function initMap(){
     if(mapReady) return;
@@ -639,30 +641,44 @@ function clearMessages(){
     return (jack.state==="bad") ? "#fb7185" : (jack.state==="warn") ? "#facc15" : "#4ade80";
   }
 
-  function updateMap(pan){
-    initMap();
+let hasCenteredOnGps = false;
 
-    const hasGps = !!(jack.gps && isFinite(jack.gps.lat) && isFinite(jack.gps.lng));
-    const lat = hasGps ? jack.gps.lat : BASE_GPS.lat;
-    const lng = hasGps ? jack.gps.lng : BASE_GPS.lng;
-    const acc = hasGps ? (jack.gps.accM ?? 20) : 20;
+function updateMap(pan){
+  initMap();
 
-    marker.setLatLng([lat,lng]);
-    marker.setStyle({
-      fillColor: stateFillColor(),
-      radius: (jack.state==="bad") ? 11 : 9,
-      weight: (jack.state==="bad") ? 3 : 2
-    });
+  const hasGps = !!(jack.gps && isFinite(jack.gps.lat) && isFinite(jack.gps.lng));
+  const lat = hasGps ? jack.gps.lat : BASE_GPS.lat;
+  const lng = hasGps ? jack.gps.lng : BASE_GPS.lng;
+  const acc = hasGps ? (jack.gps.accM ?? 20) : 20;
 
-    accuracyCircle.setLatLng([lat,lng]);
-    accuracyCircle.setRadius(acc);
-
-    if(pan){
-      map.setView([lat,lng], Math.max(map.getZoom(), 15));
-    }
-
-    setTimeout(() => map.invalidateSize(), 50);
+  // ✅ Auto-center the first time we get a real GPS fix
+  if (hasGps && !hasCenteredOnGps) {
+    pan = true;
+    hasCenteredOnGps = true;
   }
+
+  // (Optional) if GPS is removed later, allow auto-center again when it returns
+  if (!hasGps) {
+    hasCenteredOnGps = false;
+  }
+
+  marker.setLatLng([lat,lng]);
+  marker.setStyle({
+    fillColor: stateFillColor(),
+    radius: (jack.state==="bad") ? 11 : 9,
+    weight: (jack.state==="bad") ? 3 : 2
+  });
+
+  accuracyCircle.setLatLng([lat,lng]);
+  accuracyCircle.setRadius(acc);
+
+  if(pan){
+    map.setView([lat,lng], Math.max(map.getZoom(), 15));
+  }
+
+  setTimeout(() => map.invalidateSize(), 50);
+}
+
 
   // Buttons
   document.getElementById("btnCenter").addEventListener("click", ()=> updateMap(true));
