@@ -400,6 +400,8 @@
 
   let liveJackMessages = []; // [{text,timestamp,...}]
 
+let hasCenteredOnGps = false;
+  
   // =========================
   // Helpers
   // =========================
@@ -641,7 +643,7 @@ function clearMessages(){
     return (jack.state==="bad") ? "#fb7185" : (jack.state==="warn") ? "#facc15" : "#4ade80";
   }
 
-let hasCenteredOnGps = false;
+
 
 function updateMap(pan){
   initMap();
