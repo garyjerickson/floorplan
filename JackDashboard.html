@@ -1,0 +1,756 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+
+  <!--
+    UltraWatch
+    Build: JACK-ONLY v1.0.0
+    Last Updated: 2026-01-05
+    Live reads (same as your original file):
+      /beacons/GRANDPA  -> room, entered_at, last_seen, last_sensor (optional), battery (optional)
+      /alerts/GRANDPA   -> sos, pool, timestamp
+      /gps/GRANDPA      -> lat, lng OR lon, accM/accuracyM/accuracy, updatedAt/timestamp
+      /messages/GRANDPA -> {text,timestamp,...} (last 20)
+      /profiles/GRANDPA/caregiverPhone (optional)
+  -->
+
+  <title>UltraWatch — Jack Erickson</title>
+
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+  <!-- Firebase compat -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+  <style>
+    :root{
+      --bg:#0b1220;
+      --panel:rgba(255,255,255,.07);
+      --panel2:rgba(255,255,255,.10);
+      --text:#e9eefc;
+      --muted:rgba(233,238,252,.72);
+      --line:rgba(255,255,255,.12);
+      --good:#4ade80;
+      --warn:#facc15;
+      --bad:#fb7185;
+      --accent:#60a5fa;
+      --radius:18px;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0;
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;
+      background:var(--bg);
+      color:var(--text);
+      -webkit-font-smoothing:antialiased;
+      padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    }
+
+    /* Phone-first: a single column with the map always visible at bottom */
+    .app{
+      height:100%;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      padding:12px;
+      max-width:520px;   /* nice on phones; still ok on desktop */
+      margin:0 auto;
+    }
+
+    .card{
+      background:var(--panel);
+      border:1px solid var(--line);
+      border-radius:var(--radius);
+      padding:12px;
+      overflow:hidden;
+    }
+
+    .topRow{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:10px;
+    }
+
+    .title{
+      display:flex;
+      flex-direction:column;
+      gap:4px;
+    }
+    .title h1{
+      margin:0;
+      font-size:18px;
+      letter-spacing:.2px;
+      line-height:1.15;
+    }
+    .sub{
+      color:var(--muted);
+      font-size:12px;
+      line-height:1.3;
+    }
+
+    .pills{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      margin-top:10px;
+    }
+    .pill{
+      display:inline-flex;
+      gap:8px;
+      align-items:center;
+      padding:6px 10px;
+      border-radius:999px;
+      border:1px solid var(--line);
+      font-size:12px;
+      color:var(--muted);
+      white-space:nowrap;
+      background:rgba(0,0,0,.10);
+    }
+    .pill b{color:var(--text)}
+    .dot{width:9px;height:9px;border-radius:50%;background:var(--good)}
+    .dot.warn{background:var(--warn)}
+    .dot.bad{background:var(--bad)}
+
+    .actions{
+      display:flex;
+      gap:8px;
+      align-items:center;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+    }
+    .btn{
+      border:1px solid var(--line);
+      background:var(--panel2);
+      color:var(--text);
+      padding:9px 12px;
+      border-radius:14px;
+      font-weight:800;
+      cursor:pointer;
+      text-decoration:none;
+      user-select:none;
+      font-size:12px;
+    }
+    .btn:hover{filter:brightness(1.08)}
+    .btn.danger{
+      border-color:rgba(251,113,133,.45);
+      background:rgba(251,113,133,.12);
+    }
+
+    /* Main status emphasis */
+    .bigStatus{
+      margin-top:10px;
+      display:grid;
+      grid-template-columns:1fr;
+      gap:10px;
+    }
+    .hero{
+      border:1px solid var(--line);
+      border-radius:16px;
+      padding:12px;
+      background:rgba(0,0,0,.15);
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      align-items:center;
+    }
+    .heroLeft{
+      display:flex;
+      flex-direction:column;
+      gap:3px;
+      min-width:0;
+    }
+    .heroLabel{color:var(--muted);font-size:12px}
+    .heroValue{
+      font-size:26px;
+      font-weight:950;
+      line-height:1.05;
+      white-space:nowrap;
+      overflow:hidden;
+      text-overflow:ellipsis;
+    }
+    .heroRight{
+      display:flex;
+      flex-direction:column;
+      align-items:flex-end;
+      gap:4px;
+      text-align:right;
+    }
+    .heroRight .mini{
+      font-size:12px;
+      color:var(--muted);
+    }
+
+    /* Messages (optional, small) */
+    .msgList{
+      max-height:140px;
+      overflow:auto;
+      border:1px solid var(--line);
+      border-radius:16px;
+      background:rgba(0,0,0,.10);
+      padding:8px 10px;
+    }
+    .evt{
+      display:flex;
+      justify-content:space-between;
+      gap:12px;
+      padding:8px 0;
+      border-bottom:1px solid rgba(255,255,255,.08);
+    }
+    .evt:last-child{border-bottom:none}
+    .evt .t{font-size:12px;color:var(--muted);white-space:nowrap}
+
+    /* Map pinned at bottom */
+    .mapCard{
+      padding:10px;
+    }
+    .mapTop{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:10px;
+      margin-bottom:8px;
+    }
+    .mapMeta{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+    .mapWrap{
+      border:1px solid var(--line);
+      border-radius:16px;
+      overflow:hidden;
+      background:rgba(0,0,0,.18);
+      position:relative;
+      height:34vh;          /* phone-friendly */
+      min-height:220px;     /* never too small */
+      max-height:360px;     /* keeps room for top content */
+    }
+    #leafletMap{
+      position:absolute;
+      inset:0;
+    }
+
+    /* Leaflet controls styling */
+    .leaflet-control-zoom a{
+      background:rgba(20,26,40,.85) !important;
+      color:var(--text) !important;
+      border:1px solid rgba(255,255,255,.12) !important;
+    }
+    .leaflet-control-attribution{
+      background:rgba(20,26,40,.65) !important;
+      color:rgba(233,238,252,.72) !important;
+      border-radius:10px;
+      border:1px solid rgba(255,255,255,.12);
+      padding:2px 6px;
+    }
+
+    /* Alert Modal */
+    .alert{
+      display:none;
+      position:fixed;inset:0;
+      background:rgba(0,0,0,.72);
+      padding:16px;
+      z-index:50;
+    }
+    .alertBox{
+      max-width:560px;
+      margin:80px auto;
+      background:rgba(20,26,40,.98);
+      border:1px solid var(--line);
+      border-radius:22px;
+      padding:16px;
+    }
+    .alertBox h2{margin:0 0 6px 0}
+    .alertBox .sub{margin:0}
+
+    /* Tiny footer status */
+    .foot{
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      align-items:center;
+      color:var(--muted);
+      font-size:12px;
+      padding:0 2px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="app">
+
+    <!-- Top summary -->
+    <div class="card">
+      <div class="topRow">
+        <div class="title">
+          <h1>Jack Erickson</h1>
+          <div class="sub">UltraWatch — Elderly Monitoring</div>
+        </div>
+
+        <div class="actions">
+          <button class="btn" id="btnCenter" type="button">Center Map</button>
+          <button class="btn danger" id="btnMute" type="button">Sound: ON</button>
+        </div>
+      </div>
+
+      <div class="pills">
+        <span class="pill"><span id="stateDot" class="dot"></span><b id="stateText">OK</b></span>
+        <span class="pill">Status: <b id="statusText">—</b></span>
+        <span class="pill">Last seen: <b id="lastSeen">—</b></span>
+        <span class="pill">Sensor: <b id="lastSensor">—</b></span>
+      </div>
+
+      <div class="bigStatus">
+        <div class="hero">
+          <div class="heroLeft">
+            <div class="heroLabel">Current room</div>
+            <div class="heroValue" id="room">—</div>
+          </div>
+          <div class="heroRight">
+            <div class="mini">Time in room</div>
+            <div style="font-weight:950;font-size:18px" id="timeInRoom">—</div>
+          </div>
+        </div>
+      </div>
+
+      <div style="height:10px"></div>
+      <div style="font-weight:950">Messages from phone</div>
+      <div class="sub">Recent quick-button messages from Jack’s app</div>
+      <div style="height:8px"></div>
+      <div class="msgList" id="msgLog">
+        <div class="evt"><div><b>No messages yet</b></div><div class="t">—</div></div>
+      </div>
+    </div>
+
+    <!-- Map (always visible at bottom) -->
+    <div class="card mapCard">
+      <div class="mapTop">
+        <div class="mapMeta">
+          <span class="pill">GPS: <b id="gpsLatLng">—</b></span>
+          <span class="pill">Acc: <b id="gpsAcc">—</b></span>
+          <span class="pill">Updated: <b id="gpsUpdated">—</b></span>
+        </div>
+      </div>
+
+      <div class="mapWrap">
+        <div id="leafletMap"></div>
+      </div>
+    </div>
+
+    <div class="foot">
+      <div>UltraWatch © 2026</div>
+      <div>Firebase: <b id="fbStatus">Connecting…</b></div>
+    </div>
+  </div>
+
+  <!-- Alert Modal -->
+  <div id="alert" class="alert" onclick="dismissAlert()">
+    <div class="alertBox" onclick="event.stopPropagation()">
+      <h2 id="alertTitle">Alert</h2>
+      <p id="alertBody" class="sub">Message</p>
+      <div style="height:12px"></div>
+      <div style="display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap">
+        <button class="btn" onclick="dismissAlert()">Dismiss</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+  // =========================
+  // Constants (same Firebase values / keys as your original)
+  // =========================
+  const PERSON_NAME = "Jack Erickson";
+  const FIREBASE_KEY = "GRANDPA";
+  const firebaseConfig = { databaseURL: "https://ultrawatch-home-default-rtdb.firebaseio.com/" };
+
+  // Baseline view if no GPS yet (Orlando)
+  const BASE_GPS = { lat: 28.538336, lng: -81.379234 };
+
+  // =========================
+  // Simple state
+  // =========================
+  const jack = {
+    name: PERSON_NAME,
+    room: "",
+    lastSensor: "",
+    battery: null,
+    status: "—",
+    state: "ok",          // ok | warn | bad (warn reserved for future linger logic)
+    lastSeenSec: null,
+    timeInRoom: "—",
+    _entered_at: null,    // epoch seconds
+    _last_seen: 0,        // epoch seconds
+    _alerts: {},          // {sos,pool,...}
+    gps: null             // {lat,lng,accM,updatedAt(ms)}
+  };
+
+  let liveJackMessages = []; // [{text,timestamp,...}]
+
+  // =========================
+  // Helpers
+  // =========================
+  function setFbStatus(txt){ document.getElementById("fbStatus").textContent = txt; }
+
+  function formatDuration(seconds) {
+    const s = Math.max(0, Math.floor(seconds || 0));
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const sec = s % 60;
+    if (h > 0) return `${h}:${String(m).padStart(2,"0")}:${String(sec).padStart(2,"0")}`;
+    return `${m}:${String(sec).padStart(2,"0")}`;
+  }
+
+  function updateDerivedTimes(){
+    const nowSec = Math.floor(Date.now()/1000);
+
+    if(jack._last_seen){
+      jack.lastSeenSec = Math.max(0, nowSec - jack._last_seen);
+    }else{
+      jack.lastSeenSec = null;
+    }
+
+    if(jack._entered_at){
+      const dwell = Math.max(0, nowSec - jack._entered_at);
+      jack.timeInRoom = formatDuration(dwell);
+    }else{
+      jack.timeInRoom = "—";
+    }
+  }
+
+  function computeAway(){
+    const nowSec = Math.floor(Date.now()/1000);
+    const lastSeen = jack._last_seen || 0;
+    const offline = !lastSeen || ((nowSec - lastSeen) > 12); // same as original
+    // Keep your original logic idea: if offline + last known at Front Door -> away
+    if(offline && (jack.room === "Front Door" || jack.lastSensor === "Front Door")){
+      jack.status = "Left Home";
+      jack.room = ""; // no room when away
+    }else{
+      jack.status = "Home";
+    }
+  }
+
+  // =========================
+  // Alarm sound (same behavior style, just simplified toggle)
+  // =========================
+  let soundOn = true;
+  let audioCtx = null, osc = null, gain = null, alarmTimer = null;
+
+  function startAlarm(){
+    if(!soundOn) return;
+    try{
+      if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if(audioCtx.state === "suspended") audioCtx.resume();
+      if(alarmTimer) return;
+
+      gain = audioCtx.createGain();
+      gain.gain.value = 0.0001;
+      gain.connect(audioCtx.destination);
+
+      osc = audioCtx.createOscillator();
+      osc.type = "square";
+      osc.frequency.value = 880;
+      osc.connect(gain);
+      osc.start();
+
+      alarmTimer = setInterval(() => {
+        const now = audioCtx.currentTime;
+        gain.gain.cancelScheduledValues(now);
+        gain.gain.setValueAtTime(0.0001, now);
+        gain.gain.linearRampToValueAtTime(0.12, now + 0.01);
+        gain.gain.linearRampToValueAtTime(0.0001, now + 0.25);
+      }, 350);
+    }catch(e){ console.log("Alarm audio error:", e); }
+  }
+
+  function stopAlarm(){
+    try{
+      if(alarmTimer){ clearInterval(alarmTimer); alarmTimer = null; }
+      if(osc){ osc.stop(); osc.disconnect(); osc = null; }
+      if(gain){ gain.disconnect(); gain = null; }
+    }catch(e){ console.log("Stop alarm error:", e); }
+  }
+
+  // =========================
+  // Alert modal
+  // =========================
+  function showAlert(title, body){
+    document.getElementById("alertTitle").textContent = title;
+    document.getElementById("alertBody").textContent = body;
+    document.getElementById("alert").style.display = "block";
+  }
+  function dismissAlert(){
+    document.getElementById("alert").style.display = "none";
+    stopAlarm();
+  }
+
+  function applyStateFromAlerts(){
+    const a = jack._alerts || {};
+    if(a.sos === true || a.pool === true){
+      if(jack.state !== "bad"){
+        showAlert("Emergency Alert", `LIVE SOS/Alarm for ${jack.name}.`);
+        startAlarm();
+      }
+      jack.state = "bad";
+      return;
+    }
+    if(jack.state === "bad"){
+      stopAlarm();
+    }
+    jack.state = "ok"; // warn reserved for future linger logic
+  }
+
+  // =========================
+  // Rendering
+  // =========================
+  function render(){
+    // Status pills
+    const sd = document.getElementById("stateDot");
+    sd.className = "dot" + (jack.state==="warn" ? " warn" : jack.state==="bad" ? " bad" : "");
+    document.getElementById("stateText").textContent = (jack.state==="ok") ? "OK" : (jack.state==="warn") ? "LINGER" : "ALERT";
+
+    document.getElementById("statusText").textContent = jack.status || "—";
+    document.getElementById("room").textContent = jack.room || (jack.status==="Left Home" ? "Away" : "—");
+    document.getElementById("timeInRoom").textContent = jack.timeInRoom || "—";
+
+    document.getElementById("lastSeen").textContent =
+      (jack.lastSeenSec === null || jack.lastSeenSec === undefined) ? "—" : (jack.lastSeenSec + "s ago");
+
+    document.getElementById("lastSensor").textContent = jack.lastSensor || "—";
+
+    // GPS meta
+    if(jack.gps){
+      const lat = jack.gps.lat;
+      const lng = jack.gps.lng;
+      const acc = jack.gps.accM ?? 20;
+
+      document.getElementById("gpsLatLng").textContent = lat.toFixed(6) + ", " + lng.toFixed(6);
+      document.getElementById("gpsAcc").textContent = Math.round(acc) + " m";
+
+      const secs = Math.max(0, Math.round((Date.now() - (jack.gps.updatedAt||Date.now())) / 1000));
+      document.getElementById("gpsUpdated").textContent = secs + "s ago";
+    }else{
+      document.getElementById("gpsLatLng").textContent = "—";
+      document.getElementById("gpsAcc").textContent = "—";
+      document.getElementById("gpsUpdated").textContent = "—";
+    }
+
+    renderMessages();
+    updateMap(false);
+  }
+
+  function renderMessages(){
+    const box = document.getElementById("msgLog");
+    if(!box) return;
+
+    if(!liveJackMessages.length){
+      box.innerHTML = `<div class="evt"><div><b>No messages yet</b></div><div class="t">—</div></div>`;
+      return;
+    }
+
+    box.innerHTML = "";
+    liveJackMessages.slice().reverse().forEach(m => {
+      const row = document.createElement("div");
+      row.className = "evt";
+      const when = m.timestamp ? new Date(m.timestamp).toLocaleString() : "—";
+      row.innerHTML = `<div><b>${escapeHtml(m.text || "")}</b></div><div class="t">${escapeHtml(when)}</div>`;
+      box.appendChild(row);
+    });
+    box.scrollTop = box.scrollHeight;
+  }
+
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, (c) => ({
+      "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"
+    }[c]));
+  }
+
+  // =========================
+  // Leaflet Map (always shown)
+  // =========================
+  let map = null;
+  let marker = null;
+  let accuracyCircle = null;
+  let mapReady = false;
+
+  function initMap(){
+    if(mapReady) return;
+    mapReady = true;
+
+    map = L.map('leafletMap', { zoomControl:true }).setView([BASE_GPS.lat, BASE_GPS.lng], 13);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 19,
+      attribution: '&copy; OpenStreetMap contributors'
+    }).addTo(map);
+
+    marker = L.circleMarker([BASE_GPS.lat, BASE_GPS.lng], {
+      radius: 9,
+      color: "#ffffff",
+      weight: 2,
+      fillColor: "#4ade80",
+      fillOpacity: 0.95
+    }).addTo(map);
+
+    accuracyCircle = L.circle([BASE_GPS.lat, BASE_GPS.lng], {
+      radius: 20,
+      color: "#60a5fa",
+      weight: 1,
+      fillColor: "#60a5fa",
+      fillOpacity: 0.12
+    }).addTo(map);
+
+    setTimeout(() => map.invalidateSize(), 50);
+  }
+
+  function stateFillColor(){
+    return (jack.state==="bad") ? "#fb7185" : (jack.state==="warn") ? "#facc15" : "#4ade80";
+  }
+
+  function updateMap(pan){
+    initMap();
+
+    const hasGps = !!(jack.gps && isFinite(jack.gps.lat) && isFinite(jack.gps.lng));
+    const lat = hasGps ? jack.gps.lat : BASE_GPS.lat;
+    const lng = hasGps ? jack.gps.lng : BASE_GPS.lng;
+    const acc = hasGps ? (jack.gps.accM ?? 20) : 20;
+
+    marker.setLatLng([lat,lng]);
+    marker.setStyle({
+      fillColor: stateFillColor(),
+      radius: (jack.state==="bad") ? 11 : 9,
+      weight: (jack.state==="bad") ? 3 : 2
+    });
+
+    accuracyCircle.setLatLng([lat,lng]);
+    accuracyCircle.setRadius(acc);
+
+    if(pan){
+      map.setView([lat,lng], Math.max(map.getZoom(), 15));
+    }
+
+    setTimeout(() => map.invalidateSize(), 50);
+  }
+
+  // Buttons
+  document.getElementById("btnCenter").addEventListener("click", ()=> updateMap(true));
+  document.getElementById("btnMute").addEventListener("click", (e)=>{
+    soundOn = !soundOn;
+    e.target.textContent = "Sound: " + (soundOn ? "ON" : "OFF");
+    if(!soundOn) stopAlarm();
+  });
+
+  // =========================
+  // Firebase wiring (Jack only, same paths/fields)
+  // =========================
+  let db = null;
+
+  function wireFirebase(){
+    try{
+      firebase.initializeApp(firebaseConfig);
+      db = firebase.database();
+      setFbStatus("Connected");
+
+      // Live beacons
+      db.ref("/beacons/" + FIREBASE_KEY).on("value", (snap)=>{
+        const val = snap.val() || {};
+
+        if(val.room !== undefined) jack.room = val.room || "";
+        if(val.last_sensor !== undefined) jack.lastSensor = val.last_sensor || (val.room || jack.lastSensor || "");
+        else jack.lastSensor = jack.lastSensor || val.room || "";
+
+        if(val.entered_at !== undefined) jack._entered_at = val.entered_at || null;
+        if(val.last_seen !== undefined) jack._last_seen = val.last_seen || 0;
+
+        if(val.battery !== undefined) jack.battery = val.battery;
+
+        updateDerivedTimes();
+        computeAway();
+        applyStateFromAlerts();
+        render();
+      });
+
+      // Live alerts
+      db.ref("/alerts/" + FIREBASE_KEY).on("value", (snap)=>{
+        jack._alerts = snap.val() || {};
+        applyStateFromAlerts();
+        render();
+      });
+
+      // Live GPS (supports your flexible field names)
+      db.ref("/gps/" + FIREBASE_KEY).on("value", (snap)=>{
+        const val = snap.val();
+        if(!val) return;
+
+        const lat = val.lat ?? val.latitude;
+        const lng = val.lng ?? val.lon ?? val.longitude ?? val.long;
+        if(lat === undefined || lng === undefined) return;
+
+        const acc = val.accM ?? val.accuracyM ?? val.accuracy ?? 20;
+
+        let updatedMs = (val.updatedAt ?? val.timestamp ?? val.time ?? null);
+        if(updatedMs !== null) {
+          updatedMs = Number(updatedMs);
+          if (updatedMs < 1e12) updatedMs = updatedMs * 1000; // seconds -> ms
+        } else {
+          updatedMs = Date.now();
+        }
+
+        jack.gps = jack.gps || {};
+        jack.gps.lat = Number(lat);
+        jack.gps.lng = Number(lng);
+        jack.gps.accM = Number(acc);
+        jack.gps.updatedAt = updatedMs;
+
+        render(); // updates meta + marker
+      });
+
+      // Live messages (last 20)
+      db.ref("/messages/" + FIREBASE_KEY)
+        .orderByChild("timestamp")
+        .limitToLast(20)
+        .on("value", (snap)=>{
+          const obj = snap.val() || {};
+          liveJackMessages = Object.values(obj)
+            .filter(Boolean)
+            .sort((a,b)=> (a.timestamp || 0) - (b.timestamp || 0));
+          renderMessages();
+        });
+
+      // Optional caregiver phone (not displayed yet, but kept live-ready)
+      db.ref("/profiles/" + FIREBASE_KEY + "/caregiverPhone").on("value", ()=>{ /* reserved */ });
+
+    }catch(e){
+      console.log("Firebase init error:", e);
+      setFbStatus("Error");
+    }
+  }
+
+  // =========================
+  // Tick: keep “last seen” + “time in room” counting even between updates
+  // =========================
+  setInterval(()=>{
+    updateDerivedTimes();
+    computeAway();
+    render();
+  }, 3000);
+
+  // Init UI
+  initMap();
+  updateDerivedTimes();
+  computeAway();
+  render();
+
+  // Start Firebase
+  wireFirebase();
+</script>
+
+</body>
+</html>
