@@ -607,6 +607,19 @@ function clearMessages(){
   let hasCenteredOnGps = false;
   let firstGpsCentered = false;
 
+  function centerMapOnceOnFirstGps(lat, lng){
+  initMap(); // ensures map exists
+
+  if(firstGpsCentered) return;
+  firstGpsCentered = true;
+
+  // Leaflet-safe: wait until map is actually ready, then center
+  map.whenReady(() => {
+    map.setView([lat, lng], Math.max(map.getZoom(), 15));
+    setTimeout(() => map.invalidateSize(), 50);
+  });
+}
+
   function initMap(){
     if(mapReady) return;
     mapReady = true;
@@ -737,6 +750,8 @@ function updateMap(pan){
         jack.gps.lng = Number(lng);
         jack.gps.accM = Number(acc);
         jack.gps.updatedAt = updatedMs;
+
+        centerMapOnceOnFirstGps(jack.gps.lat, jack.gps.lng);
 
         // ✅ Center the map ONE TIME when the first real GPS arrives
 if(!firstGpsCentered){
