@@ -768,10 +768,12 @@ function clearMessages(){
   }, 3000);
 
   // Init UI
-  initMap();
-  updateDerivedTimes();
-  computeAway();
-  render();
+initMap();
+updateDerivedTimes();
+computeAway();
+updateMap(true);   // center using freshest derived state
+render();
+
 
   // Start Firebase
   wireFirebase();
