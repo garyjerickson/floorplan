@@ -321,10 +321,17 @@
       </div>
 
       <div style="height:10px"></div>
-      <div style="font-weight:950">Messages from phone</div>
-      <div class="sub">Recent quick-button messages from Jack’s app</div>
-      <div style="height:8px"></div>
-      <div class="msgList" id="msgLog">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+  <div>
+    <div style="font-weight:950">Messages from phone</div>
+    <div class="sub">Recent quick-button messages from Jack’s app</div>
+  </div>
+  <button class="btn" onclick="clearMessages()">Clear</button>
+</div>
+
+<div style="height:8px"></div>
+<div class="msgList" id="msgLog">
+
         <div class="evt"><div><b>No messages yet</b></div><div class="t">—</div></div>
       </div>
     </div>
@@ -398,6 +405,24 @@
   // =========================
   function setFbStatus(txt){ document.getElementById("fbStatus").textContent = txt; }
 
+function clearMessages(){
+  if(!db) return;
+
+  if(!confirm("Clear all messages from Jack’s phone?")) return;
+
+  db.ref("/messages/" + FIREBASE_KEY)
+    .remove()
+    .then(()=>{
+      liveJackMessages = [];
+      renderMessages();
+    })
+    .catch(err=>{
+      console.log("Clear messages error:", err);
+      alert("Failed to clear messages.");
+    });
+}
+
+  
   function formatDuration(seconds) {
     const s = Math.max(0, Math.floor(seconds || 0));
     const h = Math.floor(s / 3600);
