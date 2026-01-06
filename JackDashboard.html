@@ -605,7 +605,7 @@ function clearMessages(){
   let accuracyCircle = null;
   let mapReady = false;
   let hasCenteredOnGps = false;
-
+  let firstGpsCentered = false;
 
   function initMap(){
     if(mapReady) return;
@@ -738,7 +738,16 @@ function updateMap(pan){
         jack.gps.accM = Number(acc);
         jack.gps.updatedAt = updatedMs;
 
-        render(); // updates meta + marker
+        // ✅ Center the map ONE TIME when the first real GPS arrives
+if(!firstGpsCentered){
+  firstGpsCentered = true;
+  updateMap(true);   // center once
+} else {
+  updateMap(false);  // keep updating marker without jumping
+}
+
+render();
+
       });
 
       // Live messages (last 20)
