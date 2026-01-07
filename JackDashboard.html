@@ -613,18 +613,24 @@ function wireEnterToNextInSettings(){
   ids.forEach((id, idx) => {
     const el = document.getElementById(id);
     if(!el) return;
+
     el.addEventListener("keydown", (e) => {
       if(e.key === "Enter"){
         e.preventDefault();
+
         const next = document.getElementById(ids[idx + 1]);
         if(next){
           next.focus();
           next.select?.();
+        } else {
+          // last field: save + back to status
+          document.getElementById("btnSaveSettings").click();
         }
       }
     });
   });
 }
+
 
   
   // Auto-save as user types (prevents losing edits when switching tabs)
@@ -1098,6 +1104,9 @@ function wireEnterToNextInSettings(){
 
   document.getElementById("btnSaveSettings").addEventListener("click", ()=>{
     commitSettingsFromUI();
+  // go back to Status tab
+  showTab("status");
+    
     showAlert("Saved", "Settings saved on this device.");
   });
 
