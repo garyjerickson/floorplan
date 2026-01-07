@@ -771,10 +771,35 @@ function wireEnterToNextInSettings(){
     document.getElementById("alertBody").textContent = body;
     document.getElementById("alert").style.display = "block";
   }
-  function dismissAlert(){
-    document.getElementById("alert").style.display = "none";
-    stopAlarm();
+
+  function resetLingerAfterDismiss(){
+  if(!jack._entered_at) return;
+
+  // allow a future linger alert again (but not immediately)
+  lingerAlertedForEnteredAt = null;
+
+  // reset the linger "timer baseline" locally (virtual re-entry)
+  jack._entered_at = Math.floor(Date.now() / 1000);
+
+  // clear warning state
+  if(jack.state === "warn"){
+    jack.state = "ok";
   }
+
+  updateDerivedTimes();
+  render();
+}
+  
+function dismissAlert(){
+  document.getElementById("alert").style.display = "none";
+  stopAlarm();
+
+  // ✅ If the alert was a linger warning, clear linger + restart timer
+  if(jack.state === "warn"){
+    resetLingerAfterDismiss();
+  }
+}
+
 
   // =========================
   // Alerts / State priority
