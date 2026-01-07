@@ -279,6 +279,20 @@
     .alertBox h2{margin:0 0 6px 0}
     .alertBox .sub{margin:0}
 
+    /* ✅ Alert type styling */
+    .alertBox[data-kind="sos"]{
+      border-color: rgba(251,113,133,.75);
+      box-shadow: 0 0 0 2px rgba(251,113,133,.20), 0 18px 50px rgba(0,0,0,.55);
+    }
+    .alertBox[data-kind="linger"]{
+      border-color: rgba(250,204,21,.75);
+      box-shadow: 0 0 0 2px rgba(250,204,21,.18), 0 18px 50px rgba(0,0,0,.55);
+    }
+    .alertBox[data-kind="msg"]{
+      border-color: rgba(96,165,250,.75);
+      box-shadow: 0 0 0 2px rgba(96,165,250,.18), 0 18px 50px rgba(0,0,0,.55);
+    }
+
     .foot{
       display:flex;justify-content:space-between;gap:10px;
       align-items:center;color:var(--muted);font-size:12px;padding:0 2px;
@@ -459,7 +473,7 @@
 
   <!-- Alert Modal -->
   <div id="alert" class="alert" onclick="dismissAlert()">
-    <div class="alertBox" onclick="event.stopPropagation()">
+    <div class="alertBox" id="alertBox" data-kind="msg" onclick="event.stopPropagation()">
       <h2 id="alertTitle">Alert</h2>
       <p id="alertBody" class="sub">Message</p>
       <div style="height:12px"></div>
@@ -764,42 +778,62 @@ function wireEnterToNextInSettings(){
   }
 
   // =========================
-  // Alert modal
+  // Alert modal (typed + SOS priority)
   // =========================
-  function showAlert(title, body){
+  let currentAlertKind = null; // "sos" | "linger" | "msg" | null
+
+  function setAlertKind(kind){
+    currentAlertKind = kind || null;
+    const box = document.getElementById("alertBox");
+    if(box) box.setAttribute("data-kind", kind || "msg");
+  }
+
+  function showAlertKind(kind, title, body){
+    // SOS popups overwrite all others
+    if(currentAlertKind === "sos" && kind !== "sos"){
+      return;
+    }
+    setAlertKind(kind);
     document.getElementById("alertTitle").textContent = title;
     document.getElementById("alertBody").textContent = body;
     document.getElementById("alert").style.display = "block";
   }
 
+  // Backward compatibility: any old showAlert() calls become "msg" popups
+  function showAlert(title, body){
+    showAlertKind("msg", title, body);
+  }
+
   function resetLingerAfterDismiss(){
-  if(!jack._entered_at) return;
+    if(!jack._entered_at) return;
 
-  // allow a future linger alert again (but not immediately)
-  lingerAlertedForEnteredAt = null;
+    // allow a future linger alert again (but not immediately)
+    lingerAlertedForEnteredAt = null;
 
-  // reset the linger "timer baseline" locally (virtual re-entry)
-  jack._entered_at = Math.floor(Date.now() / 1000);
+    // reset the linger "timer baseline" locally (virtual re-entry)
+    jack._entered_at = Math.floor(Date.now() / 1000);
 
-  // clear warning state
-  if(jack.state === "warn"){
-    jack.state = "ok";
+    // clear warning state
+    if(jack.state === "warn"){
+      jack.state = "ok";
+    }
+
+    updateDerivedTimes();
+    render();
   }
 
-  updateDerivedTimes();
-  render();
-}
-  
-function dismissAlert(){
-  document.getElementById("alert").style.display = "none";
-  stopAlarm();
+  function dismissAlert(){
+    document.getElementById("alert").style.display = "none";
+    stopAlarm();
 
-  // ✅ If the alert was a linger warning, clear linger + restart timer
-  if(jack.state === "warn"){
-    resetLingerAfterDismiss();
+    // If the alert was a linger warning, clear linger + restart timer
+    if(jack.state === "warn"){
+      resetLingerAfterDismiss();
+    }
+
+    // clear kind (but if SOS is still true, applyStateFromAlerts will re-show)
+    setAlertKind(null);
   }
-}
-
 
   // =========================
   // Alerts / State priority
@@ -808,8 +842,11 @@ function dismissAlert(){
     const a = jack._alerts || {};
     if(a.sos === true || a.pool === true){
       if(jack.state !== "bad"){
-        showAlert("Emergency Alert", `LIVE SOS/Alarm for ${jack.name}.`);
+        showAlertKind("sos", "Emergency Alert", `LIVE SOS/Alarm for ${jack.name}.`);
         startAlarm();
+      }else{
+        // keep SOS kind sticky while alert is active
+        setAlertKind("sos");
       }
       jack.state = "bad";
       return true; // emergency active
@@ -837,7 +874,7 @@ function dismissAlert(){
       if(lingerAlertedForEnteredAt !== jack._entered_at){
         lingerAlertedForEnteredAt = jack._entered_at;
         jack.state = "warn";
-        showAlert("Linger Alert", `${jack.name} has been in ${jack.room} for ${formatDuration(dwellSec)} (limit ${formatDuration(limitSec)}).`);
+        showAlertKind("linger", "Linger Alert", `${jack.name} has been in ${jack.room} for ${formatDuration(dwellSec)} (limit ${formatDuration(limitSec)}).`);
         if(settings.lingerSound) startAlarm();
       }else{
         jack.state = "warn";
@@ -1129,10 +1166,9 @@ function dismissAlert(){
 
   document.getElementById("btnSaveSettings").addEventListener("click", ()=>{
     commitSettingsFromUI();
-  // go back to Status tab
-  showTab("status");
-    
-    showAlert("Saved", "Settings saved on this device.");
+    // go back to Status tab
+    showTab("status");
+    showAlertKind("msg", "Saved", "Settings saved on this device.");
   });
 
   document.getElementById("btnResetSettings").addEventListener("click", ()=>{
@@ -1140,10 +1176,10 @@ function dismissAlert(){
     saveSettings();
     applySettingsToUI();
 
-      // go back to Status tab
-  showTab("status");
+    // go back to Status tab
+    showTab("status");
 
-    showAlert("Reset", "Settings reset to defaults.");
+    showAlertKind("msg", "Reset", "Settings reset to defaults.");
   });
 
   wireToggle("toggleLinger", (v)=>{ settings.lingerEnabled = v; saveSettings(); });
@@ -1278,7 +1314,7 @@ function dismissAlert(){
 
   // Init UI
   applySettingsToUI();
-  wireSettingsInputs();   // ✅ NEW: autosave as user types
+  wireSettingsInputs();   // ✅ autosave as user types
   wireEnterToNextInSettings();
   updateDerivedTimes();
   computeAway();
