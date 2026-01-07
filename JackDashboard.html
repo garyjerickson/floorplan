@@ -6,14 +6,14 @@
 
   <!--
     UltraWatch
-    Build: JACK-ONLY v1.0.0
-    Last Updated: 2026-01-05
-    Live reads (same as your original file):
+    Build: JACK-ONLY v1.1.0
+    Last Updated: 2026-01-06
+    Live reads:
       /beacons/GRANDPA  -> room, entered_at, last_seen, last_sensor (optional), battery (optional)
       /alerts/GRANDPA   -> sos, pool, timestamp
       /gps/GRANDPA      -> lat, lng OR lon, accM/accuracyM/accuracy, updatedAt/timestamp
       /messages/GRANDPA -> {text,timestamp,...} (last 20)
-      /profiles/GRANDPA/caregiverPhone (optional)
+      /logs/GRANDPA     -> room intervals (timeline/history)
   -->
 
   <title>UltraWatch — Jack Erickson</title>
@@ -80,6 +80,26 @@
     .title h1{margin:0;font-size:18px;letter-spacing:.2px;line-height:1.15;}
     .sub{color:var(--muted);font-size:12px;line-height:1.3;}
 
+    .actions{
+      display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end;
+    }
+    .btn{
+      border:1px solid var(--line);
+      background:var(--panel2);
+      color:var(--text);
+      padding:9px 12px;
+      border-radius:14px;
+      font-weight:800;
+      cursor:pointer;
+      user-select:none;
+      font-size:12px;
+    }
+    .btn:hover{filter:brightness(1.08)}
+    .btn.danger{
+      border-color:rgba(251,113,133,.45);
+      background:rgba(251,113,133,.12);
+    }
+
     .pills{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px;}
     .pill{
       display:inline-flex;gap:8px;align-items:center;
@@ -93,33 +113,34 @@
     .dot.warn{background:var(--warn)}
     .dot.bad{background:var(--bad)}
 
-    .actions{
-      display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end;
+    /* Tabs */
+    .tabs{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      margin-top:10px;
     }
-    .btn{
+    .tab{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:7px 10px;
+      border-radius:999px;
       border:1px solid var(--line);
-      background:var(--panel2);
-      color:var(--text);
-      padding:9px 12px;
-      border-radius:14px;
-      font-weight:800;
+      background:rgba(0,0,0,.15);
       cursor:pointer;
-      text-decoration:none;
-      user-select:none;
       font-size:12px;
+      color:var(--muted);
+      user-select:none;
+      font-weight:900;
     }
-    .btn:hover{filter:brightness(1.08)}
-    .btn.danger{
-      border-color:rgba(251,113,133,.45);
-      background:rgba(251,113,133,.12);
+    .tab.active{
+      border-color:rgba(96,165,250,.55);
+      background:rgba(96,165,250,.16);
+      color:var(--text);
     }
 
-    .bigStatus{
-      margin-top:10px;
-      display:grid;
-      grid-template-columns:1fr;
-      gap:10px;
-    }
+    .bigStatus{margin-top:10px;display:grid;grid-template-columns:1fr;gap:10px;}
     .hero{
       border:1px solid var(--line);
       border-radius:16px;
@@ -139,8 +160,9 @@
     .heroRight{display:flex;flex-direction:column;align-items:flex-end;gap:4px;text-align:right;}
     .heroRight .mini{font-size:12px;color:var(--muted);}
 
-    .msgList{
-      max-height:140px;
+    /* Messages & History list */
+    .listBox{
+      max-height:180px;
       overflow:auto;
       border:1px solid var(--line);
       border-radius:16px;
@@ -153,15 +175,65 @@
       gap:12px;
       padding:8px 0;
       border-bottom:1px solid rgba(255,255,255,.08);
+      align-items:flex-start;
     }
     .evt:last-child{border-bottom:none}
     .evt .t{font-size:12px;color:var(--muted);white-space:nowrap}
+    .evt .msg{font-weight:900}
+    .evt .meta{font-size:12px;color:var(--muted);margin-top:2px}
 
-    .mapCard{padding:10px;}
-    .mapTop{
-      display:flex;justify-content:space-between;align-items:center;
-      gap:10px;margin-bottom:8px;
+    /* Settings rows */
+    .setRow{
+      display:flex;
+      justify-content:space-between;
+      gap:12px;
+      align-items:center;
+      padding:12px;
+      border-radius:16px;
+      border:1px solid var(--line);
+      background:rgba(0,0,0,.15);
+      margin-top:10px;
     }
+    .setRow .left{
+      display:flex;
+      flex-direction:column;
+      gap:4px;
+      min-width:0;
+    }
+    .input{
+      width:110px;
+      border:1px solid var(--line);
+      background:rgba(0,0,0,.18);
+      color:var(--text);
+      border-radius:14px;
+      padding:10px 10px;
+      outline:none;
+      text-align:right;
+      font-weight:900;
+    }
+    .toggle{
+      width:52px;height:30px;border-radius:999px;
+      border:1px solid rgba(255,255,255,.16);
+      background: rgba(255,255,255,.08);
+      position:relative;cursor:pointer;flex:0 0 auto;
+    }
+    .knob{
+      width:22px;height:22px;border-radius:999px;
+      position:absolute;top:50%;left:4px;
+      transform:translateY(-50%);
+      background:rgba(255,255,255,.85);
+      transition:left .18s ease;
+      box-shadow:0 6px 14px rgba(0,0,0,.35);
+    }
+    .toggle.on{
+      background: rgba(96,165,250,.25);
+      border-color: rgba(96,165,250,.55);
+    }
+    .toggle.on .knob{left:26px}
+
+    /* Map */
+    .mapCard{padding:10px;}
+    .mapTop{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:8px;}
     .mapMeta{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
     .mapWrap{
       border:1px solid var(--line);
@@ -188,6 +260,7 @@
       padding:2px 6px;
     }
 
+    /* Alert Modal */
     .alert{
       display:none;
       position:fixed;inset:0;
@@ -216,6 +289,7 @@
 <body>
   <div class="app">
 
+    <!-- Top summary + Tabs -->
     <div class="card">
       <div class="topRow">
         <div class="title">
@@ -236,31 +310,124 @@
         <span class="pill">Sensor: <b id="lastSensor">—</b></span>
       </div>
 
-      <div class="bigStatus">
-        <div class="hero">
-          <div class="heroLeft">
-            <div class="heroLabel">Current room</div>
-            <div class="heroValue" id="room">—</div>
+      <div class="tabs" id="tabs">
+        <div class="tab active" data-tab="status">🏠 Status</div>
+        <div class="tab" data-tab="history">🕒 History</div>
+        <div class="tab" data-tab="settings">⚙️ Settings</div>
+      </div>
+
+      <!-- STATUS TAB -->
+      <div id="panel_status">
+        <div class="bigStatus">
+          <div class="hero">
+            <div class="heroLeft">
+              <div class="heroLabel">Current room</div>
+              <div class="heroValue" id="room">—</div>
+            </div>
+            <div class="heroRight">
+              <div class="mini">Time in room</div>
+              <div style="font-weight:950;font-size:18px" id="timeInRoom">—</div>
+            </div>
           </div>
-          <div class="heroRight">
-            <div class="mini">Time in room</div>
-            <div style="font-weight:950;font-size:18px" id="timeInRoom">—</div>
+        </div>
+
+        <div style="height:10px"></div>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <div style="font-weight:950">Messages from phone</div>
+            <div class="sub">Recent quick-button messages from Jack’s app</div>
           </div>
+          <button class="btn" onclick="clearMessages()">Clear</button>
+        </div>
+
+        <div style="height:8px"></div>
+        <div class="listBox" id="msgLog">
+          <div class="evt"><div><b>No messages yet</b></div><div class="t">—</div></div>
         </div>
       </div>
 
-      <div style="height:10px"></div>
-      <div style="display:flex;justify-content:space-between;align-items:center">
-        <div>
-          <div style="font-weight:950">Messages from phone</div>
-          <div class="sub">Recent quick-button messages from Jack’s app</div>
+      <!-- HISTORY TAB -->
+      <div id="panel_history" style="display:none">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px">
+          <div>
+            <div style="font-weight:950">Room History</div>
+            <div class="sub">From Firebase: <span style="opacity:.95">/logs/GRANDPA</span></div>
+          </div>
+          <button class="btn" id="btnRefreshHistory" type="button">Refresh</button>
         </div>
-        <button class="btn" onclick="clearMessages()">Clear</button>
+
+        <div style="height:8px"></div>
+        <div class="listBox" id="historyList" style="max-height:260px">
+          <div class="evt"><div><b>Loading…</b></div><div class="t">—</div></div>
+        </div>
+
+        <div class="sub" style="margin-top:8px">
+          Tip: If you don’t see history, your Python logger may not be writing intervals to <span style="opacity:.95">/logs/GRANDPA</span> yet.
+        </div>
       </div>
 
-      <div style="height:8px"></div>
-      <div class="msgList" id="msgLog">
-        <div class="evt"><div><b>No messages yet</b></div><div class="t">—</div></div>
+      <!-- SETTINGS TAB -->
+      <div id="panel_settings" style="display:none">
+        <div class="setRow">
+          <div class="left">
+            <div style="font-weight:950">Linger alerts</div>
+            <div class="sub">Warn if Jack stays in a room longer than the limit</div>
+          </div>
+          <div class="toggle on" id="toggleLinger"><div class="knob"></div></div>
+        </div>
+
+        <div class="setRow">
+          <div class="left">
+            <div style="font-weight:950">Sound on linger</div>
+            <div class="sub">Play alarm tone for linger warnings</div>
+          </div>
+          <div class="toggle" id="toggleLingerSound"><div class="knob"></div></div>
+        </div>
+
+        <div class="setRow">
+          <div class="left">
+            <div style="font-weight:950">Default limit</div>
+            <div class="sub">Minutes if a room-specific limit is blank</div>
+          </div>
+          <input class="input" id="limitDefault" inputmode="numeric" pattern="[0-9]*" placeholder="min" />
+        </div>
+
+        <div class="sub" style="margin-top:10px;font-weight:950">Room limits (minutes)</div>
+
+        <div class="setRow">
+          <div class="left"><div style="font-weight:950">Bedroom</div><div class="sub">Typical longer stays</div></div>
+          <input class="input" id="limitBedroom" inputmode="numeric" pattern="[0-9]*" placeholder="min" />
+        </div>
+
+        <div class="setRow">
+          <div class="left"><div style="font-weight:950">Bathroom</div><div class="sub">Short stays expected</div></div>
+          <input class="input" id="limitBathroom" inputmode="numeric" pattern="[0-9]*" placeholder="min" />
+        </div>
+
+        <div class="setRow">
+          <div class="left"><div style="font-weight:950">Kitchen</div><div class="sub">Meals / drinks</div></div>
+          <input class="input" id="limitKitchen" inputmode="numeric" pattern="[0-9]*" placeholder="min" />
+        </div>
+
+        <div class="setRow">
+          <div class="left"><div style="font-weight:950">Living Room</div><div class="sub">Sitting / TV</div></div>
+          <input class="input" id="limitLiving" inputmode="numeric" pattern="[0-9]*" placeholder="min" />
+        </div>
+
+        <div class="setRow">
+          <div class="left"><div style="font-weight:950">Front Door</div><div class="sub">Short dwell expected</div></div>
+          <input class="input" id="limitFrontDoor" inputmode="numeric" pattern="[0-9]*" placeholder="min" />
+        </div>
+
+        <div style="height:10px"></div>
+        <div style="display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap">
+          <button class="btn" id="btnSaveSettings" type="button">Save</button>
+          <button class="btn" id="btnResetSettings" type="button">Reset</button>
+        </div>
+
+        <div class="sub" style="margin-top:8px">
+          Settings are stored on this device (localStorage).
+        </div>
       </div>
     </div>
 
@@ -274,7 +441,6 @@
         </div>
       </div>
 
-      <!-- Hidden until valid GPS arrives -->
       <div class="mapWrap" id="mapWrap" style="display:none">
         <div id="leafletMap"></div>
       </div>
@@ -310,12 +476,13 @@
   const PERSON_NAME = "Jack Erickson";
   const FIREBASE_KEY = "GRANDPA";
   const firebaseConfig = { databaseURL: "https://ultrawatch-home-default-rtdb.firebaseio.com/" };
-
-  // Baseline view (ONLY used internally; map won't show until GPS is valid)
   const BASE_GPS = { lat: 28.538336, lng: -81.379234 };
 
+  // Rooms you care about
+  const ROOMS = ["Bedroom","Bathroom","Kitchen","Living Room","Front Door"];
+
   // =========================
-  // Simple state
+  // State
   // =========================
   const jack = {
     name: PERSON_NAME,
@@ -323,17 +490,107 @@
     lastSensor: "",
     battery: null,
     status: "—",
-    state: "ok",
+    state: "ok",          // ok | warn | bad
     lastSeenSec: null,
     timeInRoom: "—",
-    _entered_at: null,
-    _last_seen: 0,
-    _alerts: {},
-    gps: null
+    _entered_at: null,    // epoch seconds
+    _last_seen: 0,        // epoch seconds
+    _alerts: {},          // {sos,pool,...}
+    gps: null             // {lat,lng,accM,updatedAt(ms)}
   };
 
-  let liveJackMessages = []; // [{text,timestamp,...}]
+  let liveJackMessages = [];
   let db = null;
+
+  // Linger tracking (so we only alert once per room entry)
+  let lingerAlertedForEnteredAt = null;
+
+  // =========================
+  // Settings (localStorage)
+  // =========================
+  const SETTINGS_KEY = "uw_jack_settings_v1";
+  const defaultSettings = {
+    lingerEnabled: true,
+    lingerSound: false,
+    defaultLimitMin: 60,
+    perRoomMin: {
+      "Bedroom": 240,
+      "Bathroom": 15,
+      "Kitchen": 90,
+      "Living Room": 180,
+      "Front Door": 10
+    }
+  };
+  let settings = loadSettings();
+
+  function loadSettings(){
+    try{
+      const raw = localStorage.getItem(SETTINGS_KEY);
+      if(!raw) return structuredClone(defaultSettings);
+      const obj = JSON.parse(raw);
+      // merge shallowly
+      const merged = structuredClone(defaultSettings);
+      merged.lingerEnabled = (obj.lingerEnabled !== undefined) ? !!obj.lingerEnabled : merged.lingerEnabled;
+      merged.lingerSound = (obj.lingerSound !== undefined) ? !!obj.lingerSound : merged.lingerSound;
+      merged.defaultLimitMin = isFinite(obj.defaultLimitMin) ? Number(obj.defaultLimitMin) : merged.defaultLimitMin;
+      merged.perRoomMin = merged.perRoomMin || {};
+      if(obj.perRoomMin && typeof obj.perRoomMin === "object"){
+        for(const k of Object.keys(merged.perRoomMin)){
+          if(isFinite(obj.perRoomMin[k])) merged.perRoomMin[k] = Number(obj.perRoomMin[k]);
+        }
+      }
+      return merged;
+    }catch(e){
+      return structuredClone(defaultSettings);
+    }
+  }
+
+  function saveSettings(){
+    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+  }
+
+  function applySettingsToUI(){
+    // toggles
+    document.getElementById("toggleLinger").classList.toggle("on", !!settings.lingerEnabled);
+    document.getElementById("toggleLingerSound").classList.toggle("on", !!settings.lingerSound);
+
+    // inputs
+    document.getElementById("limitDefault").value = settings.defaultLimitMin ?? "";
+    document.getElementById("limitBedroom").value = settings.perRoomMin["Bedroom"] ?? "";
+    document.getElementById("limitBathroom").value = settings.perRoomMin["Bathroom"] ?? "";
+    document.getElementById("limitKitchen").value = settings.perRoomMin["Kitchen"] ?? "";
+    document.getElementById("limitLiving").value = settings.perRoomMin["Living Room"] ?? "";
+    document.getElementById("limitFrontDoor").value = settings.perRoomMin["Front Door"] ?? "";
+  }
+
+  function readSettingsFromUI(){
+    const n = (v)=> {
+      const x = Number(String(v ?? "").trim());
+      return isFinite(x) && x >= 0 ? x : null;
+    };
+
+    settings.defaultLimitMin = n(document.getElementById("limitDefault").value) ?? defaultSettings.defaultLimitMin;
+
+    const bedroom = n(document.getElementById("limitBedroom").value);
+    const bath = n(document.getElementById("limitBathroom").value);
+    const kit = n(document.getElementById("limitKitchen").value);
+    const liv = n(document.getElementById("limitLiving").value);
+    const fd = n(document.getElementById("limitFrontDoor").value);
+
+    settings.perRoomMin["Bedroom"] = bedroom ?? settings.perRoomMin["Bedroom"];
+    settings.perRoomMin["Bathroom"] = bath ?? settings.perRoomMin["Bathroom"];
+    settings.perRoomMin["Kitchen"] = kit ?? settings.perRoomMin["Kitchen"];
+    settings.perRoomMin["Living Room"] = liv ?? settings.perRoomMin["Living Room"];
+    settings.perRoomMin["Front Door"] = fd ?? settings.perRoomMin["Front Door"];
+  }
+
+  function getRoomLimitSeconds(room){
+    if(!room) return null;
+    const min = settings.perRoomMin[room];
+    const useMin = isFinite(min) ? Number(min) : Number(settings.defaultLimitMin || 0);
+    if(!isFinite(useMin) || useMin <= 0) return null;
+    return Math.floor(useMin * 60);
+  }
 
   // =========================
   // Helpers
@@ -462,6 +719,9 @@
     stopAlarm();
   }
 
+  // =========================
+  // Alerts / State priority
+  // =========================
   function applyStateFromAlerts(){
     const a = jack._alerts || {};
     if(a.sos === true || a.pool === true){
@@ -470,12 +730,48 @@
         startAlarm();
       }
       jack.state = "bad";
-      return;
+      return true; // emergency active
     }
     if(jack.state === "bad"){
       stopAlarm();
     }
-    jack.state = "ok";
+    return false;
+  }
+
+  function maybeLingerAlert(){
+    if(!settings.lingerEnabled) return;
+    if(jack.status !== "Home") return;
+    if(!jack._entered_at) return;
+    if(!jack.room) return;
+    if(jack.state === "bad") return; // emergency overrides
+
+    const limitSec = getRoomLimitSeconds(jack.room);
+    if(!limitSec) return;
+
+    const nowSec = Math.floor(Date.now()/1000);
+    const dwellSec = Math.max(0, nowSec - jack._entered_at);
+
+    // Reset if entered_at changed (new room entry)
+    if(lingerAlertedForEnteredAt !== jack._entered_at){
+      // not alerted yet for this entry
+    }
+
+    if(dwellSec >= limitSec){
+      if(lingerAlertedForEnteredAt !== jack._entered_at){
+        lingerAlertedForEnteredAt = jack._entered_at;
+        jack.state = "warn";
+        showAlert("Linger Alert", `${jack.name} has been in ${jack.room} for ${formatDuration(dwellSec)} (limit ${formatDuration(limitSec)}).`);
+        if(settings.lingerSound) startAlarm();
+      }else{
+        // already alerted for this room entry, keep WARN
+        jack.state = "warn";
+      }
+    }else{
+      // under limit: only clear warn if it was due to linger (not emergency)
+      if(jack.state === "warn"){
+        jack.state = "ok";
+      }
+    }
   }
 
   // =========================
@@ -515,7 +811,6 @@
 
     renderMessages();
 
-    // Only update the map if it is actually shown (i.e., we have valid GPS)
     if(mapShown){
       updateMap(false);
     }
@@ -535,10 +830,86 @@
       const row = document.createElement("div");
       row.className = "evt";
       const when = m.timestamp ? new Date(m.timestamp).toLocaleString() : "—";
-      row.innerHTML = `<div><b>${escapeHtml(m.text || "")}</b></div><div class="t">${escapeHtml(when)}</div>`;
+      row.innerHTML = `<div><div class="msg">${escapeHtml(m.text || "")}</div></div><div class="t">${escapeHtml(when)}</div>`;
       box.appendChild(row);
     });
     box.scrollTop = box.scrollHeight;
+  }
+
+  // =========================
+  // History (Room intervals)
+  // =========================
+  let historyRows = []; // [{room, entered_at, exited_at, duration_sec}]
+
+  function formatTime(tsSec){
+    if(!tsSec) return "—";
+    const d = new Date(tsSec * 1000);
+    return d.toLocaleString([], { month:"numeric", day:"numeric", hour:"2-digit", minute:"2-digit" });
+  }
+
+  function loadHistory(){
+    const box = document.getElementById("historyList");
+    if(!db){
+      box.innerHTML = `<div class="evt"><div><b>Not connected</b></div><div class="t">—</div></div>`;
+      return;
+    }
+
+    box.innerHTML = `<div class="evt"><div><b>Loading…</b></div><div class="t">—</div></div>`;
+
+    db.ref("/logs/" + FIREBASE_KEY)
+      .orderByChild("exited_at")
+      .limitToLast(50)
+      .once("value")
+      .then((snap)=>{
+        const obj = snap.val() || {};
+        const rows = Object.values(obj).filter(Boolean);
+
+        rows.sort((a,b)=>{
+          const at = (a.exited_at || a.entered_at || a.timestamp || 0);
+          const bt = (b.exited_at || b.entered_at || b.timestamp || 0);
+          return bt - at;
+        });
+
+        historyRows = rows;
+        renderHistory();
+      })
+      .catch((e)=>{
+        console.log("History load error:", e);
+        box.innerHTML = `<div class="evt"><div><b>Failed to load history</b></div><div class="t">—</div></div>`;
+      });
+  }
+
+  function renderHistory(){
+    const box = document.getElementById("historyList");
+    if(!historyRows.length){
+      box.innerHTML = `<div class="evt"><div><b>No history yet</b></div><div class="t">—</div></div>`;
+      return;
+    }
+
+    box.innerHTML = "";
+    historyRows.slice(0, 50).forEach(x=>{
+      const room = x.room || "—";
+      const entered = x.entered_at || x.timestamp || null;
+      const exited = x.exited_at || null;
+      const dur = x.duration_sec ? formatDuration(x.duration_sec) : (entered && exited ? formatDuration(exited-entered) : "");
+
+      const left = `
+        <div>
+          <div class="msg">${escapeHtml(room)}</div>
+          <div class="meta">
+            ${escapeHtml(formatTime(entered))}${exited ? (" → " + escapeHtml(formatTime(exited))) : ""}
+            ${dur ? (" • " + escapeHtml(dur)) : ""}
+          </div>
+        </div>
+      `;
+
+      const right = `<div class="t">${exited ? "Done" : "—"}</div>`;
+
+      const row = document.createElement("div");
+      row.className = "evt";
+      row.innerHTML = left + right;
+      box.appendChild(row);
+    });
   }
 
   // =========================
@@ -559,7 +930,6 @@
     if(mapReady) return;
     mapReady = true;
 
-    // Initialize with BASE (not visible yet); once visible we will setView to real GPS
     map = L.map('leafletMap', { zoomControl:true }).setView([BASE_GPS.lat, BASE_GPS.lng], 13);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -591,13 +961,12 @@
     document.getElementById("gpsWaiting").style.display = "none";
     document.getElementById("mapWrap").style.display = "block";
 
-    // Now that the container is visible, init map and let Leaflet measure it
     initMap();
     setTimeout(() => map.invalidateSize(), 80);
   }
 
   function updateMap(pan){
-    if(!mapShown) return; // hard stop until GPS is valid & map is shown
+    if(!mapShown) return;
     initMap();
 
     const hasGps = !!(jack.gps && isFinite(jack.gps.lat) && isFinite(jack.gps.lng));
@@ -624,12 +993,35 @@
     setTimeout(() => map.invalidateSize(), 50);
   }
 
-  function centerMapNow(){
-    if(!jack.gps || !mapShown) return;
-    updateMap(true);
+  // =========================
+  // Tabs + UI wiring
+  // =========================
+  function showTab(tab){
+    document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active", t.dataset.tab===tab));
+    document.getElementById("panel_status").style.display = (tab==="status") ? "block" : "none";
+    document.getElementById("panel_history").style.display = (tab==="history") ? "block" : "none";
+    document.getElementById("panel_settings").style.display = (tab==="settings") ? "block" : "none";
+    if(tab==="history") loadHistory();
+    if(tab==="settings") applySettingsToUI();
   }
 
+  document.getElementById("tabs").addEventListener("click", (e)=>{
+    const t = e.target.closest(".tab");
+    if(!t) return;
+    showTab(t.dataset.tab);
+  });
+
+  function wireToggle(id, onChange){
+    const el = document.getElementById(id);
+    el.addEventListener("click", ()=>{
+      el.classList.toggle("on");
+      onChange?.(el.classList.contains("on"));
+    });
+  }
+
+  // =========================
   // Buttons
+  // =========================
   document.getElementById("btnCenter").addEventListener("click", ()=>{
     if(!jack.gps){
       alert("Waiting for GPS…");
@@ -637,10 +1029,10 @@
     }
     if(!mapShown){
       showMapUI();
-      setTimeout(centerMapNow, 100);
+      setTimeout(()=>updateMap(true), 120);
       return;
     }
-    centerMapNow();
+    updateMap(true);
   });
 
   document.getElementById("btnMute").addEventListener("click", (e)=>{
@@ -648,6 +1040,26 @@
     e.target.textContent = "Sound: " + (soundOn ? "ON" : "OFF");
     if(!soundOn) stopAlarm();
   });
+
+  document.getElementById("btnRefreshHistory").addEventListener("click", loadHistory);
+
+  document.getElementById("btnSaveSettings").addEventListener("click", ()=>{
+    readSettingsFromUI();
+    settings.lingerEnabled = document.getElementById("toggleLinger").classList.contains("on");
+    settings.lingerSound = document.getElementById("toggleLingerSound").classList.contains("on");
+    saveSettings();
+    showAlert("Saved", "Settings saved on this device.");
+  });
+
+  document.getElementById("btnResetSettings").addEventListener("click", ()=>{
+    settings = structuredClone(defaultSettings);
+    saveSettings();
+    applySettingsToUI();
+    showAlert("Reset", "Settings reset to defaults.");
+  });
+
+  wireToggle("toggleLinger", (v)=>{ settings.lingerEnabled = v; saveSettings(); });
+  wireToggle("toggleLingerSound", (v)=>{ settings.lingerSound = v; saveSettings(); });
 
   // =========================
   // Firebase wiring
@@ -658,6 +1070,7 @@
       db = firebase.database();
       setFbStatus("Connected");
 
+      // Live beacons
       db.ref("/beacons/" + FIREBASE_KEY).on("value", (snap)=>{
         const val = snap.val() || {};
 
@@ -665,23 +1078,45 @@
         if(val.last_sensor !== undefined) jack.lastSensor = val.last_sensor || (val.room || jack.lastSensor || "");
         else jack.lastSensor = jack.lastSensor || val.room || "";
 
-        if(val.entered_at !== undefined) jack._entered_at = val.entered_at || null;
+        if(val.entered_at !== undefined) {
+          jack._entered_at = val.entered_at || null;
+          // If entered_at changed, reset linger alert gating
+          if(lingerAlertedForEnteredAt && lingerAlertedForEnteredAt !== jack._entered_at){
+            lingerAlertedForEnteredAt = null;
+          }
+        }
         if(val.last_seen !== undefined) jack._last_seen = val.last_seen || 0;
+
         if(val.battery !== undefined) jack.battery = val.battery;
 
         updateDerivedTimes();
         computeAway();
-        applyStateFromAlerts();
+
+        // Priority: emergency first
+        const emergency = applyStateFromAlerts();
+        if(!emergency){
+          maybeLingerAlert();
+          if(jack.state !== "warn") jack.state = "ok";
+        }
+
         render();
       });
 
+      // Live alerts
       db.ref("/alerts/" + FIREBASE_KEY).on("value", (snap)=>{
         jack._alerts = snap.val() || {};
-        applyStateFromAlerts();
+
+        const emergency = applyStateFromAlerts();
+        if(!emergency){
+          // If emergency cleared, re-check linger
+          maybeLingerAlert();
+          if(jack.state !== "warn") jack.state = "ok";
+        }
+
         render();
       });
 
-      // GPS: only accept and show map when valid GPS arrives
+      // Live GPS
       db.ref("/gps/" + FIREBASE_KEY).on("value", (snap)=>{
         const val = snap.val();
         if(!val) return;
@@ -710,13 +1145,10 @@
         jack.gps.accM = acc;
         jack.gps.updatedAt = updatedMs;
 
-        // Show map UI only now
         showMapUI();
 
-        // Center once on the first valid GPS
         if(!centeredOnce){
           centeredOnce = true;
-          // Wait a beat to ensure Leaflet has measured the now-visible container
           setTimeout(()=> updateMap(true), 120);
         }else{
           updateMap(false);
@@ -725,6 +1157,7 @@
         render();
       });
 
+      // Live messages
       db.ref("/messages/" + FIREBASE_KEY)
         .orderByChild("timestamp")
         .limitToLast(20)
@@ -736,25 +1169,35 @@
           renderMessages();
         });
 
-      db.ref("/profiles/" + FIREBASE_KEY + "/caregiverPhone").on("value", ()=>{ /* reserved */ });
-
     }catch(e){
       console.log("Firebase init error:", e);
       setFbStatus("Error");
     }
   }
 
-  // Tick: keep “last seen” + “time in room” counting
+  // =========================
+  // Tick: derived time + linger checks
+  // =========================
   setInterval(()=>{
     updateDerivedTimes();
     computeAway();
+
+    const emergency = applyStateFromAlerts();
+    if(!emergency){
+      maybeLingerAlert();
+      // if not warning, keep OK
+      if(jack.state !== "warn") jack.state = "ok";
+    }
+
     render();
   }, 3000);
 
-  // Init UI (IMPORTANT: DO NOT init the map here anymore)
+  // Init UI
+  applySettingsToUI();
   updateDerivedTimes();
   computeAway();
   render();
+  showTab("status");
 
   // Start Firebase
   wireFirebase();
