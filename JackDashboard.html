@@ -521,19 +521,23 @@
       "Front Door": 10
     }
   };
+
+  // Safe clone for older browsers
+  const clone = (o)=> JSON.parse(JSON.stringify(o));
+
   let settings = loadSettings();
 
   function loadSettings(){
     try{
       const raw = localStorage.getItem(SETTINGS_KEY);
-      if(!raw) return structuredClone(defaultSettings);
+      if(!raw) return clone(defaultSettings);
       const obj = JSON.parse(raw);
-      // merge shallowly
-      const merged = structuredClone(defaultSettings);
+      const merged = clone(defaultSettings);
+
       merged.lingerEnabled = (obj.lingerEnabled !== undefined) ? !!obj.lingerEnabled : merged.lingerEnabled;
       merged.lingerSound = (obj.lingerSound !== undefined) ? !!obj.lingerSound : merged.lingerSound;
       merged.defaultLimitMin = isFinite(obj.defaultLimitMin) ? Number(obj.defaultLimitMin) : merged.defaultLimitMin;
-      merged.perRoomMin = merged.perRoomMin || {};
+
       if(obj.perRoomMin && typeof obj.perRoomMin === "object"){
         for(const k of Object.keys(merged.perRoomMin)){
           if(isFinite(obj.perRoomMin[k])) merged.perRoomMin[k] = Number(obj.perRoomMin[k]);
@@ -541,12 +545,16 @@
       }
       return merged;
     }catch(e){
-      return structuredClone(defaultSettings);
+      return clone(defaultSettings);
     }
   }
 
   function saveSettings(){
-    localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+    try{
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
+    }catch(e){
+      console.log("saveSettings error:", e);
+    }
   }
 
   function applySettingsToUI(){
@@ -577,11 +585,19 @@
     const liv = n(document.getElementById("limitLiving").value);
     const fd = n(document.getElementById("limitFrontDoor").value);
 
-    settings.perRoomMin["Bedroom"] = bedroom ?? settings.perRoomMin["Bedroom"];
-    settings.perRoomMin["Bathroom"] = bath ?? settings.perRoomMin["Bathroom"];
-    settings.perRoomMin["Kitchen"] = kit ?? settings.perRoomMin["Kitchen"];
-    settings.perRoomMin["Living Room"] = liv ?? settings.perRoomMin["Living Room"];
-    settings.perRoomMin["Front Door"] = fd ?? settings.perRoomMin["Front Door"];
+    if(bedroom !== null) settings.perRoomMin["Bedroom"] = bedroom;
+    if(bath !== null) settings.perRoomMin["Bathroom"] = bath;
+    if(kit !== null) settings.perRoomMin["Kitchen"] = kit;
+    if(liv !== null) settings.perRoomMin["Living Room"] = liv;
+    if(fd !== null) settings.perRoomMin["Front Door"] = fd;
+  }
+
+  function commitSettingsFromUI(){
+    // Read inputs + toggles into settings, then save (used on tab switches and input autosave)
+    readSettingsFromUI();
+    settings.lingerEnabled = document.getElementById("toggleLinger").classList.contains("on");
+    settings.lingerSound = document.getElementById("toggleLingerSound").classList.contains("on");
+    saveSettings();
   }
 
   function getRoomLimitSeconds(room){
@@ -590,6 +606,22 @@
     const useMin = isFinite(min) ? Number(min) : Number(settings.defaultLimitMin || 0);
     if(!isFinite(useMin) || useMin <= 0) return null;
     return Math.floor(useMin * 60);
+  }
+
+  // Auto-save as user types (prevents losing edits when switching tabs)
+  function wireSettingsInputs(){
+    const ids = ["limitDefault","limitBedroom","limitBathroom","limitKitchen","limitLiving","limitFrontDoor"];
+    ids.forEach(id=>{
+      const el = document.getElementById(id);
+      if(!el) return;
+      el.addEventListener("input", ()=>{
+        // Keep it lightweight: commit on each keystroke
+        commitSettingsFromUI();
+      });
+      el.addEventListener("change", ()=>{
+        commitSettingsFromUI();
+      });
+    });
   }
 
   // =========================
@@ -751,11 +783,6 @@
     const nowSec = Math.floor(Date.now()/1000);
     const dwellSec = Math.max(0, nowSec - jack._entered_at);
 
-    // Reset if entered_at changed (new room entry)
-    if(lingerAlertedForEnteredAt !== jack._entered_at){
-      // not alerted yet for this entry
-    }
-
     if(dwellSec >= limitSec){
       if(lingerAlertedForEnteredAt !== jack._entered_at){
         lingerAlertedForEnteredAt = jack._entered_at;
@@ -763,11 +790,9 @@
         showAlert("Linger Alert", `${jack.name} has been in ${jack.room} for ${formatDuration(dwellSec)} (limit ${formatDuration(limitSec)}).`);
         if(settings.lingerSound) startAlarm();
       }else{
-        // already alerted for this room entry, keep WARN
         jack.state = "warn";
       }
     }else{
-      // under limit: only clear warn if it was due to linger (not emergency)
       if(jack.state === "warn"){
         jack.state = "ok";
       }
@@ -996,7 +1021,16 @@
   // =========================
   // Tabs + UI wiring
   // =========================
+  let currentTab = "status";
+
   function showTab(tab){
+    // If leaving Settings, commit typed values so they never "reset" on return
+    if(currentTab === "settings" && tab !== "settings"){
+      commitSettingsFromUI();
+    }
+
+    currentTab = tab;
+
     document.querySelectorAll(".tab").forEach(t=>t.classList.toggle("active", t.dataset.tab===tab));
     document.getElementById("panel_status").style.display = (tab==="status") ? "block" : "none";
     document.getElementById("panel_history").style.display = (tab==="history") ? "block" : "none";
@@ -1044,15 +1078,12 @@
   document.getElementById("btnRefreshHistory").addEventListener("click", loadHistory);
 
   document.getElementById("btnSaveSettings").addEventListener("click", ()=>{
-    readSettingsFromUI();
-    settings.lingerEnabled = document.getElementById("toggleLinger").classList.contains("on");
-    settings.lingerSound = document.getElementById("toggleLingerSound").classList.contains("on");
-    saveSettings();
+    commitSettingsFromUI();
     showAlert("Saved", "Settings saved on this device.");
   });
 
   document.getElementById("btnResetSettings").addEventListener("click", ()=>{
-    settings = structuredClone(defaultSettings);
+    settings = clone(defaultSettings);
     saveSettings();
     applySettingsToUI();
     showAlert("Reset", "Settings reset to defaults.");
@@ -1080,7 +1111,6 @@
 
         if(val.entered_at !== undefined) {
           jack._entered_at = val.entered_at || null;
-          // If entered_at changed, reset linger alert gating
           if(lingerAlertedForEnteredAt && lingerAlertedForEnteredAt !== jack._entered_at){
             lingerAlertedForEnteredAt = null;
           }
@@ -1092,7 +1122,6 @@
         updateDerivedTimes();
         computeAway();
 
-        // Priority: emergency first
         const emergency = applyStateFromAlerts();
         if(!emergency){
           maybeLingerAlert();
@@ -1108,7 +1137,6 @@
 
         const emergency = applyStateFromAlerts();
         if(!emergency){
-          // If emergency cleared, re-check linger
           maybeLingerAlert();
           if(jack.state !== "warn") jack.state = "ok";
         }
@@ -1185,7 +1213,6 @@
     const emergency = applyStateFromAlerts();
     if(!emergency){
       maybeLingerAlert();
-      // if not warning, keep OK
       if(jack.state !== "warn") jack.state = "ok";
     }
 
@@ -1194,6 +1221,7 @@
 
   // Init UI
   applySettingsToUI();
+  wireSettingsInputs();   // ✅ NEW: autosave as user types
   updateDerivedTimes();
   computeAway();
   render();
