@@ -519,6 +519,10 @@
   // Linger tracking (so we only alert once per room entry)
   let lingerAlertedForEnteredAt = null;
 
+ 
+  // ✅ Linger snooze (2 minutes)
+let lingerSnoozeUntilMs = 0;      // Date.now() ms until which we suppress linger popups
+
   // =========================
   // Settings (localStorage)
   // =========================
@@ -822,18 +826,26 @@ function wireEnterToNextInSettings(){
     render();
   }
 
-  function dismissAlert(){
-    document.getElementById("alert").style.display = "none";
-    stopAlarm();
+function dismissAlert(){
+  document.getElementById("alert").style.display = "none";
+  stopAlarm();
 
-    // If the alert was a linger warning, clear linger + restart timer
-    if(jack.state === "warn"){
-      resetLingerAfterDismiss();
-    }
-
-    // clear kind (but if SOS is still true, applyStateFromAlerts will re-show)
-    setAlertKind(null);
+  // ✅ If the popup we dismissed was LINGER, snooze linger for 2 minutes
+  if(currentAlertKind === "linger"){
+    lingerSnoozeUntilMs = Date.now() + (2 * 60 * 1000); // 2 minutes
   }
+
+  // Clear warn state visually (does NOT change Firebase timers)
+  if(jack.state === "warn"){
+    jack.state = "ok";
+  }
+
+  // clear kind (but if SOS is still true, applyStateFromAlerts will re-show)
+  setAlertKind(null);
+
+  render();
+}
+
 
   // =========================
   // Alerts / State priority
@@ -863,6 +875,9 @@ function wireEnterToNextInSettings(){
     if(!jack._entered_at) return;
     if(!jack.room) return;
     if(jack.state === "bad") return; // emergency overrides
+
+      if(Date.now() < lingerSnoozeUntilMs) return; // ✅ snooze linger popups
+
 
     const limitSec = getRoomLimitSeconds(jack.room);
     if(!limitSec) return;
