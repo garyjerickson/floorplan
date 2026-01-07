@@ -494,6 +494,7 @@
 
   // Rooms you care about
   const ROOMS = ["Bedroom","Bathroom","Kitchen","Living Room","Front Door"];
+const OFFLINE_SEC = 12; // not seen threshold (seconds) — matches your existing logic
 
   // =========================
   // State
@@ -728,17 +729,21 @@ function wireEnterToNextInSettings(){
     }
   }
 
-  function computeAway(){
-    const nowSec = Math.floor(Date.now()/1000);
-    const lastSeen = jack._last_seen || 0;
-    const offline = !lastSeen || ((nowSec - lastSeen) > 12);
-    if(offline && (jack.room === "Front Door" || jack.lastSensor === "Front Door")){
-      jack.status = "Left Home";
-      jack.room = "";
-    }else{
-      jack.status = "Home";
-    }
+function computeAway(){
+  const nowSec = Math.floor(Date.now()/1000);
+  const lastSeen = jack._last_seen || 0;
+
+  const offline = !lastSeen || ((nowSec - lastSeen) > OFFLINE_SEC);
+
+  if(offline){
+    jack.status = "Away";
+    // keep last known room internally (jack.room) so we can log gaps,
+    // but display will show "Away"
+  }else{
+    jack.status = "Home";
   }
+}
+
 
   // =========================
   // Alarm sound
@@ -911,7 +916,8 @@ function dismissAlert(){
       (jack.state==="ok") ? "OK" : (jack.state==="warn") ? "LINGER" : "ALERT";
 
     document.getElementById("statusText").textContent = jack.status || "—";
-    document.getElementById("room").textContent = jack.room || (jack.status==="Left Home" ? "Away" : "—");
+    document.getElementById("room").textContent =
+  (jack.status === "Away") ? "Away" : (jack.room || "—");
     document.getElementById("timeInRoom").textContent = jack.timeInRoom || "—";
 
     document.getElementById("lastSeen").textContent =
@@ -968,6 +974,60 @@ function dismissAlert(){
   // =========================
   let historyRows = []; // [{room, entered_at, exited_at, duration_sec}]
 
+function buildHistoryWithAway(rawRows){
+  const nowSec = Math.floor(Date.now()/1000);
+
+  // Normalize to {room, entered_at, exited_at}
+  const intervals = (rawRows || []).map(x => ({
+    room: x.room || "—",
+    entered_at: x.entered_at || x.timestamp || null,
+    exited_at: x.exited_at || null,
+    duration_sec: x.duration_sec || null
+  })).filter(x => x.entered_at);
+
+  // Sort ascending by entered time so we can detect gaps
+  intervals.sort((a,b) => (a.entered_at||0) - (b.entered_at||0));
+
+  const merged = [];
+  for(let i=0;i<intervals.length;i++){
+    const cur = intervals[i];
+    const prev = merged.length ? merged[merged.length - 1] : null;
+
+    // If there is a previous interval with an exited_at, check gap
+    if(prev && prev.exited_at && cur.entered_at){
+      const gap = cur.entered_at - prev.exited_at;
+      if(gap > OFFLINE_SEC){
+        merged.push({
+          room: "Away",
+          entered_at: prev.exited_at,
+          exited_at: cur.entered_at,
+          duration_sec: gap
+        });
+      }
+    }
+
+    merged.push(cur);
+  }
+
+  // If currently offline, add an "open" Away interval from last_seen -> now
+  if(jack._last_seen){
+    const offlineNow = (nowSec - jack._last_seen) > OFFLINE_SEC;
+    if(offlineNow){
+      merged.push({
+        room: "Away",
+        entered_at: jack._last_seen,
+        exited_at: nowSec,
+        duration_sec: nowSec - jack._last_seen
+      });
+    }
+  }
+
+  // Return in DESC order for display (most recent first)
+  merged.sort((a,b) => ((b.exited_at || b.entered_at || 0) - (a.exited_at || a.entered_at || 0)));
+  return merged;
+}
+
+  
   function formatTime(tsSec){
     if(!tsSec) return "—";
     const d = new Date(tsSec * 1000);
@@ -1006,38 +1066,101 @@ function dismissAlert(){
       });
   }
 
-  function renderHistory(){
-    const box = document.getElementById("historyList");
-    if(!historyRows.length){
-      box.innerHTML = `<div class="evt"><div><b>No history yet</b></div><div class="t">—</div></div>`;
-      return;
+function renderHistory(){
+  const box = document.getElementById("historyList");
+
+  // If nothing loaded at all
+  if(!historyRows.length){
+    box.innerHTML = `<div class="evt"><div><b>No history yet</b></div><div class="t">—</div></div>`;
+    return;
+  }
+
+  const nowSec = Math.floor(Date.now()/1000);
+
+  // 1) Normalize incoming rows -> intervals
+  const intervals = historyRows
+    .map(x => ({
+      room: x.room || "—",
+      entered_at: x.entered_at || x.timestamp || null,
+      exited_at: x.exited_at || null,
+      duration_sec: x.duration_sec || null
+    }))
+    .filter(x => !!x.entered_at);
+
+  // 2) Sort ASC so we can detect gaps between intervals
+  intervals.sort((a,b)=> (a.entered_at || 0) - (b.entered_at || 0));
+
+  // 3) Build list with injected "Away" gaps
+  const merged = [];
+  for(let i=0;i<intervals.length;i++){
+    const cur = intervals[i];
+    const prev = merged.length ? merged[merged.length - 1] : null;
+
+    // If previous interval has an exited time, see if there's a big gap
+    if(prev && prev.exited_at && cur.entered_at){
+      const gap = cur.entered_at - prev.exited_at;
+      if(gap > OFFLINE_SEC){
+        merged.push({
+          room: "Away",
+          entered_at: prev.exited_at,
+          exited_at: cur.entered_at,
+          duration_sec: gap
+        });
+      }
     }
 
-    box.innerHTML = "";
-    historyRows.slice(0, 50).forEach(x=>{
-      const room = x.room || "—";
-      const entered = x.entered_at || x.timestamp || null;
-      const exited = x.exited_at || null;
-      const dur = x.duration_sec ? formatDuration(x.duration_sec) : (entered && exited ? formatDuration(exited-entered) : "");
-
-      const left = `
-        <div>
-          <div class="msg">${escapeHtml(room)}</div>
-          <div class="meta">
-            ${escapeHtml(formatTime(entered))}${exited ? (" → " + escapeHtml(formatTime(exited))) : ""}
-            ${dur ? (" • " + escapeHtml(dur)) : ""}
-          </div>
-        </div>
-      `;
-
-      const right = `<div class="t">${exited ? "Done" : "—"}</div>`;
-
-      const row = document.createElement("div");
-      row.className = "evt";
-      row.innerHTML = left + right;
-      box.appendChild(row);
-    });
+    merged.push(cur);
   }
+
+  // 4) If currently offline, append a "current Away" interval (last_seen -> now)
+  if(jack && jack._last_seen){
+    const offlineNow = (nowSec - jack._last_seen) > OFFLINE_SEC;
+    if(offlineNow){
+      merged.push({
+        room: "Away",
+        entered_at: jack._last_seen,
+        exited_at: nowSec,
+        duration_sec: nowSec - jack._last_seen
+      });
+    }
+  }
+
+  // 5) Sort DESC for display (most recent first)
+  merged.sort((a,b)=>{
+    const at = (a.exited_at || a.entered_at || 0);
+    const bt = (b.exited_at || b.entered_at || 0);
+    return bt - at;
+  });
+
+  // 6) Render
+  box.innerHTML = "";
+  merged.slice(0, 50).forEach(x=>{
+    const room = x.room || "—";
+    const entered = x.entered_at || null;
+    const exited = x.exited_at || null;
+    const dur = x.duration_sec
+      ? formatDuration(x.duration_sec)
+      : (entered && exited ? formatDuration(exited - entered) : "");
+
+    const left = `
+      <div>
+        <div class="msg">${escapeHtml(room)}</div>
+        <div class="meta">
+          ${escapeHtml(formatTime(entered))}${exited ? (" → " + escapeHtml(formatTime(exited))) : ""}
+          ${dur ? (" • " + escapeHtml(dur)) : ""}
+        </div>
+      </div>
+    `;
+
+    const right = `<div class="t">${exited ? "Done" : "—"}</div>`;
+
+    const row = document.createElement("div");
+    row.className = "evt";
+    row.innerHTML = left + right;
+    box.appendChild(row);
+  });
+}
+
 
   // =========================
   // Leaflet Map (hidden until GPS is valid)
@@ -1311,21 +1434,27 @@ function dismissAlert(){
     }
   }
 
-  // =========================
-  // Tick: derived time + linger checks
-  // =========================
-  setInterval(()=>{
-    updateDerivedTimes();
-    computeAway();
+// =========================
+// Tick: derived time + linger checks
+// =========================
+setInterval(()=>{
+  updateDerivedTimes();
+  computeAway();
 
-    const emergency = applyStateFromAlerts();
-    if(!emergency){
-      maybeLingerAlert();
-      if(jack.state !== "warn") jack.state = "ok";
-    }
+  const emergency = applyStateFromAlerts();
+  if(!emergency){
+    maybeLingerAlert();
+    if(jack.state !== "warn") jack.state = "ok";
+  }
 
-    render();
-  }, 3000);
+  render();
+
+  // ✅ Keep "Away" duration updating live while History tab is open
+  if(currentTab === "history"){
+    renderHistory();
+  }
+}, 3000);
+
 
   // Init UI
   applySettingsToUI();
