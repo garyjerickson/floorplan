@@ -1114,6 +1114,10 @@ function wireEnterToNextInSettings(){
     settings = clone(defaultSettings);
     saveSettings();
     applySettingsToUI();
+
+      // go back to Status tab
+  showTab("status");
+
     showAlert("Reset", "Settings reset to defaults.");
   });
 
