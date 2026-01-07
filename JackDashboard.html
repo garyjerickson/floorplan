@@ -608,6 +608,25 @@
     return Math.floor(useMin * 60);
   }
 
+function wireEnterToNextInSettings(){
+  const ids = ["limitDefault","limitBedroom","limitBathroom","limitKitchen","limitLiving","limitFrontDoor"];
+  ids.forEach((id, idx) => {
+    const el = document.getElementById(id);
+    if(!el) return;
+    el.addEventListener("keydown", (e) => {
+      if(e.key === "Enter"){
+        e.preventDefault();
+        const next = document.getElementById(ids[idx + 1]);
+        if(next){
+          next.focus();
+          next.select?.();
+        }
+      }
+    });
+  });
+}
+
+  
   // Auto-save as user types (prevents losing edits when switching tabs)
   function wireSettingsInputs(){
     const ids = ["limitDefault","limitBedroom","limitBathroom","limitKitchen","limitLiving","limitFrontDoor"];
@@ -1222,6 +1241,7 @@
   // Init UI
   applySettingsToUI();
   wireSettingsInputs();   // ✅ NEW: autosave as user types
+  wireEnterToNextInSettings();
   updateDerivedTimes();
   computeAway();
   render();
