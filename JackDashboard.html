@@ -478,8 +478,20 @@
       <p id="alertBody" class="sub">Message</p>
       <div style="height:12px"></div>
       <div style="display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap">
-        <button class="btn" onclick="dismissAlert()">Dismiss</button>
-      </div>
+
+  <!-- Normal alerts use this -->
+  <div id="alertBtnsDefault">
+    <button class="btn" onclick="dismissAlert()">Dismiss</button>
+  </div>
+
+  <!-- Confirm-clear uses this -->
+  <div id="alertBtnsConfirm" style="display:none">
+    <button class="btn danger" onclick="confirmClearAlarmYes()">Yes</button>
+    <button class="btn" onclick="confirmClearAlarmNo()">No</button>
+  </div>
+
+</div>
+
     </div>
   </div>
 
@@ -523,6 +535,9 @@ const OFFLINE_SEC = 12; // not seen threshold (seconds) — matches your existin
  
   // ✅ Linger snooze (2 minutes)
 let lingerSnoozeUntilMs = 0;      // Date.now() ms until which we suppress linger popups
+// ✅ SOS/Pool "silence" (No = don't clear Firebase, but don't pop right back up)
+let emergencySnoozeUntilMs = 0;   // Date.now() ms until which we suppress SOS popup + sound
+let alertMode = "default";        // "default" | "confirmClear"
 
   // =========================
   // Settings (localStorage)
@@ -825,6 +840,61 @@ function computeAway(){
     showAlertKind("msg", title, body);
   }
 
+  function setAlertButtonsMode(mode){
+  alertMode = mode || "default";
+  const a = document.getElementById("alertBtnsDefault");
+  const b = document.getElementById("alertBtnsConfirm");
+  if(!a || !b) return;
+
+  if(alertMode === "confirmClear"){
+    a.style.display = "none";
+    b.style.display = "block";
+  }else{
+    a.style.display = "block";
+    b.style.display = "none";
+  }
+}
+
+function showClearAlarmPrompt(){
+  // Switch modal to confirm buttons
+  setAlertButtonsMode("confirmClear");
+  // Use normal "msg" styling for this confirm step
+  showAlertKind("msg", "Clear the alarm?", "This will clear the SOS/Pool alarm in Firebase for this client.");
+}
+
+function clearFirebaseAlerts(){
+  if(!db) return Promise.resolve();
+
+  // Clears both flags (your emergency logic treats either as emergency)
+  return db.ref("/alerts/" + FIREBASE_KEY).update({
+    sos: false,
+    pool: false,
+    timestamp: Date.now()
+  });
+}
+
+function confirmClearAlarmYes(){
+  // user chose to clear
+  document.getElementById("alert").style.display = "none";
+  setAlertButtonsMode("default");
+
+  emergencySnoozeUntilMs = 0; // no need to silence anymore
+
+  clearFirebaseAlerts()
+    .catch(err => console.log("clearFirebaseAlerts error:", err));
+}
+
+function confirmClearAlarmNo(){
+  // user chose NOT to clear Firebase — keep silent locally for 2 minutes
+  document.getElementById("alert").style.display = "none";
+  setAlertButtonsMode("default");
+
+  emergencySnoozeUntilMs = Date.now() + (2 * 60 * 1000);
+  stopAlarm();   // ensure it stays quiet even if something calls it
+  render();      // refresh UI
+}
+
+
   function resetLingerAfterDismiss(){
     if(!jack._entered_at) return;
 
@@ -844,83 +914,72 @@ function computeAway(){
   }
 
 function dismissAlert(){
-  const kindBefore = currentAlertKind; // capture what we are dismissing
+  const dismissedKind = currentAlertKind; // capture BEFORE we clear it
 
-  // Close the modal + stop sound immediately
   document.getElementById("alert").style.display = "none";
   stopAlarm();
 
-  // ✅ If the popup we dismissed was LINGER, snooze linger for 2 minutes
-  if(kindBefore === "linger"){
+  // ✅ If we just dismissed an SOS/Pool alert, immediately ask to clear it
+  if(dismissedKind === "sos"){
+    // Clear kind first so SOS isn't "sticky" while we're confirming
+    setAlertKind(null);
+    // Show confirm prompt (Yes/No) without restarting sound
+    showClearAlarmPrompt();
+    return;
+  }
+
+  // ✅ Linger snooze (keep your existing behavior)
+  if(dismissedKind === "linger"){
     lingerSnoozeUntilMs = Date.now() + (2 * 60 * 1000); // 2 minutes
   }
 
-  // Clear warn state visually (does NOT change Firebase timers)
+  // Clear warn state visually
   if(jack.state === "warn"){
     jack.state = "ok";
   }
 
-  // Clear kind locally (note: if SOS is still true in Firebase, it will re-show)
   setAlertKind(null);
+  setAlertButtonsMode("default");
   render();
-
-  // ✅ If it was an SOS/Pool alert, ask whether to clear Firebase
-  if(kindBefore === "sos"){
-    // Use a tiny delay so the modal has time to close before the confirm appears
-    setTimeout(()=>{
-      const ok = confirm("Clear the alarm?");
-      if(ok){
-        // Optimistically clear locally (prevents flicker while Firebase updates)
-        jack._alerts = jack._alerts || {};
-        jack._alerts.sos = false;
-        jack._alerts.pool = false;
-
-        clearFirebaseAlerts()
-          .then(()=>{
-            // Nothing else needed—Firebase listener will keep things consistent
-          })
-          .catch(err=>{
-            console.log("Failed to clear Firebase alerts:", err);
-            // If it failed, re-show if the alert is still active
-            if(jack._alerts?.sos === true || jack._alerts?.pool === true){
-              showAlertKind("sos", "Emergency Alert", `LIVE SOS/Alarm for ${jack.name}.`);
-              startAlarm();
-            }
-          });
-      }else{
-        // NO: do not clear Firebase; re-show immediately if still active
-        if(jack._alerts?.sos === true || jack._alerts?.pool === true){
-          showAlertKind("sos", "Emergency Alert", `LIVE SOS/Alarm for ${jack.name}.`);
-          startAlarm();
-        }
-      }
-    }, 50);
-  }
 }
-
-
 
   // =========================
   // Alerts / State priority
   // =========================
-  function applyStateFromAlerts(){
-    const a = jack._alerts || {};
-    if(a.sos === true || a.pool === true){
-      if(jack.state !== "bad"){
-        showAlertKind("sos", "Emergency Alert", `LIVE SOS/Alarm for ${jack.name}.`);
-        startAlarm();
-      }else{
-        // keep SOS kind sticky while alert is active
-        setAlertKind("sos");
-      }
+function applyStateFromAlerts(){
+  const a = jack._alerts || {};
+  const emergencyActive = (a.sos === true || a.pool === true);
+
+  if(emergencyActive){
+
+    // ✅ If user chose "No" recently, keep it silent for a bit
+    if(Date.now() < emergencySnoozeUntilMs){
       jack.state = "bad";
-      return true; // emergency active
-    }
-    if(jack.state === "bad"){
+      // do NOT show popup, do NOT start sound
       stopAlarm();
+      return true;
     }
-    return false;
+
+    if(jack.state !== "bad"){
+      showAlertKind("sos", "Emergency Alert", `LIVE SOS/Alarm for ${jack.name}.`);
+      startAlarm();
+    }else{
+      setAlertKind("sos");
+      // ensure sound is on if not silenced
+      startAlarm();
+    }
+
+    jack.state = "bad";
+    return true;
   }
+
+  // no emergency active
+  if(jack.state === "bad"){
+    stopAlarm();
+  }
+  return false;
+}
+
 
   function maybeLingerAlert(){
     if(!settings.lingerEnabled) return;
