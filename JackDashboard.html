@@ -41,25 +41,30 @@
       --radius:18px;
     }
     *{box-sizing:border-box}
-    html,body{height:100%}
-    body{
-      margin:0;
+html,body{height:100%}
+body{
+  margin:0;
       font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;
       background:var(--bg);
       color:var(--text);
       -webkit-font-smoothing:antialiased;
-      padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
-    }
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
 
-    .app{
-      height:100%;
-      display:flex;
-      flex-direction:column;
-      gap:10px;
-      padding:12px;
-      max-width:520px;
-      margin:0 auto;
-    }
+  /* ✅ allow scrolling on phones */
+  overflow-y:auto;
+  -webkit-overflow-scrolling:touch;
+}
+
+.app{
+  min-height:100%;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  padding:12px;
+  max-width:520px;
+  margin:0 auto;
+}
+
 
     .card{
       background:var(--panel);
@@ -241,9 +246,9 @@
       overflow:hidden;
       background:rgba(0,0,0,.18);
       position:relative;
-      height:34vh;
-      min-height:220px;
-      max-height:360px;
+        height:38vh;
+  min-height:240px;
+  max-height:420px;
     }
     #leafletMap{position:absolute;inset:0;}
 
