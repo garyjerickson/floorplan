@@ -146,16 +146,56 @@ body{
     }
 
     .bigStatus{margin-top:10px;display:grid;grid-template-columns:1fr;gap:10px;}
-    .hero{
-      border:1px solid var(--line);
-      border-radius:16px;
-      padding:12px;
-      background:rgba(0,0,0,.15);
-      display:flex;
-      justify-content:space-between;
-      gap:10px;
-      align-items:center;
-    }
+.hero{
+  border:1px solid rgba(96,165,250,.45);
+  border-radius:16px;
+  padding:14px;
+  background:linear-gradient(
+    180deg,
+    rgba(96,165,250,.16),
+    rgba(0,0,0,.18)
+  );
+  display:flex;
+  justify-content:space-between;
+  gap:10px;
+  align-items:center;
+  box-shadow: 0 6px 22px rgba(0,0,0,.35);
+  position:relative;
+}
+
+/* subtle left accent bar */
+.hero::before{
+  content:"";
+  position:absolute;
+  left:0;
+  top:0;
+  bottom:0;
+  width:4px;
+  background:rgba(96,165,250,.85);
+  border-radius:16px 0 0 16px;
+}
+
+.hero.warn{
+  background:linear-gradient(
+    180deg,
+    rgba(250,204,21,.20),
+    rgba(0,0,0,.18)
+  );
+  border-color:rgba(250,204,21,.55);
+}
+.hero.warn::before{ background:rgba(250,204,21,.9); }
+
+.hero.bad{
+  background:linear-gradient(
+    180deg,
+    rgba(251,113,133,.20),
+    rgba(0,0,0,.18)
+  );
+  border-color:rgba(251,113,133,.55);
+}
+.hero.bad::before{ background:rgba(251,113,133,.9); }
+
+    
     .heroLeft{display:flex;flex-direction:column;gap:3px;min-width:0;}
     .heroLabel{color:var(--muted);font-size:12px}
     .heroValue{
@@ -1078,6 +1118,13 @@ function applyStateFromAlerts(){
     document.getElementById("stateText").textContent =
       (jack.state==="ok") ? "OK" : (jack.state==="warn") ? "LINGER" : "ALERT";
 
+  // Highlight current-room card based on state
+  const hero = document.querySelector(".hero");
+  if(hero){
+    hero.classList.toggle("warn", jack.state === "warn");
+    hero.classList.toggle("bad", jack.state === "bad");
+  }
+   
     document.getElementById("statusText").textContent = jack.status || "—";
     document.getElementById("room").textContent =
   (jack.status === "Away") ? "Away" : (jack.room || "—");
