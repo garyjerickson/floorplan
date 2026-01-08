@@ -484,10 +484,12 @@ body{
       <div style="height:12px"></div>
       <div style="display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap">
 
-  <!-- Normal alerts use this -->
-  <div id="alertBtnsDefault">
-    <button class="btn" onclick="dismissAlert()">Dismiss</button>
-  </div>
+<!-- Normal alerts use this -->
+<div id="alertBtnsDefault">
+  <button class="btn" id="btnClearPopup" style="display:none" type="button">Clear</button>
+  <button class="btn" onclick="dismissAlert()">Dismiss</button>
+</div>
+
 
   <!-- Confirm-clear uses this -->
   <div id="alertBtnsConfirm" style="display:none">
@@ -533,6 +535,13 @@ const OFFLINE_SEC = 12; // not seen threshold (seconds) — matches your existin
 
   let liveJackMessages = [];
   let db = null;
+
+  // =========================
+// Message popup tracking
+// =========================
+let lastMsgPopupTs = 0;      // last message timestamp we popped
+let currentMsgKey = null;    // firebase key for the message in the popup
+
 
   // Linger tracking (so we only alert once per room entry)
   let lingerAlertedForEnteredAt = null;
@@ -899,7 +908,46 @@ function confirmClearAlarmNo(){
   render();      // refresh UI
 }
 
+// =========================
+// Message popup helpers
+// =========================
+function showMessagePopup(msgKey, msgObj){
+  currentMsgKey = msgKey;
 
+  // Show modal as a normal message popup
+  setAlertButtonsMode("default");
+  setAlertKind("msg");
+  document.getElementById("alertTitle").textContent = "Message from phone";
+  document.getElementById("alertBody").textContent = msgObj?.text || "";
+  document.getElementById("alert").style.display = "block";
+
+  // Show Clear button for message popups
+  const clearBtn = document.getElementById("btnClearPopup");
+  if(clearBtn) clearBtn.style.display = "inline-flex";
+}
+
+function hideMessagePopupControls(){
+  currentMsgKey = null;
+  const clearBtn = document.getElementById("btnClearPopup");
+  if(clearBtn) clearBtn.style.display = "none";
+}
+
+function clearCurrentPopupMessage(){
+  if(!db || !currentMsgKey) return;
+
+  db.ref("/messages/" + FIREBASE_KEY + "/" + currentMsgKey)
+    .remove()
+    .then(()=>{
+      hideMessagePopupControls();
+      document.getElementById("alert").style.display = "none";
+    })
+    .catch(err=>{
+      console.log("Clear popup message error:", err);
+      alert("Failed to clear message.");
+    });
+}
+
+  
   function resetLingerAfterDismiss(){
     if(!jack._entered_at) return;
 
@@ -923,6 +971,8 @@ function dismissAlert(){
 
   document.getElementById("alert").style.display = "none";
   stopAlarm();
+  hideMessagePopupControls();
+
 
   // ✅ If we just dismissed an SOS/Pool alert, immediately ask to clear it
   if(dismissedKind === "sos"){
@@ -1436,6 +1486,8 @@ box.appendChild(row);
 
   document.getElementById("btnRefreshHistory").addEventListener("click", loadHistory);
 
+  document.getElementById("btnClearPopup").addEventListener("click", clearCurrentPopupMessage);
+
   document.getElementById("btnSaveSettings").addEventListener("click", ()=>{
     commitSettingsFromUI();
     // go back to Status tab
@@ -1562,16 +1614,34 @@ db.ref("/alerts/" + FIREBASE_KEY).on("value", (snap)=>{
       });
 
       // Live messages
-      db.ref("/messages/" + FIREBASE_KEY)
-        .orderByChild("timestamp")
-        .limitToLast(20)
-        .on("value", (snap)=>{
-          const obj = snap.val() || {};
-          liveJackMessages = Object.values(obj)
-            .filter(Boolean)
-            .sort((a,b)=> (a.timestamp || 0) - (b.timestamp || 0));
-          renderMessages();
-        });
+// Live messages
+db.ref("/messages/" + FIREBASE_KEY)
+  .orderByChild("timestamp")
+  .limitToLast(20)
+  .on("value", (snap)=>{
+    const obj = snap.val() || {};
+
+    // Keep BOTH the Firebase key + message (so Clear can delete just one)
+    const entries = Object.entries(obj)
+      .map(([key, val]) => ({ key, ...(val || {}) }))
+      .filter(x => !!x.key);
+
+    // For list UI (oldest -> newest)
+    entries.sort((a,b)=> (a.timestamp || 0) - (b.timestamp || 0));
+    liveJackMessages = entries.map(e => ({ text: e.text, timestamp: e.timestamp })); // keeps your existing renderMessages unchanged
+
+    renderMessages();
+
+    // Popup ONLY when a new message arrives
+    const newest = entries.length ? entries[entries.length - 1] : null;
+    const newestTs = newest?.timestamp || 0;
+
+    if(newest && newestTs && newestTs > lastMsgPopupTs){
+      lastMsgPopupTs = newestTs;
+      showMessagePopup(newest.key, newest);
+    }
+  });
+
 
     }catch(e){
       console.log("Firebase init error:", e);
