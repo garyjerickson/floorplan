@@ -1085,6 +1085,9 @@ function applyStateFromAlerts(){
   // History (Room intervals)
   // =========================
   let historyRows = []; // [{room, entered_at, exited_at, duration_sec}]
+  let sosHistory = []; 
+// [{ type:"sos", timestamp }]
+
 
 function buildHistoryWithAway(rawRows){
   const nowSec = Math.floor(Date.now()/1000);
@@ -1237,6 +1240,17 @@ function renderHistory(){
     }
   }
 
+  // ✅ Inject SOS events into history timeline
+sosHistory.forEach(e=>{
+  merged.push({
+    room: "🚨 SOS Button Pressed",
+    entered_at: e.timestamp,
+    exited_at: null,
+    duration_sec: null,
+    _kind: "sos"
+  });
+});
+
   // 5) Sort DESC for display (most recent first)
   merged.sort((a,b)=>{
     const at = (a.exited_at || a.entered_at || 0);
@@ -1248,6 +1262,7 @@ function renderHistory(){
   box.innerHTML = "";
   merged.slice(0, 50).forEach(x=>{
     const room = x.room || "—";
+const isSOS = x._kind === "sos";
     const entered = x.entered_at || null;
     const exited = x.exited_at || null;
     const dur = x.duration_sec
@@ -1267,9 +1282,16 @@ function renderHistory(){
     const right = `<div class="t">${exited ? "Done" : "—"}</div>`;
 
     const row = document.createElement("div");
-    row.className = "evt";
-    row.innerHTML = left + right;
-    box.appendChild(row);
+row.className = "evt";
+
+// ✅ Highlight SOS history rows
+if(x._kind === "sos"){
+  row.style.borderLeft = "4px solid #fb7185";
+}
+
+row.innerHTML = left + right;
+box.appendChild(row);
+
   });
 }
 
@@ -1474,18 +1496,29 @@ function renderHistory(){
         render();
       });
 
-      // Live alerts
-      db.ref("/alerts/" + FIREBASE_KEY).on("value", (snap)=>{
-        jack._alerts = snap.val() || {};
+// Live alerts
+db.ref("/alerts/" + FIREBASE_KEY).on("value", (snap)=>{
+  const prev = jack._alerts || {};
+  const next = snap.val() || {};
+  jack._alerts = next;
 
-        const emergency = applyStateFromAlerts();
-        if(!emergency){
-          maybeLingerAlert();
-          if(jack.state !== "warn") jack.state = "ok";
-        }
+  // ✅ Detect SOS button press (false → true)
+  if(prev.sos !== true && next.sos === true){
+    sosHistory.push({
+      type: "sos",
+      timestamp: Math.floor(Date.now() / 1000)
+    });
+  }
 
-        render();
-      });
+  const emergency = applyStateFromAlerts();
+  if(!emergency){
+    maybeLingerAlert();
+    if(jack.state !== "warn") jack.state = "ok";
+  }
+
+  render();
+});
+
 
       // Live GPS
       db.ref("/gps/" + FIREBASE_KEY).on("value", (snap)=>{
