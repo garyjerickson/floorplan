@@ -363,12 +363,21 @@ body{
         </div>
       </div>
 
-      <div class="pills">
-        <span class="pill"><span id="stateDot" class="dot"></span><b id="stateText">OK</b></span>
-        <span class="pill">Status: <b id="statusText">—</b></span>
-        <span class="pill">Last seen: <b id="lastSeen">—</b></span>
-        <span class="pill">Sensor: <b id="lastSensor">—</b></span>
-      </div>
+<div class="pills">
+  <span class="pill"><span id="stateDot" class="dot"></span><b id="stateText">OK</b></span>
+
+  <!-- ✅ System heartbeat status -->
+  <span class="pill">
+    System: <span id="sysDot" class="dot"></span>
+    <b id="sysText">—</b>
+    <span style="opacity:.9">(<span id="sysDur">—</span>)</span>
+  </span>
+
+  <span class="pill">Status: <b id="statusText">—</b></span>
+  <span class="pill">Last seen: <b id="lastSeen">—</b></span>
+  <span class="pill">Sensor: <b id="lastSensor">—</b></span>
+</div>
+
 
       <div class="tabs" id="tabs">
         <div class="tab active" data-tab="status">🏠 Status</div>
@@ -556,6 +565,31 @@ body{
   const ROOMS = ["Bedroom","Bathroom","Kitchen","Living Room","Front Door"];
 const OFFLINE_SEC = 12; // not seen threshold (seconds) — matches your existing logic
 
+// =========================
+// Heartbeat / Offline detection
+// =========================
+// Your Firebase path per your comment header:
+const HEARTBEAT_PATH = "/system/heartbeat";
+
+// How long without heartbeat before "System Offline"
+const HEARTBEAT_TIMEOUT_SEC = 15;
+
+let heartbeatLastSec = 0;          // last heartbeat time (epoch sec)
+let systemOffline = false;         // current computed offline state
+let systemOfflineSinceSec = null;  // when it became offline
+
+// Away popup tracking
+let clientAway = false;
+let clientAwaySinceSec = null;
+
+// Popup gating so we don't spam
+let offlinePopupShown = false;
+let awayPopupShown = false;
+
+// Event history (stored + shown in History tab)
+let eventHistory = []; // [{type, tsSec, text}]
+
+  
   // =========================
   // State
   // =========================
@@ -743,18 +777,6 @@ function wireEnterToNextInSettings(){
   // =========================
   function setFbStatus(txt){ document.getElementById("fbStatus").textContent = txt; }
 
-function clearFirebaseAlerts(){
-  if(!db) return Promise.resolve();
-
-  // Clear active alert flags in Firebase so the SOS popup does NOT come right back
-  return db.ref("/alerts/" + FIREBASE_KEY).update({
-    sos: false,
-    pool: false,
-    timestamp: Date.now()
-  });
-}
-
-  
   function isValidGps(lat, lng){
     if(!isFinite(lat) || !isFinite(lng)) return false;
     if(Math.abs(lat) < 0.000001 && Math.abs(lng) < 0.000001) return false;
@@ -794,6 +816,25 @@ function clearFirebaseAlerts(){
     return `${m}:${String(sec).padStart(2,"0")}`;
   }
 
+function nowSec(){ return Math.floor(Date.now()/1000); }
+
+// Write an event to Firebase and keep a local copy for History view
+function logEvent(type, text, tsSec){
+  const t = tsSec || nowSec();
+
+  // local cache for immediate history display
+  eventHistory.push({ type, tsSec: t, text: text || "" });
+  // keep last ~100 locally
+  if(eventHistory.length > 100) eventHistory.shift();
+
+  // store to Firebase (separate from /logs room intervals)
+  if(db){
+    const ref = db.ref("/events/" + FIREBASE_KEY).push();
+    ref.set({ type, text, ts: t }).catch(e=>console.log("logEvent write error:", e));
+  }
+}
+
+  
   function updateDerivedTimes(){
     const nowSec = Math.floor(Date.now()/1000);
 
@@ -811,20 +852,65 @@ function clearFirebaseAlerts(){
     }
   }
 
-function computeAway(){
-  const nowSec = Math.floor(Date.now()/1000);
-  const lastSeen = jack._last_seen || 0;
+ function computeHeartbeat(){
+  const n = nowSec();
+  const hb = heartbeatLastSec || 0;
+  const isOffline = !hb || ((n - hb) > HEARTBEAT_TIMEOUT_SEC);
 
-  const offline = !lastSeen || ((nowSec - lastSeen) > OFFLINE_SEC);
+  // UI pill
+  const sysText = document.getElementById("sysText");
+  const sysDot = document.getElementById("sysDot");
+  const sysDur = document.getElementById("sysDur");
+  if(sysText && sysDot && sysDur){
+    sysDot.className = "dot" + (isOffline ? " bad" : "");
+    sysText.textContent = isOffline ? "OFFLINE" : "ONLINE";
 
-  if(offline){
-    jack.status = "Away";
-    // keep last known room internally (jack.room) so we can log gaps,
-    // but display will show "Away"
-  }else{
-    jack.status = "Home";
+    const since = isOffline ? (systemOfflineSinceSec || n) : hb;
+    const dur = since ? formatDuration(Math.max(0, n - since)) : "—";
+    sysDur.textContent = dur;
+  }
+
+  // transitions + history
+  if(isOffline && !systemOffline){
+    systemOffline = true;
+    systemOfflineSinceSec = hb || n;
+    offlinePopupShown = false; // allow popup
+    logEvent("system_offline", "System Offline (heartbeat stopped)", systemOfflineSinceSec);
+  }
+  if(!isOffline && systemOffline){
+    systemOffline = false;
+    const clearedAt = n;
+    logEvent("system_online", "System Online (heartbeat restored)", clearedAt);
+    systemOfflineSinceSec = null;
+    offlinePopupShown = false;
   }
 }
+ 
+
+function computeAway(){
+  const n = nowSec();
+  const lastSeen = jack._last_seen || 0;
+
+  const isAway = !lastSeen || ((n - lastSeen) > OFFLINE_SEC);
+
+  // transition tracking (for popup + history)
+  if(isAway && !clientAway){
+    clientAway = true;
+    clientAwaySinceSec = lastSeen ? lastSeen : n;
+    awayPopupShown = false; // allow popup
+    logEvent("away_start", `${jack.name} went Away`, clientAwaySinceSec);
+  }
+  if(!isAway && clientAway){
+    clientAway = false;
+    const clearedAt = n;
+    logEvent("away_end", `${jack.name} returned Home`, clearedAt);
+    clientAwaySinceSec = null;
+    awayPopupShown = false;
+  }
+
+  jack.status = isAway ? "Away" : "Home";
+}
+
 
 
   // =========================
@@ -879,11 +965,13 @@ function computeAway(){
     if(box) box.setAttribute("data-kind", kind || "msg");
   }
 
-  function showAlertKind(kind, title, body){
-    // SOS popups overwrite all others
-    if(currentAlertKind === "sos" && kind !== "sos"){
-      return;
-    }
+function showAlertKind(kind, title, body){
+  // SOS popups overwrite all others EXCEPT system messages if you want them
+  if(currentAlertKind === "sos" && kind !== "sos"){
+    // allow system/away messages? (comment out next line to allow them)
+    return;
+  }
+
     setAlertKind(kind);
     document.getElementById("alertTitle").textContent = title;
     document.getElementById("alertBody").textContent = body;
@@ -1154,6 +1242,25 @@ function applyStateFromAlerts(){
 
     renderMessages();
 
+        // =========================
+    // ✅ System Offline popup + timer
+    // =========================
+    if(systemOffline && !offlinePopupShown){
+      offlinePopupShown = true;
+      const since = systemOfflineSinceSec || nowSec();
+      showAlertKind("msg", "System Offline", `Heartbeat stopped. Offline for ${formatDuration(nowSec() - since)}.`);
+    }
+
+    // =========================
+    // ✅ Client Away popup + timer
+    // =========================
+    if(clientAway && !awayPopupShown){
+      awayPopupShown = true;
+      const since = clientAwaySinceSec || nowSec();
+      showAlertKind("msg", "Client Away", `${jack.name} is Away. Away for ${formatDuration(nowSec() - since)}.`);
+    }
+
+
     if(mapShown){
       updateMap(false);
     }
@@ -1271,6 +1378,29 @@ function buildHistoryWithAway(rawRows){
         });
 
         historyRows = rows;
+        // Also load recent events (away/offline/online)
+        db.ref("/events/" + FIREBASE_KEY)
+          .orderByChild("ts")
+          .limitToLast(50)
+          .once("value")
+          .then(esnap=>{
+            const eobj = esnap.val() || {};
+            const erows = Object.values(eobj).filter(Boolean);
+            eventHistory = erows.map(e => ({
+              type: e.type || "event",
+              tsSec: e.ts || e.timestamp || null,
+              text: e.text || ""
+            })).filter(x=>x.tsSec);
+            renderHistory();
+          })
+          .catch(e=>{
+            console.log("Events load error:", e);
+            renderHistory(); // still show rooms
+          });
+
+        return; // prevent the older renderHistory() call below from double-running
+
+        
         renderHistory();
       })
       .catch((e)=>{
@@ -1349,6 +1479,24 @@ sosHistory.forEach(e=>{
   });
 });
 
+  // ✅ Inject System/Away events into history timeline
+  (eventHistory || []).forEach(e=>{
+    if(!e.tsSec) return;
+    merged.push({
+      room: (e.type === "system_offline") ? "🛑 System Offline"
+         : (e.type === "system_online")  ? "✅ System Online"
+         : (e.type === "away_start")     ? "🏃 Client Away"
+         : (e.type === "away_end")       ? "🏠 Client Home"
+         : "ℹ️ Event",
+      entered_at: e.tsSec,
+      exited_at: null,
+      duration_sec: null,
+      _kind: "event",
+      _text: e.text || ""
+    });
+  });
+
+  
   // 5) Sort DESC for display (most recent first)
   merged.sort((a,b)=>{
     const at = (a.exited_at || a.entered_at || 0);
@@ -1370,6 +1518,8 @@ const isSOS = x._kind === "sos";
     const left = `
       <div>
         <div class="msg">${escapeHtml(room)}</div>
+${x._kind==="event" && x._text ? `<div class="meta">${escapeHtml(x._text)}</div>` : ""}
+
         <div class="meta">
           ${escapeHtml(formatTime(entered))}${exited ? (" → " + escapeHtml(formatTime(exited))) : ""}
           ${dur ? (" • " + escapeHtml(dur)) : ""}
@@ -1386,6 +1536,11 @@ row.className = "evt";
 if(x._kind === "sos"){
   row.style.borderLeft = "4px solid #fb7185";
 }
+
+if(x._kind === "event"){
+  row.style.borderLeft = "4px solid #60a5fa";
+}
+
 
 row.innerHTML = left + right;
 box.appendChild(row);
@@ -1566,6 +1721,26 @@ box.appendChild(row);
       db = firebase.database();
       setFbStatus("Connected");
 
+            // =========================
+      // ✅ Heartbeat listener
+      // =========================
+      db.ref(HEARTBEAT_PATH).on("value", (snap)=>{
+        const v = snap.val();
+        if(v === null || v === undefined) return;
+
+        let t = Number(v);
+        if(!isFinite(t)) return;
+
+        // accept sec OR ms
+        if(t > 1e12) t = Math.floor(t / 1000);
+
+        heartbeatLastSec = t;
+        // recompute immediately
+        computeHeartbeat();
+        render();
+      });
+
+
       // Live beacons
       db.ref("/beacons/" + FIREBASE_KEY).on("value", (snap)=>{
         const val = snap.val() || {};
@@ -1703,6 +1878,7 @@ db.ref("/messages/" + FIREBASE_KEY)
 setInterval(()=>{
   updateDerivedTimes();
   computeAway();
+  computeHeartbeat(); // ✅ ADD THIS LINE
 
   const emergency = applyStateFromAlerts();
   if(!emergency){
@@ -1717,6 +1893,7 @@ setInterval(()=>{
     renderHistory();
   }
 }, 3000);
+
 
 
   // Init UI
