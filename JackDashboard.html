@@ -370,7 +370,8 @@ body{
   <span class="pill">
     System: <span id="sysDot" class="dot"></span>
     <b id="sysText">—</b>
-    <span style="opacity:.9">(<span id="sysDur">—</span>)</span>
+    <span style="opacity:.9">(<span id="sysDurLabel">—</span> <span id="sysDur">—</span>)</span>
+
   </span>
 
   <span class="pill">Status: <b id="statusText">—</b></span>
@@ -577,10 +578,12 @@ const HEARTBEAT_TIMEOUT_SEC = 15;
 let heartbeatLastSec = 0;          // last heartbeat time (epoch sec)
 let systemOffline = false;         // current computed offline state
 let systemOfflineSinceSec = null;  // when it became offline
+let heartbeatInitialized = false;   // ✅ only true after first heartbeat read
 
 // Away popup tracking
 let clientAway = false;
 let clientAwaySinceSec = null;
+let beaconsInitialized = false; // ✅ becomes true after first /beacons snapshot
 
 // Popup gating so we don't spam
 let offlinePopupShown = false;
@@ -853,6 +856,7 @@ function logEvent(type, text, tsSec){
   }
 
  function computeHeartbeat(){
+   if(!heartbeatInitialized) return;
   const n = nowSec();
   const hb = heartbeatLastSec || 0;
   const isOffline = !hb || ((n - hb) > HEARTBEAT_TIMEOUT_SEC);
@@ -861,13 +865,28 @@ function logEvent(type, text, tsSec){
   const sysText = document.getElementById("sysText");
   const sysDot = document.getElementById("sysDot");
   const sysDur = document.getElementById("sysDur");
+   const sysDurLabel = document.getElementById("sysDurLabel");
+
   if(sysText && sysDot && sysDur){
     sysDot.className = "dot" + (isOffline ? " bad" : "");
     sysText.textContent = isOffline ? "OFFLINE" : "ONLINE";
 
-    const since = isOffline ? (systemOfflineSinceSec || n) : hb;
-    const dur = since ? formatDuration(Math.max(0, n - since)) : "—";
-    sysDur.textContent = dur;
+    if(sysDurLabel){
+  sysDurLabel.textContent = isOffline ? "Offline:" : "HB:";
+}
+
+
+    let dur = "—";
+
+if(isOffline){
+  const since = (systemOfflineSinceSec || n);
+  dur = formatDuration(Math.max(0, n - since));          // Offline for X:XX
+}else{
+  dur = formatDuration(Math.max(0, n - hb));             // HB age X:XX
+}
+
+sysDur.textContent = dur;
+
   }
 
   // transitions + history
@@ -889,27 +908,49 @@ function logEvent(type, text, tsSec){
 
 function computeAway(){
   const n = nowSec();
+
+  // ✅ Don’t show Away until we’ve actually received beacon data
+  if(!beaconsInitialized){
+    jack.status = "—";
+    clientAway = false;
+    clientAwaySinceSec = null;
+    return;
+  }
+
   const lastSeen = jack._last_seen || 0;
 
-  const isAway = !lastSeen || ((n - lastSeen) > OFFLINE_SEC);
+  // ✅ If last_seen is missing/0, treat as "unknown" instead of Away
+  if(!lastSeen){
+    jack.status = "—";
+    clientAway = false;
+    clientAwaySinceSec = null;
+    return;
+  }
 
-  // transition tracking (for popup + history)
+  const isAway = (n - lastSeen) > OFFLINE_SEC;
+
+  // Transition: Home -> Away
   if(isAway && !clientAway){
     clientAway = true;
-    clientAwaySinceSec = lastSeen ? lastSeen : n;
-    awayPopupShown = false; // allow popup
-    logEvent("away_start", `${jack.name} went Away`, clientAwaySinceSec);
+    clientAwaySinceSec = lastSeen;     // ✅ Away starts at last_seen
+    awayPopupShown = false;            // ✅ allow popup once
+    logEvent("away_start", "Client became Away", clientAwaySinceSec);
   }
+
+  // Transition: Away -> Home
   if(!isAway && clientAway){
     clientAway = false;
-    const clearedAt = n;
-    logEvent("away_end", `${jack.name} returned Home`, clearedAt);
+    const backAt = n;
+    logEvent("away_end", "Client returned Home", backAt);
     clientAwaySinceSec = null;
     awayPopupShown = false;
   }
 
-  jack.status = isAway ? "Away" : "Home";
+  // Set display status
+  jack.status = clientAway ? "Away" : "Home";
 }
+
+
 
 
 
@@ -1245,7 +1286,7 @@ function applyStateFromAlerts(){
         // =========================
     // ✅ System Offline popup + timer
     // =========================
-    if(systemOffline && !offlinePopupShown){
+    if(heartbeatInitialized && systemOffline && !offlinePopupShown){
       offlinePopupShown = true;
       const since = systemOfflineSinceSec || nowSec();
       showAlertKind("msg", "System Offline", `Heartbeat stopped. Offline for ${formatDuration(nowSec() - since)}.`);
@@ -1254,11 +1295,22 @@ function applyStateFromAlerts(){
     // =========================
     // ✅ Client Away popup + timer
     // =========================
-    if(clientAway && !awayPopupShown){
-      awayPopupShown = true;
-      const since = clientAwaySinceSec || nowSec();
-      showAlertKind("msg", "Client Away", `${jack.name} is Away. Away for ${formatDuration(nowSec() - since)}.`);
-    }
+    // =========================
+// ✅ Client Away popup + timer
+// =========================
+if(clientAway && !awayPopupShown){
+  if(clientAwaySinceSec){
+    awayPopupShown = true;
+    const since = clientAwaySinceSec;
+    showAlertKind("msg", "Client Away", `${jack.name} is Away. Away for ${formatDuration(nowSec() - since)}.`);
+  }
+}
+
+  awayPopupShown = true;
+  const since = clientAwaySinceSec;
+  showAlertKind("msg", "Client Away", `${jack.name} is Away. Away for ${formatDuration(nowSec() - since)}.`);
+}
+
 
 
     if(mapShown){
@@ -1735,6 +1787,8 @@ box.appendChild(row);
         if(t > 1e12) t = Math.floor(t / 1000);
 
         heartbeatLastSec = t;
+        heartbeatInitialized = true;
+
         // recompute immediately
         computeHeartbeat();
         render();
@@ -1744,6 +1798,7 @@ box.appendChild(row);
       // Live beacons
       db.ref("/beacons/" + FIREBASE_KEY).on("value", (snap)=>{
         const val = snap.val() || {};
+        beaconsInitialized = true; // ✅ we now have real beacon data (even if empty)
 
         if(val.room !== undefined) jack.room = val.room || "";
         if(val.last_sensor !== undefined) jack.lastSensor = val.last_sensor || (val.room || jack.lastSensor || "");
