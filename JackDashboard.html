@@ -6,14 +6,16 @@
 
   <!--
     UltraWatch
-    Build: JACK-ONLY v1.1.0
-    Last Updated: 2026-01-06
+    Build: JACK-ONLY v1.2.0
+    Last Updated: 2026-01-08
+
     Live reads:
       /beacons/GRANDPA  -> room, entered_at, last_seen, last_sensor (optional), battery (optional)
       /alerts/GRANDPA   -> sos, pool, timestamp
       /gps/GRANDPA      -> lat, lng OR lon, accM/accuracyM/accuracy, updatedAt/timestamp
       /messages/GRANDPA -> {text,timestamp,...} (last 20)
       /logs/GRANDPA     -> room intervals (timeline/history)
+      /system/heartbeat -> epoch seconds (or ms) heartbeat
   -->
 
   <title>UltraWatch — Jack Erickson</title>
@@ -41,30 +43,27 @@
       --radius:18px;
     }
     *{box-sizing:border-box}
-html,body{height:100%}
-body{
-  margin:0;
+    html,body{height:100%}
+    body{
+      margin:0;
       font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;
       background:var(--bg);
       color:var(--text);
       -webkit-font-smoothing:antialiased;
-  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+      padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+      overflow-y:auto;
+      -webkit-overflow-scrolling:touch;
+    }
 
-  /* ✅ allow scrolling on phones */
-  overflow-y:auto;
-  -webkit-overflow-scrolling:touch;
-}
-
-.app{
-  min-height:100%;
-  display:flex;
-  flex-direction:column;
-  gap:10px;
-  padding:12px;
-  max-width:520px;
-  margin:0 auto;
-}
-
+    .app{
+      min-height:100%;
+      display:flex;
+      flex-direction:column;
+      gap:10px;
+      padding:12px;
+      max-width:520px;
+      margin:0 auto;
+    }
 
     .card{
       background:var(--panel);
@@ -146,56 +145,37 @@ body{
     }
 
     .bigStatus{margin-top:10px;display:grid;grid-template-columns:1fr;gap:10px;}
-.hero{
-  border:1px solid rgba(96,165,250,.45);
-  border-radius:16px;
-  padding:14px;
-  background:linear-gradient(
-    180deg,
-    rgba(96,165,250,.16),
-    rgba(0,0,0,.18)
-  );
-  display:flex;
-  justify-content:space-between;
-  gap:10px;
-  align-items:center;
-  box-shadow: 0 6px 22px rgba(0,0,0,.35);
-  position:relative;
-}
+    .hero{
+      border:1px solid rgba(96,165,250,.45);
+      border-radius:16px;
+      padding:14px;
+      background:linear-gradient(180deg, rgba(96,165,250,.16), rgba(0,0,0,.18));
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      align-items:center;
+      box-shadow: 0 6px 22px rgba(0,0,0,.35);
+      position:relative;
+    }
+    .hero::before{
+      content:"";
+      position:absolute;
+      left:0; top:0; bottom:0;
+      width:4px;
+      background:rgba(96,165,250,.85);
+      border-radius:16px 0 0 16px;
+    }
+    .hero.warn{
+      background:linear-gradient(180deg, rgba(250,204,21,.20), rgba(0,0,0,.18));
+      border-color:rgba(250,204,21,.55);
+    }
+    .hero.warn::before{ background:rgba(250,204,21,.9); }
+    .hero.bad{
+      background:linear-gradient(180deg, rgba(251,113,133,.20), rgba(0,0,0,.18));
+      border-color:rgba(251,113,133,.55);
+    }
+    .hero.bad::before{ background:rgba(251,113,133,.9); }
 
-/* subtle left accent bar */
-.hero::before{
-  content:"";
-  position:absolute;
-  left:0;
-  top:0;
-  bottom:0;
-  width:4px;
-  background:rgba(96,165,250,.85);
-  border-radius:16px 0 0 16px;
-}
-
-.hero.warn{
-  background:linear-gradient(
-    180deg,
-    rgba(250,204,21,.20),
-    rgba(0,0,0,.18)
-  );
-  border-color:rgba(250,204,21,.55);
-}
-.hero.warn::before{ background:rgba(250,204,21,.9); }
-
-.hero.bad{
-  background:linear-gradient(
-    180deg,
-    rgba(251,113,133,.20),
-    rgba(0,0,0,.18)
-  );
-  border-color:rgba(251,113,133,.55);
-}
-.hero.bad::before{ background:rgba(251,113,133,.9); }
-
-    
     .heroLeft{display:flex;flex-direction:column;gap:3px;min-width:0;}
     .heroLabel{color:var(--muted);font-size:12px}
     .heroValue{
@@ -286,9 +266,9 @@ body{
       overflow:hidden;
       background:rgba(0,0,0,.18);
       position:relative;
-        height:38vh;
-  min-height:240px;
-  max-height:420px;
+      height:38vh;
+      min-height:240px;
+      max-height:420px;
     }
     #leafletMap{position:absolute;inset:0;}
 
@@ -323,9 +303,9 @@ body{
     }
     .alertBox h2{margin:0 0 6px 0}
     .alertBox .sub{margin:0}
-#alertBody.sub{font-size:16px; line-height:1.35; color:var(--text);}
-    
-    /* ✅ Alert type styling */
+    #alertBody.sub{font-size:16px; line-height:1.35; color:var(--text); white-space:pre-line;}
+
+    /* Alert type styling */
     .alertBox[data-kind="sos"]{
       border-color: rgba(251,113,133,.75);
       box-shadow: 0 0 0 2px rgba(251,113,133,.20), 0 18px 50px rgba(0,0,0,.55);
@@ -337,6 +317,14 @@ body{
     .alertBox[data-kind="msg"]{
       border-color: rgba(96,165,250,.75);
       box-shadow: 0 0 0 2px rgba(96,165,250,.18), 0 18px 50px rgba(0,0,0,.55);
+    }
+    .alertBox[data-kind="offline"]{
+      border-color: rgba(251,113,133,.75);
+      box-shadow: 0 0 0 2px rgba(251,113,133,.18), 0 18px 50px rgba(0,0,0,.55);
+    }
+    .alertBox[data-kind="away"]{
+      border-color: rgba(250,204,21,.75);
+      box-shadow: 0 0 0 2px rgba(250,204,21,.18), 0 18px 50px rgba(0,0,0,.55);
     }
 
     .foot{
@@ -364,6 +352,9 @@ body{
       </div>
 
       <div class="pills">
+        <!-- ✅ System online light -->
+        <span class="pill"><span id="sysDot" class="dot"></span><b id="sysText">System Online</b></span>
+
         <span class="pill"><span id="stateDot" class="dot"></span><b id="stateText">OK</b></span>
         <span class="pill">Status: <b id="statusText">—</b></span>
         <span class="pill">Last seen: <b id="lastSeen">—</b></span>
@@ -525,21 +516,19 @@ body{
       <div style="height:12px"></div>
       <div style="display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap">
 
-<!-- Normal alerts use this -->
-<div id="alertBtnsDefault">
-  <button class="btn" id="btnClearPopup" style="display:none" type="button">Clear</button>
-  <button class="btn" onclick="dismissAlert()">Dismiss</button>
-</div>
+        <!-- Normal alerts use this -->
+        <div id="alertBtnsDefault">
+          <button class="btn" id="btnClearPopup" style="display:none" type="button">Clear</button>
+          <button class="btn" onclick="dismissAlert()">Dismiss</button>
+        </div>
 
+        <!-- Confirm-clear uses this -->
+        <div id="alertBtnsConfirm" style="display:none">
+          <button class="btn danger" onclick="confirmClearAlarmYes()">Yes</button>
+          <button class="btn" onclick="confirmClearAlarmNo()">No</button>
+        </div>
 
-  <!-- Confirm-clear uses this -->
-  <div id="alertBtnsConfirm" style="display:none">
-    <button class="btn danger" onclick="confirmClearAlarmYes()">Yes</button>
-    <button class="btn" onclick="confirmClearAlarmNo()">No</button>
-  </div>
-
-</div>
-
+      </div>
     </div>
   </div>
 
@@ -554,7 +543,12 @@ body{
 
   // Rooms you care about
   const ROOMS = ["Bedroom","Bathroom","Kitchen","Living Room","Front Door"];
-const OFFLINE_SEC = 12; // not seen threshold (seconds) — matches your existing logic
+
+  // Client "Away" threshold (seconds) — your existing logic
+  const OFFLINE_SEC = 12;
+
+  // ✅ Heartbeat stale threshold (seconds) for "System Offline"
+  const HEARTBEAT_OFFLINE_SEC = 20;
 
   // =========================
   // State
@@ -578,21 +572,73 @@ const OFFLINE_SEC = 12; // not seen threshold (seconds) — matches your existin
   let db = null;
 
   // =========================
-// Message popup tracking
-// =========================
-let lastMsgPopupTs = 0;      // last message timestamp we popped
-let currentMsgKey = null;    // firebase key for the message in the popup
-
+  // Message popup tracking
+  // =========================
+  let lastMsgPopupTs = 0;
+  let currentMsgKey = null;
 
   // Linger tracking (so we only alert once per room entry)
   let lingerAlertedForEnteredAt = null;
 
- 
-  // ✅ Linger snooze (2 minutes)
-let lingerSnoozeUntilMs = 0;      // Date.now() ms until which we suppress linger popups
-// ✅ SOS/Pool "silence" (No = don't clear Firebase, but don't pop right back up)
-let emergencySnoozeUntilMs = 0;   // Date.now() ms until which we suppress SOS popup + sound
-let alertMode = "default";        // "default" | "confirmClear"
+  // Linger snooze (2 minutes)
+  let lingerSnoozeUntilMs = 0;
+
+  // SOS/Pool "silence" (No = don't clear Firebase, but don't pop right back up)
+  let emergencySnoozeUntilMs = 0;
+  let alertMode = "default"; // "default" | "confirmClear"
+
+  // =========================
+  // ✅ Heartbeat tracking
+  // =========================
+  let lastHeartbeatSec = 0;
+  let systemOnline = true;
+
+  // =========================
+  // ✅ Interval logging for Away / System Offline
+  // Writes to /logs/GRANDPA as intervals, auto-closes on recovery
+  // =========================
+  let awayActive = false;
+  let awaySinceSec = 0;
+  let awayLogKey = null;
+
+  let sysOfflineActive = false;
+  let sysOfflineSinceSec = 0;
+  let sysOfflineLogKey = null;
+
+  function nowSec(){ return Math.floor(Date.now()/1000); }
+
+  function startIntervalLog(kindLabel, enteredAtSec){
+    if(!db) return Promise.resolve(null);
+    const ref = db.ref("/logs/" + FIREBASE_KEY).push();
+    const payload = {
+      room: kindLabel,           // show in History list
+      entered_at: enteredAtSec,
+      exited_at: null,
+      duration_sec: null,
+      source: "dashboard",
+      kind: kindLabel === "Away" ? "away" : "system_offline"
+    };
+    return ref.set(payload).then(()=> ref.key).catch(()=> null);
+  }
+
+  function closeIntervalLog(logKey, exitedAtSec){
+    if(!db || !logKey) return Promise.resolve();
+    return db.ref("/logs/" + FIREBASE_KEY + "/" + logKey).update({
+      exited_at: exitedAtSec,
+      duration_sec: null // filled below
+    }).then(()=>{
+      // compute duration safely
+      return db.ref("/logs/" + FIREBASE_KEY + "/" + logKey).once("value");
+    }).then((snap)=>{
+      const v = snap.val() || {};
+      const entered = Number(v.entered_at || 0);
+      const exited = Number(exitedAtSec || 0);
+      const dur = (entered && exited && exited >= entered) ? (exited - entered) : null;
+      return db.ref("/logs/" + FIREBASE_KEY + "/" + logKey).update({
+        duration_sec: dur
+      });
+    }).catch(()=>{});
+  }
 
   // =========================
   // Settings (localStorage)
@@ -611,9 +657,7 @@ let alertMode = "default";        // "default" | "confirmClear"
     }
   };
 
-  // Safe clone for older browsers
   const clone = (o)=> JSON.parse(JSON.stringify(o));
-
   let settings = loadSettings();
 
   function loadSettings(){
@@ -639,19 +683,14 @@ let alertMode = "default";        // "default" | "confirmClear"
   }
 
   function saveSettings(){
-    try{
-      localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
-    }catch(e){
-      console.log("saveSettings error:", e);
-    }
+    try{ localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); }
+    catch(e){ console.log("saveSettings error:", e); }
   }
 
   function applySettingsToUI(){
-    // toggles
     document.getElementById("toggleLinger").classList.toggle("on", !!settings.lingerEnabled);
     document.getElementById("toggleLingerSound").classList.toggle("on", !!settings.lingerSound);
 
-    // inputs
     document.getElementById("limitDefault").value = settings.defaultLimitMin ?? "";
     document.getElementById("limitBedroom").value = settings.perRoomMin["Bedroom"] ?? "";
     document.getElementById("limitBathroom").value = settings.perRoomMin["Bathroom"] ?? "";
@@ -682,7 +721,6 @@ let alertMode = "default";        // "default" | "confirmClear"
   }
 
   function commitSettingsFromUI(){
-    // Read inputs + toggles into settings, then save (used on tab switches and input autosave)
     readSettingsFromUI();
     settings.lingerEnabled = document.getElementById("toggleLinger").classList.contains("on");
     settings.lingerSound = document.getElementById("toggleLingerSound").classList.contains("on");
@@ -697,44 +735,34 @@ let alertMode = "default";        // "default" | "confirmClear"
     return Math.floor(useMin * 60);
   }
 
-function wireEnterToNextInSettings(){
-  const ids = ["limitDefault","limitBedroom","limitBathroom","limitKitchen","limitLiving","limitFrontDoor"];
-  ids.forEach((id, idx) => {
-    const el = document.getElementById(id);
-    if(!el) return;
+  function wireEnterToNextInSettings(){
+    const ids = ["limitDefault","limitBedroom","limitBathroom","limitKitchen","limitLiving","limitFrontDoor"];
+    ids.forEach((id, idx) => {
+      const el = document.getElementById(id);
+      if(!el) return;
 
-    el.addEventListener("keydown", (e) => {
-      if(e.key === "Enter"){
-        e.preventDefault();
-
-        const next = document.getElementById(ids[idx + 1]);
-        if(next){
-          next.focus();
-          next.select?.();
-        } else {
-          // last field: save + back to status
-          document.getElementById("btnSaveSettings").click();
+      el.addEventListener("keydown", (e) => {
+        if(e.key === "Enter"){
+          e.preventDefault();
+          const next = document.getElementById(ids[idx + 1]);
+          if(next){
+            next.focus();
+            next.select?.();
+          } else {
+            document.getElementById("btnSaveSettings").click();
+          }
         }
-      }
+      });
     });
-  });
-}
+  }
 
-
-  
-  // Auto-save as user types (prevents losing edits when switching tabs)
   function wireSettingsInputs(){
     const ids = ["limitDefault","limitBedroom","limitBathroom","limitKitchen","limitLiving","limitFrontDoor"];
     ids.forEach(id=>{
       const el = document.getElementById(id);
       if(!el) return;
-      el.addEventListener("input", ()=>{
-        // Keep it lightweight: commit on each keystroke
-        commitSettingsFromUI();
-      });
-      el.addEventListener("change", ()=>{
-        commitSettingsFromUI();
-      });
+      el.addEventListener("input", ()=>{ commitSettingsFromUI(); });
+      el.addEventListener("change", ()=>{ commitSettingsFromUI(); });
     });
   }
 
@@ -743,18 +771,6 @@ function wireEnterToNextInSettings(){
   // =========================
   function setFbStatus(txt){ document.getElementById("fbStatus").textContent = txt; }
 
-function clearFirebaseAlerts(){
-  if(!db) return Promise.resolve();
-
-  // Clear active alert flags in Firebase so the SOS popup does NOT come right back
-  return db.ref("/alerts/" + FIREBASE_KEY).update({
-    sos: false,
-    pool: false,
-    timestamp: Date.now()
-  });
-}
-
-  
   function isValidGps(lat, lng){
     if(!isFinite(lat) || !isFinite(lng)) return false;
     if(Math.abs(lat) < 0.000001 && Math.abs(lng) < 0.000001) return false;
@@ -775,14 +791,8 @@ function clearFirebaseAlerts(){
 
     db.ref("/messages/" + FIREBASE_KEY)
       .remove()
-      .then(()=>{
-        liveJackMessages = [];
-        renderMessages();
-      })
-      .catch(err=>{
-        console.log("Clear messages error:", err);
-        alert("Failed to clear messages.");
-      });
+      .then(()=>{ liveJackMessages = []; renderMessages(); })
+      .catch(err=>{ console.log("Clear messages error:", err); alert("Failed to clear messages."); });
   }
 
   function formatDuration(seconds) {
@@ -795,37 +805,43 @@ function clearFirebaseAlerts(){
   }
 
   function updateDerivedTimes(){
-    const nowSec = Math.floor(Date.now()/1000);
+    const n = nowSec();
 
     if(jack._last_seen){
-      jack.lastSeenSec = Math.max(0, nowSec - jack._last_seen);
+      jack.lastSeenSec = Math.max(0, n - jack._last_seen);
     }else{
       jack.lastSeenSec = null;
     }
 
     if(jack._entered_at){
-      const dwell = Math.max(0, nowSec - jack._entered_at);
+      const dwell = Math.max(0, n - jack._entered_at);
       jack.timeInRoom = formatDuration(dwell);
     }else{
       jack.timeInRoom = "—";
     }
   }
 
-function computeAway(){
-  const nowSec = Math.floor(Date.now()/1000);
-  const lastSeen = jack._last_seen || 0;
-
-  const offline = !lastSeen || ((nowSec - lastSeen) > OFFLINE_SEC);
-
-  if(offline){
-    jack.status = "Away";
-    // keep last known room internally (jack.room) so we can log gaps,
-    // but display will show "Away"
-  }else{
-    jack.status = "Home";
+  function computeAway(){
+    const n = nowSec();
+    const lastSeen = jack._last_seen || 0;
+    const offline = !lastSeen || ((n - lastSeen) > OFFLINE_SEC);
+    jack.status = offline ? "Away" : "Home";
+    return offline;
   }
-}
 
+  // ✅ heartbeat normalize (seconds or ms)
+  function normalizeHeartbeatToSec(v){
+    let x = Number(v || 0);
+    if(!isFinite(x) || x <= 0) return 0;
+    if(x > 1e12) x = Math.floor(x / 1000); // ms -> sec
+    return Math.floor(x);
+  }
+
+  function computeSystemOnline(){
+    const n = nowSec();
+    if(!lastHeartbeatSec) return false;
+    return (n - lastHeartbeatSec) <= HEARTBEAT_OFFLINE_SEC;
+  }
 
   // =========================
   // Alarm sound
@@ -871,7 +887,7 @@ function computeAway(){
   // =========================
   // Alert modal (typed + SOS priority)
   // =========================
-  let currentAlertKind = null; // "sos" | "linger" | "msg" | null
+  let currentAlertKind = null; // "sos" | "linger" | "msg" | "offline" | "away" | null
 
   function setAlertKind(kind){
     currentAlertKind = kind || null;
@@ -881,230 +897,266 @@ function computeAway(){
 
   function showAlertKind(kind, title, body){
     // SOS popups overwrite all others
-    if(currentAlertKind === "sos" && kind !== "sos"){
-      return;
-    }
+    if(currentAlertKind === "sos" && kind !== "sos") return;
     setAlertKind(kind);
     document.getElementById("alertTitle").textContent = title;
     document.getElementById("alertBody").textContent = body;
     document.getElementById("alert").style.display = "block";
   }
 
-  // Backward compatibility: any old showAlert() calls become "msg" popups
-  function showAlert(title, body){
-    showAlertKind("msg", title, body);
-  }
-
   function setAlertButtonsMode(mode){
-  alertMode = mode || "default";
-  const a = document.getElementById("alertBtnsDefault");
-  const b = document.getElementById("alertBtnsConfirm");
-  if(!a || !b) return;
+    alertMode = mode || "default";
+    const a = document.getElementById("alertBtnsDefault");
+    const b = document.getElementById("alertBtnsConfirm");
+    if(!a || !b) return;
 
-  if(alertMode === "confirmClear"){
-    a.style.display = "none";
-    b.style.display = "block";
-  }else{
-    a.style.display = "block";
-    b.style.display = "none";
-  }
-}
-
-function showClearAlarmPrompt(){
-  // Switch modal to confirm buttons
-  setAlertButtonsMode("confirmClear");
-  // Use normal "msg" styling for this confirm step
-  showAlertKind("msg", "Clear the alarm?", "This will clear the SOS/Pool alarm in Firebase for this client.");
-}
-
-function clearFirebaseAlerts(){
-  if(!db) return Promise.resolve();
-
-  // Clears both flags (your emergency logic treats either as emergency)
-  return db.ref("/alerts/" + FIREBASE_KEY).update({
-    sos: false,
-    pool: false,
-    timestamp: Date.now()
-  });
-}
-
-function confirmClearAlarmYes(){
-  // user chose to clear
-  document.getElementById("alert").style.display = "none";
-  setAlertButtonsMode("default");
-
-  emergencySnoozeUntilMs = 0; // no need to silence anymore
-
-  clearFirebaseAlerts()
-    .catch(err => console.log("clearFirebaseAlerts error:", err));
-}
-
-function confirmClearAlarmNo(){
-  // user chose NOT to clear Firebase — keep silent locally for 2 minutes
-  document.getElementById("alert").style.display = "none";
-  setAlertButtonsMode("default");
-
-  emergencySnoozeUntilMs = Date.now() + (2 * 60 * 1000);
-  stopAlarm();   // ensure it stays quiet even if something calls it
-  render();      // refresh UI
-}
-
-// =========================
-// Message popup helpers
-// =========================
-function showMessagePopup(msgKey, msgObj){
-  currentMsgKey = msgKey;
-
-  // Show modal as a normal message popup
-  setAlertButtonsMode("default");
-  setAlertKind("msg");
-  document.getElementById("alertTitle").textContent = "Message from phone";
-  document.getElementById("alertBody").textContent = msgObj?.text || "";
-  document.getElementById("alert").style.display = "block";
-
-  // Show Clear button for message popups
-  const clearBtn = document.getElementById("btnClearPopup");
-  if(clearBtn) clearBtn.style.display = "inline-flex";
-}
-
-function hideMessagePopupControls(){
-  currentMsgKey = null;
-  const clearBtn = document.getElementById("btnClearPopup");
-  if(clearBtn) clearBtn.style.display = "none";
-}
-
-function clearCurrentPopupMessage(){
-  if(!db || !currentMsgKey) return;
-
-  db.ref("/messages/" + FIREBASE_KEY + "/" + currentMsgKey)
-    .remove()
-    .then(()=>{
-      hideMessagePopupControls();
-      document.getElementById("alert").style.display = "none";
-    })
-    .catch(err=>{
-      console.log("Clear popup message error:", err);
-      alert("Failed to clear message.");
-    });
-}
-
-  
-  function resetLingerAfterDismiss(){
-    if(!jack._entered_at) return;
-
-    // allow a future linger alert again (but not immediately)
-    lingerAlertedForEnteredAt = null;
-
-    // reset the linger "timer baseline" locally (virtual re-entry)
-    jack._entered_at = Math.floor(Date.now() / 1000);
-
-    // clear warning state
-    if(jack.state === "warn"){
-      jack.state = "ok";
+    if(alertMode === "confirmClear"){
+      a.style.display = "none";
+      b.style.display = "block";
+    }else{
+      a.style.display = "block";
+      b.style.display = "none";
     }
+  }
 
-    updateDerivedTimes();
+  function showClearAlarmPrompt(){
+    setAlertButtonsMode("confirmClear");
+    showAlertKind("msg", "Clear the alarm?", "This will clear the SOS/Pool alarm in Firebase for this client.");
+  }
+
+  function clearFirebaseAlerts(){
+    if(!db) return Promise.resolve();
+    return db.ref("/alerts/" + FIREBASE_KEY).update({
+      sos: false,
+      pool: false,
+      timestamp: Date.now()
+    });
+  }
+
+  function confirmClearAlarmYes(){
+    document.getElementById("alert").style.display = "none";
+    setAlertButtonsMode("default");
+    emergencySnoozeUntilMs = 0;
+    clearFirebaseAlerts().catch(err => console.log("clearFirebaseAlerts error:", err));
+  }
+
+  function confirmClearAlarmNo(){
+    document.getElementById("alert").style.display = "none";
+    setAlertButtonsMode("default");
+    emergencySnoozeUntilMs = Date.now() + (2 * 60 * 1000);
+    stopAlarm();
     render();
   }
 
-function dismissAlert(){
-  const dismissedKind = currentAlertKind; // capture BEFORE we clear it
+  // =========================
+  // Message popup helpers
+  // =========================
+  function showMessagePopup(msgKey, msgObj){
+    currentMsgKey = msgKey;
+    setAlertButtonsMode("default");
+    setAlertKind("msg");
+    document.getElementById("alertTitle").textContent = "Message from phone";
+    document.getElementById("alertBody").textContent = msgObj?.text || "";
+    document.getElementById("alert").style.display = "block";
 
-  document.getElementById("alert").style.display = "none";
-  stopAlarm();
-  hideMessagePopupControls();
+    const clearBtn = document.getElementById("btnClearPopup");
+    if(clearBtn) clearBtn.style.display = "inline-flex";
+  }
 
+  function hideMessagePopupControls(){
+    currentMsgKey = null;
+    const clearBtn = document.getElementById("btnClearPopup");
+    if(clearBtn) clearBtn.style.display = "none";
+  }
 
-  // ✅ If we just dismissed an SOS/Pool alert, immediately ask to clear it
-  if(dismissedKind === "sos"){
-    // Clear kind first so SOS isn't "sticky" while we're confirming
+  function clearCurrentPopupMessage(){
+    if(!db || !currentMsgKey) return;
+
+    db.ref("/messages/" + FIREBASE_KEY + "/" + currentMsgKey)
+      .remove()
+      .then(()=>{
+        hideMessagePopupControls();
+        document.getElementById("alert").style.display = "none";
+      })
+      .catch(err=>{
+        console.log("Clear popup message error:", err);
+        alert("Failed to clear message.");
+      });
+  }
+
+  function dismissAlert(){
+    const dismissedKind = currentAlertKind;
+
+    document.getElementById("alert").style.display = "none";
+    stopAlarm();
+    hideMessagePopupControls();
+
+    if(dismissedKind === "sos"){
+      setAlertKind(null);
+      showClearAlarmPrompt();
+      return;
+    }
+
+    if(dismissedKind === "linger"){
+      lingerSnoozeUntilMs = Date.now() + (2 * 60 * 1000);
+    }
+
+    // For offline/away, dismiss just hides it (it may re-open if still active)
     setAlertKind(null);
-    // Show confirm prompt (Yes/No) without restarting sound
-    showClearAlarmPrompt();
-    return;
+    setAlertButtonsMode("default");
+    render();
   }
-
-  // ✅ Linger snooze (keep your existing behavior)
-  if(dismissedKind === "linger"){
-    lingerSnoozeUntilMs = Date.now() + (2 * 60 * 1000); // 2 minutes
-  }
-
-  // Clear warn state visually
-  if(jack.state === "warn"){
-    jack.state = "ok";
-  }
-
-  setAlertKind(null);
-  setAlertButtonsMode("default");
-  render();
-}
 
   // =========================
   // Alerts / State priority
   // =========================
-function applyStateFromAlerts(){
-  const a = jack._alerts || {};
-  const emergencyActive = (a.sos === true || a.pool === true);
+  function applyStateFromAlerts(){
+    const a = jack._alerts || {};
+    const emergencyActive = (a.sos === true || a.pool === true);
 
-  if(emergencyActive){
+    if(emergencyActive){
+      if(Date.now() < emergencySnoozeUntilMs){
+        jack.state = "bad";
+        stopAlarm();
+        return true;
+      }
 
-    // ✅ If user chose "No" recently, keep it silent for a bit
-    if(Date.now() < emergencySnoozeUntilMs){
+      if(jack.state !== "bad"){
+        showAlertKind("sos", "Emergency Alert", `LIVE SOS/Alarm for ${jack.name}.`);
+        startAlarm();
+      }else{
+        setAlertKind("sos");
+        startAlarm();
+      }
+
       jack.state = "bad";
-      // do NOT show popup, do NOT start sound
-      stopAlarm();
       return true;
     }
 
-    if(jack.state !== "bad"){
-      showAlertKind("sos", "Emergency Alert", `LIVE SOS/Alarm for ${jack.name}.`);
-      startAlarm();
-    }else{
-      setAlertKind("sos");
-      // ensure sound is on if not silenced
-      startAlarm();
+    if(jack.state === "bad"){
+      stopAlarm();
     }
-
-    jack.state = "bad";
-    return true;
+    return false;
   }
 
-  // no emergency active
-  if(jack.state === "bad"){
-    stopAlarm();
+  function getRoomLimitSeconds(room){
+    if(!room) return null;
+    const min = settings.perRoomMin[room];
+    const useMin = isFinite(min) ? Number(min) : Number(settings.defaultLimitMin || 0);
+    if(!isFinite(useMin) || useMin <= 0) return null;
+    return Math.floor(useMin * 60);
   }
-  return false;
-}
-
 
   function maybeLingerAlert(){
     if(!settings.lingerEnabled) return;
     if(jack.status !== "Home") return;
     if(!jack._entered_at) return;
     if(!jack.room) return;
-    if(jack.state === "bad") return; // emergency overrides
-
-      if(Date.now() < lingerSnoozeUntilMs) return; // ✅ snooze linger popups
-
+    if(jack.state === "bad") return;
+    if(Date.now() < lingerSnoozeUntilMs) return;
 
     const limitSec = getRoomLimitSeconds(jack.room);
     if(!limitSec) return;
 
-    const nowSec = Math.floor(Date.now()/1000);
-    const dwellSec = Math.max(0, nowSec - jack._entered_at);
+    const n = nowSec();
+    const dwellSec = Math.max(0, n - jack._entered_at);
 
     if(dwellSec >= limitSec){
       if(lingerAlertedForEnteredAt !== jack._entered_at){
         lingerAlertedForEnteredAt = jack._entered_at;
         jack.state = "warn";
-        showAlertKind("linger", "Linger Alert", `${jack.name} has been in ${jack.room} for ${formatDuration(dwellSec)} (limit ${formatDuration(limitSec)}).`);
+        showAlertKind("linger", "Linger Alert",
+          `${jack.name} has been in ${jack.room} for ${formatDuration(dwellSec)} (limit ${formatDuration(limitSec)}).`);
         if(settings.lingerSound) startAlarm();
       }else{
         jack.state = "warn";
       }
     }else{
-      if(jack.state === "warn"){
-        jack.state = "ok";
+      if(jack.state === "warn") jack.state = "ok";
+    }
+  }
+
+  // =========================
+  // ✅ System Offline + Away popups + logging
+  // =========================
+  function handleSystemOfflineAndAway(){
+    const n = nowSec();
+
+    // -------- System Offline (heartbeat) --------
+    const onlineNow = computeSystemOnline();
+    systemOnline = onlineNow;
+
+    if(!onlineNow){
+      if(!sysOfflineActive){
+        sysOfflineActive = true;
+        sysOfflineSinceSec = n;
+
+        // Start interval log
+        startIntervalLog("System Offline", sysOfflineSinceSec).then((key)=>{
+          sysOfflineLogKey = key;
+        });
+
+        // Popup (only on transition)
+        if(currentAlertKind !== "sos"){
+          showAlertKind("offline", "System Offline",
+            `Heartbeat missing/stale.\nFor: ${formatDuration(n - sysOfflineSinceSec)}`);
+        }
+      }else{
+        // Update popup timer if it's currently the offline popup
+        if(currentAlertKind === "offline"){
+          document.getElementById("alertBody").textContent =
+            `Heartbeat missing/stale.\nFor: ${formatDuration(n - sysOfflineSinceSec)}`;
+        }
+      }
+    }else{
+      if(sysOfflineActive){
+        // close interval log
+        closeIntervalLog(sysOfflineLogKey, n);
+        sysOfflineActive = false;
+        sysOfflineSinceSec = 0;
+        sysOfflineLogKey = null;
+
+        // auto-clear popup if it was showing
+        if(currentAlertKind === "offline"){
+          document.getElementById("alert").style.display = "none";
+          setAlertKind(null);
+        }
+      }
+    }
+
+    // -------- Client Away (beacon last_seen) --------
+    const awayNow = (jack.status === "Away");
+
+    if(awayNow){
+      if(!awayActive){
+        awayActive = true;
+        awaySinceSec = n;
+
+        startIntervalLog("Away", awaySinceSec).then((key)=>{
+          awayLogKey = key;
+        });
+
+        if(currentAlertKind !== "sos" && currentAlertKind !== "offline"){
+          showAlertKind("away", "Client Away",
+            `${jack.name} is not being seen by any sensor.\nFor: ${formatDuration(n - awaySinceSec)}`);
+        }
+      }else{
+        if(currentAlertKind === "away"){
+          document.getElementById("alertBody").textContent =
+            `${jack.name} is not being seen by any sensor.\nFor: ${formatDuration(n - awaySinceSec)}`;
+        }
+      }
+    }else{
+      if(awayActive){
+        closeIntervalLog(awayLogKey, n);
+        awayActive = false;
+        awaySinceSec = 0;
+        awayLogKey = null;
+
+        if(currentAlertKind === "away"){
+          document.getElementById("alert").style.display = "none";
+          setAlertKind(null);
+        }
       }
     }
   }
@@ -1113,21 +1165,30 @@ function applyStateFromAlerts(){
   // Rendering
   // =========================
   function render(){
+    // ✅ system online dot
+    const sysDot = document.getElementById("sysDot");
+    const sysText = document.getElementById("sysText");
+    if(sysDot){
+      sysDot.className = "dot" + (systemOnline ? "" : " bad");
+    }
+    if(sysText){
+      sysText.textContent = systemOnline ? "System Online" : "System Offline";
+    }
+
     const sd = document.getElementById("stateDot");
     sd.className = "dot" + (jack.state==="warn" ? " warn" : jack.state==="bad" ? " bad" : "");
     document.getElementById("stateText").textContent =
       (jack.state==="ok") ? "OK" : (jack.state==="warn") ? "LINGER" : "ALERT";
 
-  // Highlight current-room card based on state
-  const hero = document.querySelector(".hero");
-  if(hero){
-    hero.classList.toggle("warn", jack.state === "warn");
-    hero.classList.toggle("bad", jack.state === "bad");
-  }
-   
+    const hero = document.querySelector(".hero");
+    if(hero){
+      hero.classList.toggle("warn", jack.state === "warn");
+      hero.classList.toggle("bad", jack.state === "bad");
+    }
+
     document.getElementById("statusText").textContent = jack.status || "—";
     document.getElementById("room").textContent =
-  (jack.status === "Away") ? "Away" : (jack.room || "—");
+      (jack.status === "Away") ? "Away" : (jack.room || "—");
     document.getElementById("timeInRoom").textContent = jack.timeInRoom || "—";
 
     document.getElementById("lastSeen").textContent =
@@ -1135,7 +1196,6 @@ function applyStateFromAlerts(){
 
     document.getElementById("lastSensor").textContent = jack.lastSensor || "—";
 
-    // GPS meta
     if(jack.gps){
       const lat = jack.gps.lat;
       const lng = jack.gps.lng;
@@ -1182,65 +1242,9 @@ function applyStateFromAlerts(){
   // =========================
   // History (Room intervals)
   // =========================
-  let historyRows = []; // [{room, entered_at, exited_at, duration_sec}]
-  let sosHistory = []; 
-// [{ type:"sos", timestamp }]
+  let historyRows = [];
+  let sosHistory = [];
 
-
-function buildHistoryWithAway(rawRows){
-  const nowSec = Math.floor(Date.now()/1000);
-
-  // Normalize to {room, entered_at, exited_at}
-  const intervals = (rawRows || []).map(x => ({
-    room: x.room || "—",
-    entered_at: x.entered_at || x.timestamp || null,
-    exited_at: x.exited_at || null,
-    duration_sec: x.duration_sec || null
-  })).filter(x => x.entered_at);
-
-  // Sort ascending by entered time so we can detect gaps
-  intervals.sort((a,b) => (a.entered_at||0) - (b.entered_at||0));
-
-  const merged = [];
-  for(let i=0;i<intervals.length;i++){
-    const cur = intervals[i];
-    const prev = merged.length ? merged[merged.length - 1] : null;
-
-    // If there is a previous interval with an exited_at, check gap
-    if(prev && prev.exited_at && cur.entered_at){
-      const gap = cur.entered_at - prev.exited_at;
-      if(gap > OFFLINE_SEC){
-        merged.push({
-          room: "Away",
-          entered_at: prev.exited_at,
-          exited_at: cur.entered_at,
-          duration_sec: gap
-        });
-      }
-    }
-
-    merged.push(cur);
-  }
-
-  // If currently offline, add an "open" Away interval from last_seen -> now
-  if(jack._last_seen){
-    const offlineNow = (nowSec - jack._last_seen) > OFFLINE_SEC;
-    if(offlineNow){
-      merged.push({
-        room: "Away",
-        entered_at: jack._last_seen,
-        exited_at: nowSec,
-        duration_sec: nowSec - jack._last_seen
-      });
-    }
-  }
-
-  // Return in DESC order for display (most recent first)
-  merged.sort((a,b) => ((b.exited_at || b.entered_at || 0) - (a.exited_at || a.entered_at || 0)));
-  return merged;
-}
-
-  
   function formatTime(tsSec){
     if(!tsSec) return "—";
     const d = new Date(tsSec * 1000);
@@ -1279,120 +1283,119 @@ function buildHistoryWithAway(rawRows){
       });
   }
 
-function renderHistory(){
-  const box = document.getElementById("historyList");
+  function renderHistory(){
+    const box = document.getElementById("historyList");
+    if(!historyRows.length){
+      box.innerHTML = `<div class="evt"><div><b>No history yet</b></div><div class="t">—</div></div>`;
+      return;
+    }
 
-  // If nothing loaded at all
-  if(!historyRows.length){
-    box.innerHTML = `<div class="evt"><div><b>No history yet</b></div><div class="t">—</div></div>`;
-    return;
-  }
+    const n = nowSec();
 
-  const nowSec = Math.floor(Date.now()/1000);
+    const intervals = historyRows
+      .map(x => ({
+        room: x.room || "—",
+        entered_at: x.entered_at || x.timestamp || null,
+        exited_at: x.exited_at || null,
+        duration_sec: x.duration_sec || null,
+        kind: x.kind || null
+      }))
+      .filter(x => !!x.entered_at);
 
-  // 1) Normalize incoming rows -> intervals
-  const intervals = historyRows
-    .map(x => ({
-      room: x.room || "—",
-      entered_at: x.entered_at || x.timestamp || null,
-      exited_at: x.exited_at || null,
-      duration_sec: x.duration_sec || null
-    }))
-    .filter(x => !!x.entered_at);
+    intervals.sort((a,b)=> (a.entered_at || 0) - (b.entered_at || 0));
 
-  // 2) Sort ASC so we can detect gaps between intervals
-  intervals.sort((a,b)=> (a.entered_at || 0) - (b.entered_at || 0));
+    const merged = [];
+    for(let i=0;i<intervals.length;i++){
+      const cur = intervals[i];
+      const prev = merged.length ? merged[merged.length - 1] : null;
 
-  // 3) Build list with injected "Away" gaps
-  const merged = [];
-  for(let i=0;i<intervals.length;i++){
-    const cur = intervals[i];
-    const prev = merged.length ? merged[merged.length - 1] : null;
+      if(prev && prev.exited_at && cur.entered_at){
+        const gap = cur.entered_at - prev.exited_at;
+        if(gap > OFFLINE_SEC){
+          merged.push({
+            room: "Away",
+            entered_at: prev.exited_at,
+            exited_at: cur.entered_at,
+            duration_sec: gap,
+            _kind: "away_gap"
+          });
+        }
+      }
+      merged.push(cur);
+    }
 
-    // If previous interval has an exited time, see if there's a big gap
-    if(prev && prev.exited_at && cur.entered_at){
-      const gap = cur.entered_at - prev.exited_at;
-      if(gap > OFFLINE_SEC){
+    // If currently away, show an open interval live in history
+    if(jack && jack._last_seen){
+      const offlineNow = (n - jack._last_seen) > OFFLINE_SEC;
+      if(offlineNow){
         merged.push({
           room: "Away",
-          entered_at: prev.exited_at,
-          exited_at: cur.entered_at,
-          duration_sec: gap
+          entered_at: jack._last_seen,
+          exited_at: n,
+          duration_sec: n - jack._last_seen,
+          _kind: "away_live"
         });
       }
     }
 
-    merged.push(cur);
-  }
-
-  // 4) If currently offline, append a "current Away" interval (last_seen -> now)
-  if(jack && jack._last_seen){
-    const offlineNow = (nowSec - jack._last_seen) > OFFLINE_SEC;
-    if(offlineNow){
+    // SOS inline events (existing)
+    sosHistory.forEach(e=>{
       merged.push({
-        room: "Away",
-        entered_at: jack._last_seen,
-        exited_at: nowSec,
-        duration_sec: nowSec - jack._last_seen
+        room: "🚨 SOS Button Pressed",
+        entered_at: e.timestamp,
+        exited_at: null,
+        duration_sec: null,
+        _kind: "sos"
       });
-    }
-  }
+    });
 
-  // ✅ Inject SOS events into history timeline
-sosHistory.forEach(e=>{
-  merged.push({
-    room: "🚨 SOS Button Pressed",
-    entered_at: e.timestamp,
-    exited_at: null,
-    duration_sec: null,
-    _kind: "sos"
-  });
-});
+    merged.sort((a,b)=>{
+      const at = (a.exited_at || a.entered_at || 0);
+      const bt = (b.exited_at || b.entered_at || 0);
+      return bt - at;
+    });
 
-  // 5) Sort DESC for display (most recent first)
-  merged.sort((a,b)=>{
-    const at = (a.exited_at || a.entered_at || 0);
-    const bt = (b.exited_at || b.entered_at || 0);
-    return bt - at;
-  });
+    box.innerHTML = "";
+    merged.slice(0, 50).forEach(x=>{
+      const room = x.room || "—";
+      const entered = x.entered_at || null;
+      const exited = x.exited_at || null;
+      const dur = x.duration_sec
+        ? formatDuration(x.duration_sec)
+        : (entered && exited ? formatDuration(exited - entered) : "");
 
-  // 6) Render
-  box.innerHTML = "";
-  merged.slice(0, 50).forEach(x=>{
-    const room = x.room || "—";
-const isSOS = x._kind === "sos";
-    const entered = x.entered_at || null;
-    const exited = x.exited_at || null;
-    const dur = x.duration_sec
-      ? formatDuration(x.duration_sec)
-      : (entered && exited ? formatDuration(exited - entered) : "");
-
-    const left = `
-      <div>
-        <div class="msg">${escapeHtml(room)}</div>
-        <div class="meta">
-          ${escapeHtml(formatTime(entered))}${exited ? (" → " + escapeHtml(formatTime(exited))) : ""}
-          ${dur ? (" • " + escapeHtml(dur)) : ""}
+      const left = `
+        <div>
+          <div class="msg">${escapeHtml(room)}</div>
+          <div class="meta">
+            ${escapeHtml(formatTime(entered))}${exited ? (" → " + escapeHtml(formatTime(exited))) : ""}
+            ${dur ? (" • " + escapeHtml(dur)) : ""}
+          </div>
         </div>
-      </div>
-    `;
+      `;
 
-    const right = `<div class="t">${exited ? "Done" : "—"}</div>`;
+      const right = `<div class="t">${exited ? "Done" : "—"}</div>`;
 
-    const row = document.createElement("div");
-row.className = "evt";
+      const row = document.createElement("div");
+      row.className = "evt";
 
-// ✅ Highlight SOS history rows
-if(x._kind === "sos"){
-  row.style.borderLeft = "4px solid #fb7185";
-}
+      // highlight SOS
+      if(x._kind === "sos"){
+        row.style.borderLeft = "4px solid #fb7185";
+      }
+      // highlight System Offline intervals
+      if((x.kind === "system_offline") || (String(room).toLowerCase().includes("system offline"))){
+        row.style.borderLeft = "4px solid #fb7185";
+      }
+      // highlight Away intervals
+      if((x.kind === "away") || (String(room).toLowerCase() === "away")){
+        row.style.borderLeft = row.style.borderLeft || "4px solid #facc15";
+      }
 
-row.innerHTML = left + right;
-box.appendChild(row);
-
-  });
-}
-
+      row.innerHTML = left + right;
+      box.appendChild(row);
+    });
+  }
 
   // =========================
   // Leaflet Map (hidden until GPS is valid)
@@ -1481,7 +1484,6 @@ box.appendChild(row);
   let currentTab = "status";
 
   function showTab(tab){
-    // If leaving Settings, commit typed values so they never "reset" on return
     if(currentTab === "settings" && tab !== "settings"){
       commitSettingsFromUI();
     }
@@ -1533,12 +1535,10 @@ box.appendChild(row);
   });
 
   document.getElementById("btnRefreshHistory").addEventListener("click", loadHistory);
-
   document.getElementById("btnClearPopup").addEventListener("click", clearCurrentPopupMessage);
 
   document.getElementById("btnSaveSettings").addEventListener("click", ()=>{
     commitSettingsFromUI();
-    // go back to Status tab
     showTab("status");
     showAlertKind("msg", "Saved", "Settings saved on this device.");
   });
@@ -1547,10 +1547,7 @@ box.appendChild(row);
     settings = clone(defaultSettings);
     saveSettings();
     applySettingsToUI();
-
-    // go back to Status tab
     showTab("status");
-
     showAlertKind("msg", "Reset", "Settings reset to defaults.");
   });
 
@@ -1565,6 +1562,13 @@ box.appendChild(row);
       firebase.initializeApp(firebaseConfig);
       db = firebase.database();
       setFbStatus("Connected");
+
+      // ✅ System heartbeat
+      db.ref("/system/heartbeat").on("value", (snap)=>{
+        const v = snap.val();
+        lastHeartbeatSec = normalizeHeartbeatToSec(v);
+        // Don't show popups here; tick loop will handle transitions cleanly
+      });
 
       // Live beacons
       db.ref("/beacons/" + FIREBASE_KEY).on("value", (snap)=>{
@@ -1581,7 +1585,6 @@ box.appendChild(row);
           }
         }
         if(val.last_seen !== undefined) jack._last_seen = val.last_seen || 0;
-
         if(val.battery !== undefined) jack.battery = val.battery;
 
         updateDerivedTimes();
@@ -1593,32 +1596,33 @@ box.appendChild(row);
           if(jack.state !== "warn") jack.state = "ok";
         }
 
+        // ✅ handle Away/System Offline popups + logging
+        handleSystemOfflineAndAway();
+
         render();
       });
 
-// Live alerts
-db.ref("/alerts/" + FIREBASE_KEY).on("value", (snap)=>{
-  const prev = jack._alerts || {};
-  const next = snap.val() || {};
-  jack._alerts = next;
+      // Live alerts
+      db.ref("/alerts/" + FIREBASE_KEY).on("value", (snap)=>{
+        const prev = jack._alerts || {};
+        const next = snap.val() || {};
+        jack._alerts = next;
 
-  // ✅ Detect SOS button press (false → true)
-  if(prev.sos !== true && next.sos === true){
-    sosHistory.push({
-      type: "sos",
-      timestamp: Math.floor(Date.now() / 1000)
-    });
-  }
+        if(prev.sos !== true && next.sos === true){
+          sosHistory.push({ type:"sos", timestamp: nowSec() });
+        }
 
-  const emergency = applyStateFromAlerts();
-  if(!emergency){
-    maybeLingerAlert();
-    if(jack.state !== "warn") jack.state = "ok";
-  }
+        const emergency = applyStateFromAlerts();
+        if(!emergency){
+          maybeLingerAlert();
+          if(jack.state !== "warn") jack.state = "ok";
+        }
 
-  render();
-});
+        // ✅ keep offline/away logic consistent
+        handleSystemOfflineAndAway();
 
+        render();
+      });
 
       // Live GPS
       db.ref("/gps/" + FIREBASE_KEY).on("value", (snap)=>{
@@ -1662,34 +1666,28 @@ db.ref("/alerts/" + FIREBASE_KEY).on("value", (snap)=>{
       });
 
       // Live messages
-// Live messages
-db.ref("/messages/" + FIREBASE_KEY)
-  .orderByChild("timestamp")
-  .limitToLast(20)
-  .on("value", (snap)=>{
-    const obj = snap.val() || {};
+      db.ref("/messages/" + FIREBASE_KEY)
+        .orderByChild("timestamp")
+        .limitToLast(20)
+        .on("value", (snap)=>{
+          const obj = snap.val() || {};
+          const entries = Object.entries(obj)
+            .map(([key, val]) => ({ key, ...(val || {}) }))
+            .filter(x => !!x.key);
 
-    // Keep BOTH the Firebase key + message (so Clear can delete just one)
-    const entries = Object.entries(obj)
-      .map(([key, val]) => ({ key, ...(val || {}) }))
-      .filter(x => !!x.key);
+          entries.sort((a,b)=> (a.timestamp || 0) - (b.timestamp || 0));
+          liveJackMessages = entries.map(e => ({ text: e.text, timestamp: e.timestamp }));
 
-    // For list UI (oldest -> newest)
-    entries.sort((a,b)=> (a.timestamp || 0) - (b.timestamp || 0));
-    liveJackMessages = entries.map(e => ({ text: e.text, timestamp: e.timestamp })); // keeps your existing renderMessages unchanged
+          renderMessages();
 
-    renderMessages();
+          const newest = entries.length ? entries[entries.length - 1] : null;
+          const newestTs = newest?.timestamp || 0;
 
-    // Popup ONLY when a new message arrives
-    const newest = entries.length ? entries[entries.length - 1] : null;
-    const newestTs = newest?.timestamp || 0;
-
-    if(newest && newestTs && newestTs > lastMsgPopupTs){
-      lastMsgPopupTs = newestTs;
-      showMessagePopup(newest.key, newest);
-    }
-  });
-
+          if(newest && newestTs && newestTs > lastMsgPopupTs){
+            lastMsgPopupTs = newestTs;
+            showMessagePopup(newest.key, newest);
+          }
+        });
 
     }catch(e){
       console.log("Firebase init error:", e);
@@ -1697,31 +1695,34 @@ db.ref("/messages/" + FIREBASE_KEY)
     }
   }
 
-// =========================
-// Tick: derived time + linger checks
-// =========================
-setInterval(()=>{
-  updateDerivedTimes();
-  computeAway();
+  // =========================
+  // Tick: derived time + linger + offline/away checks
+  // =========================
+  let currentTab = "status"; // ensure defined before interval uses it
 
-  const emergency = applyStateFromAlerts();
-  if(!emergency){
-    maybeLingerAlert();
-    if(jack.state !== "warn") jack.state = "ok";
-  }
+  setInterval(()=>{
+    updateDerivedTimes();
+    computeAway();
 
-  render();
+    const emergency = applyStateFromAlerts();
+    if(!emergency){
+      maybeLingerAlert();
+      if(jack.state !== "warn") jack.state = "ok";
+    }
 
-  // ✅ Keep "Away" duration updating live while History tab is open
-  if(currentTab === "history"){
-    renderHistory();
-  }
-}, 3000);
+    // ✅ offline/away popups + timers + auto-clear + interval logging
+    handleSystemOfflineAndAway();
 
+    render();
+
+    if(currentTab === "history"){
+      renderHistory();
+    }
+  }, 3000);
 
   // Init UI
   applySettingsToUI();
-  wireSettingsInputs();   // ✅ autosave as user types
+  wireSettingsInputs();
   wireEnterToNextInSettings();
   updateDerivedTimes();
   computeAway();
