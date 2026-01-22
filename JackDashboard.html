@@ -1197,8 +1197,8 @@
     }
 
     if(mapShown){
-      updateMap(false);
-    }
+  updateMap(autoFollowAllowed());
+}
   }
 
   function renderMessages(){
@@ -1412,6 +1412,19 @@
   let mapShown = false;
   let centeredOnce = false;
 
+  // ✅ Auto-follow pause: if user pans/zooms, stop following for 60s
+  let autoFollowPauseUntilMs = 0;
+  const AUTO_FOLLOW_PAUSE_MS = 60 * 1000;
+
+  function pauseAutoFollow(){
+    autoFollowPauseUntilMs = Date.now() + AUTO_FOLLOW_PAUSE_MS;
+  }
+
+  function autoFollowAllowed(){
+    return Date.now() >= autoFollowPauseUntilMs;
+  }
+
+  
   function stateFillColor(){
     return (jack.state==="bad") ? "#fb7185" : (jack.state==="warn") ? "#facc15" : "#4ade80";
   }
@@ -1421,6 +1434,9 @@
     mapReady = true;
 
     map = L.map('leafletMap', { zoomControl:true }).setView([BASE_GPS.lat, BASE_GPS.lng], 13);
+
+        // ✅ If the user interacts with the map, pause auto-follow for 60s
+    map.on("dragstart zoomstart mousedown touchstart", pauseAutoFollow);
 
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 19,
@@ -1527,9 +1543,11 @@
     }
     if(!mapShown){
       showMapUI();
+      autoFollowPauseUntilMs = 0;            // ✅ resume follow immediately
       setTimeout(()=>updateMap(true), 120);
       return;
     }
+    autoFollowPauseUntilMs = 0;            // ✅ resume follow immediately
     updateMap(true);
   });
 
@@ -1667,13 +1685,13 @@
 
         showMapUI();
 
-        if(!centeredOnce){
-          centeredOnce = true;
-          setTimeout(()=> updateMap(true), 120);
-        }else{
-          updateMap(false);
-        }
-
+if(!centeredOnce){
+  centeredOnce = true;
+  setTimeout(()=> updateMap(true), 120);
+}else{
+  // ✅ Follow unless the user recently panned/zoomed
+  updateMap(autoFollowAllowed());
+}
         render();
       });
 
